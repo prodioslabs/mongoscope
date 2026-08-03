@@ -1,1 +1,1 @@
-preload = ["@opentui/solid/preload"]
+# OpenTUI React uses the standard React JSX transform — no Bun preload required.

@@ -1,4 +1,11 @@
-import { render } from '@opentui/solid'
+import { createCliRenderer } from '@opentui/core'
+import { createRoot } from '@opentui/react'
 import { App } from './app'
+import { ThemeProvider } from './components/theme-provider'
 
-render(App)
+const renderer = await createCliRenderer()
+createRoot(renderer).render(
+  <ThemeProvider mode="dark" theme="gruvbox">
+    <App />
+  </ThemeProvider>,
+)
