@@ -1,17 +1,7 @@
 import { bold, fg, t } from '@opentui/core'
 import { useKeyboard, useRenderer } from '@opentui/react'
+import { IntroMessage } from './components/intro-message'
 import { useTheme } from './stores/theme'
-
-// Original "scope" mark: a monitor screen with a pulse waveform.
-const SCOPE = [
-  '  ▄███████████▄  ',
-  '  █           █  ',
-  '  █     █     █  ',
-  '  █    ▄█▄    █  ',
-  '  █ ▄▄▄█ █▄▄▄ █  ',
-  '  █           █  ',
-  '  ▀███████████▀  ',
-].join('\n')
 
 export function App() {
   const renderer = useRenderer()
@@ -38,15 +28,7 @@ export function App() {
 
   return (
     <box width="100%" height="100%" flexDirection="column">
-      <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
-        <box flexDirection="row" alignItems="center">
-          <text content={SCOPE} fg={theme.primary} />
-          <box flexDirection="column" alignItems="flex-start">
-            <ascii-font text="MongoScope" color={theme.text} />
-            <text content="a lens into your MongoDB" fg={theme.textMuted} />
-          </box>
-        </box>
-      </box>
+      <IntroMessage />
       <box
         width="100%"
         paddingLeft={1}
