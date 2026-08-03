@@ -33,9 +33,12 @@ useEffect(() => {
 }, [renderer, theme.background])
 
 // ✅ GOOD — name states the effect’s job
-useEffect(function applyThemeBackground() {
-  renderer.setBackgroundColor(theme.background)
-}, [renderer, theme.background])
+useEffect(
+  function applyThemeBackground() {
+    renderer.setBackgroundColor(theme.background)
+  },
+  [renderer, theme.background],
+)
 ```
 
 Do not use anonymous arrow functions or unnamed function expressions for effect callbacks.
