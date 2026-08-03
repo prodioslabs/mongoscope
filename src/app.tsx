@@ -1,13 +1,13 @@
-import { bold, fg, t } from '@opentui/core'
 import { useKeyboard, useRenderer } from '@opentui/react'
 import { useState } from 'react'
 import { CommandPalette } from './components/command-palette'
+import { Footer } from './components/footer'
 import { IntroMessage } from './components/intro-message'
 import { useTheme } from './stores/theme'
 
 export function App() {
   const renderer = useRenderer()
-  const { theme, mode, setMode, set, selected, all } = useTheme()
+  const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
 
   useKeyboard(function keyHandler(key) {
@@ -40,20 +40,7 @@ export function App() {
   return (
     <box width="100%" height="100%" flexDirection="column">
       <IntroMessage />
-      <box
-        width="100%"
-        paddingLeft={1}
-        paddingRight={1}
-        paddingBottom={0}
-        justifyContent="flex-end"
-        flexDirection="row"
-        gap={2}
-        backgroundColor={theme.backgroundPanel}
-      >
-        <text
-          content={t`${bold(fg(theme.text)('ctrl+k'))} ${fg(theme.textMuted)('commands')}  ${bold(fg(theme.text)('q'))} ${fg(theme.textMuted)('quit')}`}
-        />
-      </box>
+      <Footer />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </box>
   )
