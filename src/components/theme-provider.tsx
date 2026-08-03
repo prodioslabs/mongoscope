@@ -4,21 +4,27 @@ import { useEffect, type ReactNode } from 'react'
 import { useTheme, type ThemeMode } from '../stores/theme'
 import { hasTheme } from '../theme'
 
-export function ThemeProvider(props: { mode?: ThemeMode; theme?: string; children?: ReactNode }) {
+type ThemeProviderProps = {
+  mode?: ThemeMode
+  theme?: string
+  children?: ReactNode
+}
+
+export function ThemeProvider({ mode, theme: themeName, children }: ThemeProviderProps) {
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const setMode = useTheme((s) => s.setMode)
   const set = useTheme((s) => s.set)
 
-  useEffect(() => {
-    if (typeof props.theme === 'string' && hasTheme(props.theme)) set(props.theme)
-  }, [props.theme, set])
+  useEffect(function syncThemeFromProps() {
+    if (typeof themeName === 'string' && hasTheme(themeName)) set(themeName)
+  }, [themeName, set])
 
-  useEffect(() => {
-    if (props.mode === 'dark' || props.mode === 'light') setMode(props.mode)
-  }, [props.mode, setMode])
+  useEffect(function syncModeFromProps() {
+    if (mode === 'dark' || mode === 'light') setMode(mode)
+  }, [mode, setMode])
 
-  useEffect(() => {
+  useEffect(function subscribeRendererThemeMode() {
     const handle = (next: ThemeMode) => {
       setMode(next)
     }
@@ -28,9 +34,9 @@ export function ThemeProvider(props: { mode?: ThemeMode; theme?: string; childre
     }
   }, [renderer, setMode])
 
-  useEffect(() => {
+  useEffect(function applyThemeBackground() {
     renderer.setBackgroundColor(theme.background)
   }, [renderer, theme.background])
 
-  return <>{props.children}</>
+  return <>{children}</>
 }
