@@ -7,6 +7,7 @@
   "type": "module",
   "module": "index.ts",
   "scripts": {
+    "build": "bun run scripts/build.ts",
     "format": "oxfmt --write",
     "lint": "oxlint --fix --fix-suggestions",
     "typecheck": "tsc --noEmit",
