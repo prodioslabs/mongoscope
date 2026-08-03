@@ -17,7 +17,7 @@ export function IntroMessage() {
   return (
     <box flexGrow={1} flexDirection="column" alignItems="center" justifyContent="center">
       <box flexDirection="row" alignItems="center">
-        <text content={SCOPE} fg={theme.primary} />
+        <text content={SCOPE} fg={theme.accent} />
         <box flexDirection="column" alignItems="flex-start">
           <ascii-font text="MongoScope" color={theme.text} />
           <text content="a lens into your MongoDB" fg={theme.textMuted} />
