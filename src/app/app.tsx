@@ -5,7 +5,22 @@ import { Footer } from './components/footer'
 import { IntroMessage } from './components/intro-message'
 import { useTheme } from './stores/theme'
 
-export function App() {
+export type AppOptions = {
+  logPath?: string
+  logDir?: string
+  uri?: string
+  host?: string
+  port?: number
+  username?: string
+  password?: string
+  authDb?: string
+}
+
+type AppProps = {
+  options: AppOptions
+}
+
+export function App({ options: _options }: AppProps) {
   const renderer = useRenderer()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
