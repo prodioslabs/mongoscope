@@ -1,13 +1,24 @@
 import { bold, fg, t } from '@opentui/core'
 import { useKeyboard, useRenderer } from '@opentui/react'
+import { useState } from 'react'
+import { CommandPalette } from './components/command-palette'
 import { IntroMessage } from './components/intro-message'
 import { useTheme } from './stores/theme'
 
 export function App() {
   const renderer = useRenderer()
   const { theme, mode, setMode, set, selected, all } = useTheme()
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
   useKeyboard(function keyHandler(key) {
+    if (key.ctrl && key.name === 'k') {
+      key.preventDefault()
+      setPaletteOpen((open) => !open)
+      return
+    }
+
+    if (paletteOpen) return
+
     if (key.name === 'q') {
       renderer.destroy()
       return
@@ -32,6 +43,7 @@ export function App() {
       <box
         width="100%"
         paddingLeft={1}
+        paddingRight={1}
         paddingBottom={0}
         justifyContent="flex-end"
         flexDirection="row"
@@ -39,10 +51,10 @@ export function App() {
         backgroundColor={theme.backgroundPanel}
       >
         <text
-          content={t`${bold(fg(theme.text)('q'))} ${fg(theme.textMuted)('quit')}  ${bold(fg(theme.text)('t'))} ${fg(theme.textMuted)('theme')}  ${bold(fg(theme.text)('m'))} ${fg(theme.textMuted)('mode')}`}
+          content={t`${bold(fg(theme.text)('ctrl+k'))} ${fg(theme.textMuted)('commands')}  ${bold(fg(theme.text)('q'))} ${fg(theme.textMuted)('quit')}`}
         />
-        <text content={t`${fg(theme.textMuted)(selected)}/${fg(theme.textMuted)(mode)}`} />
       </box>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </box>
   )
 }
