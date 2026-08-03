@@ -206,3 +206,18 @@ export function resolveTheme(theme: ThemeJson, mode: 'dark' | 'light'): Theme {
     thinkingOpacity,
   } as Theme
 }
+
+export function selectedForeground(theme: Theme, bg?: RGBA): RGBA {
+  if (theme._hasSelectedListItemText) {
+    return theme.selectedListItemText
+  }
+
+  if (theme.background.a === 0) {
+    const targetColor = bg ?? theme.primary
+    const { r, g, b } = targetColor
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return luminance > 0.5 ? RGBA.fromInts(0, 0, 0) : RGBA.fromInts(255, 255, 255)
+  }
+
+  return theme.background
+}
