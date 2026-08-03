@@ -1,6 +1,9 @@
 {
   "name": "mongoscope-v2",
   "private": true,
+  "bin": {
+    "mongoscope": "./bin/mongoscope"
+  },
   "type": "module",
   "module": "index.ts",
   "scripts": {
@@ -8,21 +11,23 @@
     "lint": "oxlint --fix --fix-suggestions",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "start": "bun src/index.tsx",
+    "start": "bun bin/mongoscope",
     "pin-versions": "bun run scripts/pin-versions.ts"
   },
   "dependencies": {
     "@clack/prompts": "1.7.0",
     "@opentui/core": "0.4.5",
     "@opentui/react": "0.4.5",
-    "match-sorter": "^8.3.0",
+    "match-sorter": "8.3.0",
     "react": "19.2.8",
     "vitest": "4.1.10",
-    "zustand": "^5.0.14"
+    "yargs": "18.1.0",
+    "zustand": "5.0.14"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
     "@types/react": "19.2.18",
+    "@types/yargs": "17.0.35",
     "oxfmt": "0.61.0",
     "oxlint": "1.76.0"
   },
