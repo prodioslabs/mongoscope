@@ -3,6 +3,12 @@ import { useEffect, useState } from 'react'
 import { useFooter } from '../stores/footer'
 import { useTheme } from '../stores/theme'
 
+/** Cap mid-footer status so long log paths don't crowd keybindings on narrow terminals. */
+const STATUS_MAX_WIDTH = '45%'
+
+/** Cap keybinding scope hints so they stay visible alongside clock + status. */
+const SCOPE_MAX_WIDTH = '50%'
+
 function formatClock(date: Date): string {
   const time = date.toLocaleTimeString('en-GB', {
     hour: '2-digit',
@@ -42,18 +48,33 @@ export function Footer() {
       backgroundColor={theme.backgroundPanel}
     >
       <text content={clock} fg={theme.text} flexShrink={0} />
-      {status ? <text content={status} fg={theme.textMuted} flexGrow={1} flexShrink={1} /> : null}
+      {status ? (
+        <text
+          content={status}
+          fg={theme.textMuted}
+          flexGrow={1}
+          flexShrink={1}
+          maxWidth={STATUS_MAX_WIDTH}
+          wrapMode="none"
+          truncate
+        />
+      ) : null}
       <box
         flexDirection="row"
         gap={2}
         justifyContent="flex-end"
         flexGrow={status ? 0 : 1}
-        flexShrink={0}
+        flexShrink={1}
+        maxWidth={SCOPE_MAX_WIDTH}
+        overflow="hidden"
       >
         {keybindings.map((binding) => (
           <text
             key={`${binding.keys}:${binding.label}`}
             content={t`${bold(fg(theme.text)(binding.keys))} ${fg(theme.textMuted)(binding.label)}`}
+            flexShrink={1}
+            wrapMode="none"
+            truncate
           />
         ))}
       </box>
