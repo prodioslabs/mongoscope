@@ -9,7 +9,8 @@ import {
 } from '@opentui/core'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useFooter } from '../../stores/footer'
+import { useFooter, type FooterKeybinding } from '../../stores/footer'
+import { useFooterKeybindings } from '../../stores/footer-keybindings'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { selectedForeground, type Theme } from '../../theme'
@@ -36,11 +37,14 @@ const CHROME_ROWS = 7
 /** Approximate height of one data row (content line + inner border). */
 const ROW_STRIDE = 2
 
+const SLOW_QUERIES_KEYBINDINGS: FooterKeybinding[] = [
+  { keys: '↑↓/jk', label: 'navigate' },
+  { keys: 'c/a/p', label: 'sort count/avg/plan' },
+]
+
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
   const queryPatterns = useSession((s) => s.queryPatterns)
-  const setKeybindings = useFooter((s) => s.setKeybindings)
-  const resetKeybindings = useFooter((s) => s.resetKeybindings)
   const setStatus = useFooter((s) => s.setStatus)
   const { height: terminalHeight } = useTerminalDimensions()
 
@@ -62,19 +66,7 @@ export function SlowQueriesTab() {
       ? formatWindowLabel(queryPatterns.windowStartMs, queryPatterns.windowEndMs)
       : 'full log'
 
-  useEffect(
-    function syncSlowQueriesFooterKeybindings() {
-      setKeybindings([
-        { keys: '1-6', label: 'tabs' },
-        { keys: '↑↓/jk', label: 'navigate' },
-        { keys: 'c/a/p', label: 'sort count/avg/plan' },
-      ])
-      return function resetSlowQueriesFooterKeybindings() {
-        resetKeybindings()
-      }
-    },
-    [setKeybindings, resetKeybindings],
-  )
+  useFooterKeybindings(SLOW_QUERIES_KEYBINDINGS)
 
   useEffect(
     function syncSlowQueriesFooterStatus() {
@@ -193,11 +185,10 @@ export function SlowQueriesTab() {
             outerBorder
             borderStyle="single"
             borderColor={theme.border}
-            columnWidthMode="full"
+            columnWidthMode="content"
             wrapMode="none"
-            cellPaddingX={1}
+            cellPaddingX={0}
             selectable={false}
-            backgroundColor={theme.background}
           />
         </box>
       )}
@@ -239,27 +230,38 @@ function buildTableContent(
     headerCell('TREND', theme),
   ]
 
+  let namespaceWidth = 'NAMESPACE'.length
+  for (const pattern of patterns) {
+    if (pattern.namespace.length > namespaceWidth) namespaceWidth = pattern.namespace.length
+  }
+
   const rows: TextTableContent = [header]
 
   for (let i = 0; i < patterns.length; i++) {
     const pattern = patterns[i]!
     const selected = i === selectedIndex
-    rows.push(buildPatternRow(pattern, selected, theme))
+    rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme))
   }
 
   return rows
 }
 
-function buildPatternRow(pattern: QueryPattern, selected: boolean, theme: Theme): TextChunk[][] {
-  const selectBg = selected ? theme.primary : undefined
-  const selectFg = selected ? selectedForeground(theme) : undefined
-
+function buildPatternRow(
+  pattern: QueryPattern,
+  selected: boolean,
+  namespaceWidth: number,
+  theme: Theme,
+): TextChunk[][] {
   const msSeverity = avgMsSeverity(pattern.avgMs)
   const examSeverity = examinedSeverity(pattern.avgDocsExamined, pattern.avgDocsReturned)
   const pSeverity = planSeverity(pattern.plan)
 
+  const namespace = padEnd(pattern.namespace, namespaceWidth)
+
   return [
-    cell(pattern.namespace, selectFg ?? theme.info, selectBg),
+    selected
+      ? cell(namespace, selectedForeground(theme, theme.primary), theme.primary)
+      : cell(pattern.namespace, theme.info),
     cell(pattern.op, theme.textMuted),
     cell(truncateShape(pattern.shape), theme.textMuted),
     cell(formatCount(pattern.count), theme.textMuted),
@@ -271,6 +273,11 @@ function buildPatternRow(pattern: QueryPattern, selected: boolean, theme: Theme)
     cell(pattern.plan, severityColor(theme, pSeverity)),
     cell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
   ]
+}
+
+function padEnd(text: string, width: number): string {
+  if (text.length >= width) return text
+  return text + ' '.repeat(width - text.length)
 }
 
 function headerCell(label: string, theme: Theme): TextChunk[] {
