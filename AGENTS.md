@@ -43,6 +43,35 @@ useEffect(
 
 Do not use anonymous arrow functions or unnamed function expressions for effect callbacks.
 
+## Component file order
+
+In a component module, the **exported** component is the first function/component in the file (after imports and module-level constants/types for that export). Private helpers and subcomponents used by it follow below, each with their props type colocated above the component.
+
+```tsx
+// imports
+// module constants
+
+type WelcomeScreenProps = {
+  logDir: string
+}
+
+export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
+  // ...
+}
+
+function progressBar(percent: number): string {
+  // ...
+}
+
+type LogFileSectionProps = {
+  // ...
+}
+
+function LogFileSection({ ... }: LogFileSectionProps) {
+  // ...
+}
+```
+
 ## Cursor Cloud specific instructions
 
 MongoScope v2 is a single-package **terminal UI (TUI)** CLI for visualizing MongoDB logs. It has no HTTP server or network port. The toolchain is [Bun](https://bun.sh) (runtime + package manager); Bun lives at `~/.bun/bin` and is on `PATH` via `~/.bashrc`. All commands are defined in `package.json` `scripts`.
