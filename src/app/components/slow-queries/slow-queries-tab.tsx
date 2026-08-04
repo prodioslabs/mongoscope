@@ -9,8 +9,8 @@ import {
 } from '@opentui/core'
 import { useKeyboard, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useFooter, type FooterKeybinding } from '../../stores/footer'
-import { useFooterKeybindings } from '../../stores/footer-keybindings'
+import { type FooterKeybinding } from '../../stores/footer'
+import { useFooterKeybindings, useFooterStatus } from '../../stores/footer-keybindings'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { selectedForeground, type Theme } from '../../theme'
@@ -45,7 +45,6 @@ const SLOW_QUERIES_KEYBINDINGS: FooterKeybinding[] = [
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
   const queryPatterns = useSession((s) => s.queryPatterns)
-  const setStatus = useFooter((s) => s.setStatus)
   const { height: terminalHeight } = useTerminalDimensions()
 
   const patterns = queryPatterns?.patterns ?? []
@@ -67,16 +66,7 @@ export function SlowQueriesTab() {
       : 'full log'
 
   useFooterKeybindings(SLOW_QUERIES_KEYBINDINGS)
-
-  useEffect(
-    function syncSlowQueriesFooterStatus() {
-      setStatus(`grouped by shape · ${windowLabel}`)
-      return function clearSlowQueriesFooterStatus() {
-        setStatus(null)
-      }
-    },
-    [windowLabel, setStatus],
-  )
+  useFooterStatus(windowLabel)
 
   useEffect(
     function clampSlowQueriesSelection() {

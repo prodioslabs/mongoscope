@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
 import { match } from 'ts-pattern'
-import { useFooter, type FooterKeybinding } from '../stores/footer'
+import { type FooterKeybinding } from '../stores/footer'
 import { FooterKeybindingScope } from '../stores/footer-keybindings'
 import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
@@ -13,29 +12,11 @@ export function Dashboard() {
   const activeTab = useSession((s) => s.activeTab)
   const logPath = useSession((s) => s.logPath)
   const parseDurationMs = useSession((s) => s.parseDurationMs)
-  const setStatus = useFooter((s) => s.setStatus)
 
-  useEffect(
-    function syncDashboardFooterStatus() {
-      // Slow Queries owns the mid-footer status while that tab is active.
-      if (activeTab === 'slow-queries') {
-        return
-      }
-
-      if (logPath == null || parseDurationMs == null) {
-        setStatus(null)
-        return function clearDashboardFooterStatus() {
-          setStatus(null)
-        }
-      }
-
-      setStatus(`${logPath} · parsed in ${formatParseDuration(parseDurationMs)}`)
-      return function clearDashboardFooterStatus() {
-        setStatus(null)
-      }
-    },
-    [activeTab, logPath, parseDurationMs, setStatus],
-  )
+  const status =
+    logPath != null && parseDurationMs != null
+      ? `${logPath} · parsed in ${formatParseDuration(parseDurationMs)}`
+      : null
 
   const content = match(activeTab)
     .with('slow-queries', () => <SlowQueriesTab />)
@@ -47,7 +28,7 @@ export function Dashboard() {
     .exhaustive()
 
   return (
-    <FooterKeybindingScope bindings={DASHBOARD_KEYBINDINGS}>
+    <FooterKeybindingScope bindings={DASHBOARD_KEYBINDINGS} status={status}>
       <box flexGrow={1} flexShrink={1} flexDirection="column" width="100%">
         <TabBar />
         {content}
