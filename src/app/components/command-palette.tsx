@@ -8,10 +8,16 @@ import {
 import { useKeyboard, useRenderer, useTerminalDimensions } from '@opentui/react'
 import { matchSorter } from 'match-sorter'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useFooter } from '../stores/footer'
+import { useFooter, type FooterKeybinding } from '../stores/footer'
 import { useTheme } from '../stores/theme'
 import { selectedForeground } from '../theme'
 import { Dialog } from './ui/dialog'
+
+const PALETTE_OVERLAY_KEYBINDINGS: FooterKeybinding[] = [
+  { keys: '↑/↓', label: 'navigate' },
+  { keys: 'enter', label: 'select' },
+  { keys: 'esc', label: 'close' },
+]
 
 type CommandPaletteProps = {
   open: boolean
@@ -105,8 +111,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const all = useTheme((s) => s.all)
   const setMode = useTheme((s) => s.setMode)
   const set = useTheme((s) => s.set)
-  const setKeybindings = useFooter((s) => s.setKeybindings)
-  const resetKeybindings = useFooter((s) => s.resetKeybindings)
+  const setOverlayKeybindings = useFooter((s) => s.setOverlayKeybindings)
 
   const [view, setView] = useState<PaletteView>('commands')
   const [filter, setFilter] = useState('')
@@ -204,18 +209,14 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   )
 
   useEffect(
-    function syncFooterKeybindings() {
+    function syncFooterOverlayKeybindings() {
       if (!open) return
-      setKeybindings([
-        { keys: '↑/↓', label: 'navigate' },
-        { keys: 'enter', label: 'select' },
-        { keys: 'esc', label: 'close' },
-      ])
-      return function resetFooterKeybindingsOnClose() {
-        resetKeybindings()
+      setOverlayKeybindings(PALETTE_OVERLAY_KEYBINDINGS)
+      return function clearFooterOverlayKeybindings() {
+        setOverlayKeybindings(null)
       }
     },
-    [open, setKeybindings, resetKeybindings],
+    [open, setOverlayKeybindings],
   )
 
   useEffect(

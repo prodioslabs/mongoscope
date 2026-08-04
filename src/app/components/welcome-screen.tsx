@@ -3,7 +3,8 @@ import { useKeyboard } from '@opentui/react'
 import { join } from 'node:path'
 import { useEffect, useRef, useState } from 'react'
 import { listLogFiles, MONGODB_DEFAULT_LOG_DIR } from '../lib/list-log-files'
-import { useFooter } from '../stores/footer'
+import { type FooterKeybinding } from '../stores/footer'
+import { useFooterKeybindings } from '../stores/footer-keybindings'
 import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
 import { selectedForeground } from '../theme'
@@ -12,6 +13,14 @@ const MAX_VISIBLE_FILES = 5
 const MAX_SECTION_WIDTH = 80
 const PROGRESS_BAR_WIDTH = 24
 const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
+
+const WELCOME_PARSING_KEYBINDINGS: FooterKeybinding[] = [{ keys: '…', label: 'parsing' }]
+
+const WELCOME_IDLE_KEYBINDINGS: FooterKeybinding[] = [
+  { keys: '↑/↓', label: 'navigate' },
+  { keys: 'tab', label: 'section' },
+  { keys: 'enter', label: 'analyze' },
+]
 
 // Original "scope" mark: a monitor screen with a pulse waveform.
 const SCOPE = [
@@ -29,8 +38,6 @@ type WelcomeScreenProps = {
 
 export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const theme = useTheme((s) => s.theme)
-  const setKeybindings = useFooter((s) => s.setKeybindings)
-  const resetKeybindings = useFooter((s) => s.resetKeybindings)
   const parseProgress = useSession((s) => s.parseProgress)
   const parseError = useSession((s) => s.parseError)
   const startParse = useSession((s) => s.startParse)
@@ -40,6 +47,8 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const [dirLogs, setDirLogs] = useState<string[]>([])
   const [activeSection, setActiveSection] = useState(0)
   const [selectedIndexes, setSelectedIndexes] = useState<[number, number]>([0, 0])
+
+  useFooterKeybindings(parsing ? WELCOME_PARSING_KEYBINDINGS : WELCOME_IDLE_KEYBINDINGS)
 
   useEffect(
     function loadLogFileLists() {
@@ -63,24 +72,6 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
       }
     },
     [logDir],
-  )
-
-  useEffect(
-    function syncWelcomeFooterKeybindings() {
-      setKeybindings(
-        parsing
-          ? [{ keys: '…', label: 'parsing' }]
-          : [
-              { keys: '↑/↓', label: 'navigate' },
-              { keys: 'tab', label: 'section' },
-              { keys: 'enter', label: 'analyze' },
-            ],
-      )
-      return function resetWelcomeFooterKeybindings() {
-        resetKeybindings()
-      }
-    },
-    [setKeybindings, resetKeybindings, parsing],
   )
 
   useEffect(

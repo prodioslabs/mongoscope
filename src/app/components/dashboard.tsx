@@ -1,28 +1,19 @@
 import { useEffect } from 'react'
 import { match } from 'ts-pattern'
-import { useFooter } from '../stores/footer'
+import { useFooter, type FooterKeybinding } from '../stores/footer'
+import { FooterKeybindingScope } from '../stores/footer-keybindings'
 import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
 import { SlowQueriesTab } from './slow-queries/slow-queries-tab'
 import { TabBar } from './tab-bar'
 
+const DASHBOARD_KEYBINDINGS: FooterKeybinding[] = [{ keys: '1-6', label: 'tabs' }]
+
 export function Dashboard() {
   const activeTab = useSession((s) => s.activeTab)
   const logPath = useSession((s) => s.logPath)
   const parseDurationMs = useSession((s) => s.parseDurationMs)
-  const setKeybindings = useFooter((s) => s.setKeybindings)
-  const resetKeybindings = useFooter((s) => s.resetKeybindings)
   const setStatus = useFooter((s) => s.setStatus)
-
-  useEffect(
-    function syncDashboardFooterKeybindings() {
-      setKeybindings([{ keys: '1-6', label: 'tabs' }])
-      return function resetDashboardFooterKeybindings() {
-        resetKeybindings()
-      }
-    },
-    [setKeybindings, resetKeybindings],
-  )
 
   useEffect(
     function syncDashboardFooterStatus() {
@@ -56,10 +47,12 @@ export function Dashboard() {
     .exhaustive()
 
   return (
-    <box flexGrow={1} flexShrink={1} flexDirection="column" width="100%">
-      <TabBar />
-      {content}
-    </box>
+    <FooterKeybindingScope bindings={DASHBOARD_KEYBINDINGS}>
+      <box flexGrow={1} flexShrink={1} flexDirection="column" width="100%">
+        <TabBar />
+        {content}
+      </box>
+    </FooterKeybindingScope>
   )
 }
 
