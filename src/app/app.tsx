@@ -1,8 +1,11 @@
 import { useKeyboard, useRenderer } from '@opentui/react'
 import { useState } from 'react'
+import { match } from 'ts-pattern'
 import { CommandPalette } from './components/command-palette'
+import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
 import { WelcomeScreen } from './components/welcome-screen'
+import { tabFromKey, useSession } from './stores/session'
 import { useTheme } from './stores/theme'
 
 export type AppOptions = {
@@ -24,6 +27,8 @@ export function App({ options }: AppProps) {
   const renderer = useRenderer()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const screen = useSession((s) => s.screen)
+  const setTab = useSession((s) => s.setTab)
 
   useKeyboard(function keyHandler(key) {
     if (key.ctrl && key.name === 'k') {
@@ -49,12 +54,26 @@ export function App({ options }: AppProps) {
       const index = names.indexOf(selected)
       const next = names[(index + 1) % names.length]
       if (next) set(next)
+      return
+    }
+
+    if (screen === 'dashboard') {
+      const tab = tabFromKey(key.name)
+      if (tab) {
+        key.preventDefault()
+        setTab(tab)
+      }
     }
   })
 
+  const body = match(screen)
+    .with('welcome', () => <WelcomeScreen logDir={options.logDir ?? '.'} />)
+    .with('dashboard', () => <Dashboard />)
+    .exhaustive()
+
   return (
     <box width="100%" height="100%" flexDirection="column">
-      <WelcomeScreen logDir={options.logDir ?? '.'} />
+      {body}
       <Footer />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </box>
