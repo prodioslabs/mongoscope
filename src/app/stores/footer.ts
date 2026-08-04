@@ -5,21 +5,28 @@ export type FooterKeybinding = {
   label: string
 }
 
-type FooterScope = {
+type FooterKeybindingScope = {
   path: string
   bindings: FooterKeybinding[]
 }
 
+type FooterStatusScope = {
+  path: string
+  status: string | null
+}
+
 type FooterState = {
   keybindings: FooterKeybinding[]
-  scopes: FooterScope[]
+  scopes: FooterKeybindingScope[]
   overlay: FooterKeybinding[] | null
   /** Optional mid-footer status (e.g. log path + parse time) */
   status: string | null
+  statusScopes: FooterStatusScope[]
   contributeKeybindings: (path: string, bindings: FooterKeybinding[]) => void
   withdrawKeybindings: (path: string) => void
   setOverlayKeybindings: (bindings: FooterKeybinding[] | null) => void
-  setStatus: (status: string | null) => void
+  contributeStatus: (path: string, status: string | null) => void
+  withdrawStatus: (path: string) => void
 }
 
 const DEFAULT_KEYBINDINGS: FooterKeybinding[] = [
@@ -31,12 +38,12 @@ function withDefaults(custom: FooterKeybinding[]): FooterKeybinding[] {
   return [...custom, ...DEFAULT_KEYBINDINGS]
 }
 
-function flattenScopes(scopes: FooterScope[]): FooterKeybinding[] {
+function flattenScopes(scopes: FooterKeybindingScope[]): FooterKeybinding[] {
   return scopes.flatMap((scope) => scope.bindings)
 }
 
 function deriveKeybindings(
-  scopes: FooterScope[],
+  scopes: FooterKeybindingScope[],
   overlay: FooterKeybinding[] | null,
 ): FooterKeybinding[] {
   if (overlay != null) {
@@ -45,10 +52,25 @@ function deriveKeybindings(
   return withDefaults(flattenScopes(scopes))
 }
 
-function sortScopes(scopes: FooterScope[]): FooterScope[] {
-  return scopes.slice().sort(function compareScopePaths(a, b) {
+function deriveStatus(statusScopes: FooterStatusScope[]): string | null {
+  const parts: string[] = []
+  for (const scope of statusScopes) {
+    if (scope.status != null) {
+      parts.push(scope.status)
+    }
+  }
+  return parts.length > 0 ? parts.join(' · ') : null
+}
+
+function sortByPath<T extends { path: string }>(items: T[]): T[] {
+  return items.slice().sort(function comparePaths(a, b) {
     return a.path.localeCompare(b.path)
   })
+}
+
+function withoutPathAndDescendants<T extends { path: string }>(items: T[], path: string): T[] {
+  const prefix = `${path}/`
+  return items.filter((item) => item.path !== path && !item.path.startsWith(prefix))
 }
 
 export const useFooter = create<FooterState>((set) => ({
@@ -56,19 +78,17 @@ export const useFooter = create<FooterState>((set) => ({
   scopes: [],
   overlay: null,
   status: null,
+  statusScopes: [],
   contributeKeybindings(path, bindings) {
     set((state) => {
       const without = state.scopes.filter((scope) => scope.path !== path)
-      const scopes = sortScopes([...without, { path, bindings }])
+      const scopes = sortByPath([...without, { path, bindings }])
       return { scopes, keybindings: deriveKeybindings(scopes, state.overlay) }
     })
   },
   withdrawKeybindings(path) {
     set((state) => {
-      const prefix = `${path}/`
-      const scopes = state.scopes.filter(
-        (scope) => scope.path !== path && !scope.path.startsWith(prefix),
-      )
+      const scopes = withoutPathAndDescendants(state.scopes, path)
       return { scopes, keybindings: deriveKeybindings(scopes, state.overlay) }
     })
   },
@@ -78,7 +98,17 @@ export const useFooter = create<FooterState>((set) => ({
       keybindings: deriveKeybindings(state.scopes, bindings),
     }))
   },
-  setStatus(status) {
-    set({ status })
+  contributeStatus(path, status) {
+    set((state) => {
+      const without = state.statusScopes.filter((scope) => scope.path !== path)
+      const statusScopes = sortByPath([...without, { path, status }])
+      return { statusScopes, status: deriveStatus(statusScopes) }
+    })
+  },
+  withdrawStatus(path) {
+    set((state) => {
+      const statusScopes = withoutPathAndDescendants(state.statusScopes, path)
+      return { statusScopes, status: deriveStatus(statusScopes) }
+    })
   },
 }))
