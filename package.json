@@ -12,6 +12,7 @@
     "lint": "oxlint --fix --fix-suggestions",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
+    "bench:parser": "bun run scripts/bench-parser.ts",
     "start": "bun bin/mongoscope",
     "pin-versions": "bun run scripts/pin-versions.ts"
   },
