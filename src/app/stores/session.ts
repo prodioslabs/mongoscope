@@ -2,6 +2,7 @@ import { stat } from 'node:fs/promises'
 import { match } from 'ts-pattern'
 import { create } from 'zustand'
 import { LogStore, parseLogFile } from '../../parser'
+import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
 
 export type AppScreen = 'welcome' | 'dashboard'
 
@@ -38,6 +39,7 @@ type SessionState = {
   activeTab: AppTab
   logPath: string | null
   logStore: LogStore | null
+  queryPatterns: QueryPatternStore | null
   /** 0–100 while parsing; null when idle */
   parseProgress: number | null
   /** Wall-clock ms for the last successful parse; null until then */
@@ -58,6 +60,7 @@ export const useSession = create<SessionState>((set, get) => ({
   activeTab: 'slow-queries',
   logPath: null,
   logStore: null,
+  queryPatterns: null,
   parseProgress: null,
   parseDurationMs: null,
   parseError: null,
@@ -72,6 +75,7 @@ export const useSession = create<SessionState>((set, get) => ({
     set({
       logPath: path,
       logStore: null,
+      queryPatterns: null,
       parseProgress: 0,
       parseDurationMs: null,
       parseError: null,
@@ -91,8 +95,11 @@ export const useSession = create<SessionState>((set, get) => ({
         latest = batch.store
       }
 
+      const queryPatterns = latest != null ? await buildQueryPatternStore(latest) : null
+
       set({
         logStore: latest,
+        queryPatterns,
         parseProgress: null,
         parseDurationMs: Math.round(performance.now() - startedAt),
         parseError: null,
@@ -106,6 +113,7 @@ export const useSession = create<SessionState>((set, get) => ({
         parseDurationMs: null,
         parseError: message,
         logStore: null,
+        queryPatterns: null,
       })
     }
   },
@@ -116,6 +124,7 @@ export const useSession = create<SessionState>((set, get) => ({
       activeTab: 'slow-queries',
       logPath: null,
       logStore: null,
+      queryPatterns: null,
       parseProgress: null,
       parseDurationMs: null,
       parseError: null,
