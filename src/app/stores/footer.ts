@@ -7,6 +7,7 @@ export type FooterKeybinding = {
 
 type FooterState = {
   keybindings: FooterKeybinding[]
+  stack: FooterKeybinding[][]
   setKeybindings: (keybindings: FooterKeybinding[]) => void
   resetKeybindings: () => void
 }
@@ -16,12 +17,24 @@ const DEFAULT_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'q', label: 'quit' },
 ]
 
+function withDefaults(custom: FooterKeybinding[]): FooterKeybinding[] {
+  return [...custom, ...DEFAULT_KEYBINDINGS]
+}
+
 export const useFooter = create<FooterState>((set) => ({
   keybindings: DEFAULT_KEYBINDINGS,
+  stack: [],
   setKeybindings(keybindings) {
-    set({ keybindings: [...keybindings, ...DEFAULT_KEYBINDINGS] })
+    set((state) => {
+      const stack = [...state.stack, keybindings]
+      return { stack, keybindings: withDefaults(keybindings) }
+    })
   },
   resetKeybindings() {
-    set({ keybindings: DEFAULT_KEYBINDINGS })
+    set((state) => {
+      const stack = state.stack.slice(0, -1)
+      const top = stack[stack.length - 1] ?? []
+      return { stack, keybindings: withDefaults(top) }
+    })
   },
 }))

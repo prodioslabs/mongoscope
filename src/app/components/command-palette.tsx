@@ -205,10 +205,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   useEffect(
     function syncFooterKeybindings() {
-      if (!open) {
-        resetKeybindings()
-        return
-      }
+      if (!open) return
       setKeybindings([
         { keys: '↑/↓', label: 'navigate' },
         { keys: 'enter', label: 'select' },
