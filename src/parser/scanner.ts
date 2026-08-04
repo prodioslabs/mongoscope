@@ -517,9 +517,15 @@ export type ParseBatch = {
   end: number
 }
 
+export type ParseProgress = {
+  bytesRead: number
+  rowCount: number
+}
+
 export type ParseLogFileOptions = {
   batchSize?: number
   chunkSize?: number
+  onProgress?: (info: ParseProgress) => void
 }
 
 /**
@@ -532,6 +538,7 @@ export async function* parseLogFile(
 ): AsyncGenerator<ParseBatch, void, undefined> {
   const batchSize = options?.batchSize ?? DEFAULT_BATCH_SIZE
   const chunkSize = options?.chunkSize ?? DEFAULT_CHUNK_SIZE
+  const onProgress = options?.onProgress
   const store = new LogStore(path)
 
   const stream = createReadStream(path, {
@@ -556,6 +563,8 @@ export async function* parseLogFile(
       carry = result.carry
       carryFileOffset = result.carryFileOffset
       fileOffset += chunk.length
+      store.byteLength = fileOffset
+      onProgress?.({ bytesRead: fileOffset, rowCount: store.rowCount })
 
       while (store.rowCount - batchStart >= batchSize) {
         const end = batchStart + batchSize
@@ -566,6 +575,7 @@ export async function* parseLogFile(
 
     flushCarry(store, carry, carryFileOffset)
     store.byteLength = fileOffset
+    onProgress?.({ bytesRead: fileOffset, rowCount: store.rowCount })
 
     if (store.rowCount > batchStart) {
       yield { store, start: batchStart, end: store.rowCount }

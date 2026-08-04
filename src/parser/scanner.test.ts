@@ -187,4 +187,28 @@ describe('parseLogFile + readEntryDetail', () => {
     }
     expect(batches).toEqual([{ start: 0, end: 0, rows: 0 }])
   })
+
+  it('reports byte progress via onProgress and updates byteLength mid-parse', async () => {
+    const lines = Array.from({ length: 120 }, (_, i) => line({ id: i, msg: `m${i}` })).join('\n')
+    const path = await writeTempLog(`${lines}\n`)
+    const progress: { bytesRead: number; rowCount: number }[] = []
+
+    let store: LogStore | null = null
+    for await (const batch of parseLogFile(path, {
+      batchSize: 50,
+      chunkSize: 256,
+      onProgress: (info) => progress.push({ ...info }),
+    })) {
+      store = batch.store
+      expect(store.byteLength).toBeGreaterThan(0)
+    }
+
+    expect(store).not.toBeNull()
+    expect(progress.length).toBeGreaterThan(0)
+    expect(progress[progress.length - 1]?.rowCount).toBe(120)
+    expect(progress[progress.length - 1]?.bytesRead).toBe(store!.byteLength)
+    for (let i = 1; i < progress.length; i++) {
+      expect(progress[i]!.bytesRead).toBeGreaterThanOrEqual(progress[i - 1]!.bytesRead)
+    }
+  })
 })

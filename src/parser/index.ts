@@ -8,6 +8,7 @@ import {
   DEFAULT_CHUNK_SIZE,
   type ParseBatch,
   type ParseLogFileOptions,
+  type ParseProgress,
 } from './scanner'
 import {
   getEntry,
@@ -28,6 +29,7 @@ import {
 export type {
   ParseBatch,
   ParseLogFileOptions,
+  ParseProgress,
   LogEntry,
   LogEntryDetail,
   LogKind,
