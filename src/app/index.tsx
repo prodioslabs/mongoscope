@@ -2,6 +2,7 @@ import { createCliRenderer } from '@opentui/core'
 import { createRoot } from '@opentui/react'
 import { App, type AppOptions } from './app'
 import { ThemeProvider } from './components/theme-provider'
+import './lib/opentui-text-table'
 
 export type { AppOptions }
 
