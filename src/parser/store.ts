@@ -290,9 +290,7 @@ export class LogStore {
       this.msgIds.byteLength
 
     const internBytes =
-      this.components.estimateBytes() +
-      this.ctxs.estimateBytes() +
-      this.msgs.estimateBytes()
+      this.components.estimateBytes() + this.ctxs.estimateBytes() + this.msgs.estimateBytes()
 
     return {
       typedArraysBytes,

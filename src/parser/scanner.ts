@@ -40,11 +40,7 @@
 
 import { createReadStream } from 'node:fs'
 import { open } from 'node:fs/promises'
-import {
-  encodeSeverity,
-  LogStore,
-  type SeverityCode,
-} from './store'
+import { encodeSeverity, LogStore, type SeverityCode } from './store'
 
 const TEXT_DECODER = new TextDecoder('utf-8')
 
@@ -75,9 +71,7 @@ const CHAR_x = 0x78
 const CHAR_m = 0x6d
 const CHAR_g = 0x67
 
-const DAYS_BEFORE_MONTH = [
-  0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334,
-]
+const DAYS_BEFORE_MONTH = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
 
 function isLeapYear(year: number): boolean {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
@@ -105,11 +99,7 @@ function parseNDigits(buf: Uint8Array, i: number, n: number): number {
  *   YYYY-MM-DDTHH:mm:ss.sss±HH:MM
  * Milliseconds may be 1–3 digits. Returns epoch millis or NaN.
  */
-export function parseIsoTimestampBytes(
-  buf: Uint8Array,
-  start: number,
-  end: number,
-): number {
+export function parseIsoTimestampBytes(buf: Uint8Array, start: number, end: number): number {
   // Minimum: YYYY-MM-DDTHH:mm:ssZ = 20 chars
   if (end - start < 20) return Number.NaN
 
@@ -178,8 +168,7 @@ export function parseIsoTimestampBytes(
   if (month > 2 && isLeapYear(year)) days += 1
   days += day - 1
 
-  const totalMinutes =
-    days * 24 * 60 + hour * 60 + minute - offsetMinutes
+  const totalMinutes = days * 24 * 60 + hour * 60 + minute - offsetMinutes
   return totalMinutes * 60_000 + second * 1000 + millis
 }
 
@@ -192,12 +181,7 @@ function skipWs(buf: Uint8Array, i: number, end: number): number {
   return i
 }
 
-function expectBytes(
-  buf: Uint8Array,
-  i: number,
-  end: number,
-  expected: number[],
-): number {
+function expectBytes(buf: Uint8Array, i: number, end: number, expected: number[]): number {
   if (i + expected.length > end) return -1
   for (let k = 0; k < expected.length; k++) {
     if (buf[i + k] !== expected[k]) return -1
@@ -237,11 +221,7 @@ type HotFields = {
  * Specialized forward scan for mongod 4.4+ structured JSON log lines.
  * Returns null if the line does not match the expected shape.
  */
-export function scanHotFields(
-  buf: Uint8Array,
-  start: number,
-  end: number,
-): HotFields | null {
+export function scanHotFields(buf: Uint8Array, start: number, end: number): HotFields | null {
   let i = start
 
   // {"t":{"$date":"
@@ -258,15 +238,7 @@ export function scanHotFields(
   if (Number.isNaN(timestamp)) return null
   // Timestamp closing quote already at tsEnd; next bytes are },"s":"
   i = tsEnd + 1
-  i = expectBytes(buf, i, end, [
-    0x7d,
-    0x2c,
-    0x22,
-    CHAR_s,
-    0x22,
-    CHAR_COLON,
-    0x22,
-  ])
+  i = expectBytes(buf, i, end, [0x7d, 0x2c, 0x22, CHAR_s, 0x22, CHAR_COLON, 0x22])
   if (i < 0) return null
 
   const sevStart = i
@@ -307,15 +279,7 @@ export function scanHotFields(
   // ,"ctx":"
   if (i >= end || buf[i] !== CHAR_COMMA) return null
   i = skipWs(buf, i + 1, end)
-  i = expectBytes(buf, i, end, [
-    0x22,
-    CHAR_c,
-    CHAR_t,
-    CHAR_x,
-    0x22,
-    CHAR_COLON,
-    0x22,
-  ])
+  i = expectBytes(buf, i, end, [0x22, CHAR_c, CHAR_t, CHAR_x, 0x22, CHAR_COLON, 0x22])
   if (i < 0) return null
 
   const ctxStart = i
@@ -327,15 +291,7 @@ export function scanHotFields(
   // ,"msg":"
   if (i >= end || buf[i] !== CHAR_COMMA) return null
   i = skipWs(buf, i + 1, end)
-  i = expectBytes(buf, i, end, [
-    0x22,
-    CHAR_m,
-    CHAR_s,
-    CHAR_g,
-    0x22,
-    CHAR_COLON,
-    0x22,
-  ])
+  i = expectBytes(buf, i, end, [0x22, CHAR_m, CHAR_s, CHAR_g, 0x22, CHAR_COLON, 0x22])
   if (i < 0) return null
 
   const msgStart = i
@@ -369,11 +325,7 @@ function parseTimestampFromJson(t: MongoLine['t']): number {
   return Number.NaN
 }
 
-function tryJsonFallback(
-  buf: Uint8Array,
-  start: number,
-  end: number,
-): HotFields | null {
+function tryJsonFallback(buf: Uint8Array, start: number, end: number): HotFields | null {
   let text: string
   try {
     text = decodeSlice(buf, start, end)
@@ -626,11 +578,7 @@ export async function* parseLogFile(
   }
 }
 
-export async function readLineAt(
-  path: string,
-  offset: number,
-  length: number,
-): Promise<string> {
+export async function readLineAt(path: string, offset: number, length: number): Promise<string> {
   const fh = await open(path, 'r')
   try {
     const buf = Buffer.allocUnsafe(length)

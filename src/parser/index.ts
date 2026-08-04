@@ -55,10 +55,7 @@ export {
 /**
  * Lazily decode and JSON.parse a single row's full payload for the detail view.
  */
-export async function readEntryDetail(
-  store: LogStore,
-  row: number,
-): Promise<LogEntryDetail> {
+export async function readEntryDetail(store: LogStore, row: number): Promise<LogEntryDetail> {
   const entry = store.getEntry(row)
   const text = await readLineAt(store.path, entry.offset, entry.length)
 
@@ -69,10 +66,7 @@ export async function readEntryDetail(
   try {
     const parsed: unknown = JSON.parse(text)
     const attr =
-      parsed !== null &&
-      typeof parsed === 'object' &&
-      !Array.isArray(parsed) &&
-      'attr' in parsed
+      parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && 'attr' in parsed
         ? (parsed as { attr?: unknown }).attr
         : undefined
     return { ...entry, attr, raw: parsed }

@@ -2,12 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import {
-  parseIsoTimestampBytes,
-  parseLogFile,
-  scanBytes,
-  scanHotFields,
-} from './scanner'
+import { parseIsoTimestampBytes, parseLogFile, scanBytes, scanHotFields } from './scanner'
 import { readEntryDetail } from './index'
 import { LogStore } from './store'
 
@@ -160,9 +155,7 @@ describe('scanBytes', () => {
 
 describe('parseLogFile + readEntryDetail', () => {
   it('yields progressive batches and supports lazy detail', async () => {
-    const lines = Array.from({ length: 120 }, (_, i) =>
-      line({ id: i, msg: `m${i}` }),
-    ).join('\n')
+    const lines = Array.from({ length: 120 }, (_, i) => line({ id: i, msg: `m${i}` })).join('\n')
     const path = await writeTempLog(`${lines}\n`)
 
     const batches: { start: number; end: number }[] = []
