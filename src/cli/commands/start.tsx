@@ -9,6 +9,7 @@ function applyOptions(args: Argv) {
     })
     .option('log-dir', {
       type: 'string',
+      default: '.',
       description: 'Directory containing log files to analyze',
     })
     .option('uri', {

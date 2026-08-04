@@ -2,7 +2,7 @@ import { useKeyboard, useRenderer } from '@opentui/react'
 import { useState } from 'react'
 import { CommandPalette } from './components/command-palette'
 import { Footer } from './components/footer'
-import { IntroMessage } from './components/intro-message'
+import { WelcomeScreen } from './components/welcome-screen'
 import { useTheme } from './stores/theme'
 
 export type AppOptions = {
@@ -20,7 +20,7 @@ type AppProps = {
   options: AppOptions
 }
 
-export function App({ options: _options }: AppProps) {
+export function App({ options }: AppProps) {
   const renderer = useRenderer()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -54,7 +54,7 @@ export function App({ options: _options }: AppProps) {
 
   return (
     <box width="100%" height="100%" flexDirection="column">
-      <IntroMessage />
+      <WelcomeScreen logDir={options.logDir ?? '.'} />
       <Footer />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </box>
