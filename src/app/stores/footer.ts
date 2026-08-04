@@ -8,8 +8,11 @@ export type FooterKeybinding = {
 type FooterState = {
   keybindings: FooterKeybinding[]
   stack: FooterKeybinding[][]
+  /** Optional mid-footer status (e.g. log path + parse time) */
+  status: string | null
   setKeybindings: (keybindings: FooterKeybinding[]) => void
   resetKeybindings: () => void
+  setStatus: (status: string | null) => void
 }
 
 const DEFAULT_KEYBINDINGS: FooterKeybinding[] = [
@@ -24,6 +27,7 @@ function withDefaults(custom: FooterKeybinding[]): FooterKeybinding[] {
 export const useFooter = create<FooterState>((set) => ({
   keybindings: DEFAULT_KEYBINDINGS,
   stack: [],
+  status: null,
   setKeybindings(keybindings) {
     set((state) => {
       const stack = [...state.stack, keybindings]
@@ -36,5 +40,8 @@ export const useFooter = create<FooterState>((set) => ({
       const top = stack[stack.length - 1] ?? []
       return { stack, keybindings: withDefaults(top) }
     })
+  },
+  setStatus(status) {
+    set({ status })
   },
 }))
