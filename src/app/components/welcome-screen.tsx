@@ -1,13 +1,16 @@
 import { RGBA, ScrollBoxRenderable, TextAttributes, type KeyEvent } from '@opentui/core'
 import { useKeyboard } from '@opentui/react'
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { join } from 'node:path'
+import { useEffect, useRef, useState } from 'react'
 import { listLogFiles, MONGODB_DEFAULT_LOG_DIR } from '../lib/list-log-files'
 import { useFooter } from '../stores/footer'
+import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
 import { selectedForeground } from '../theme'
 
 const MAX_VISIBLE_FILES = 5
 const MAX_SECTION_WIDTH = 80
+const PROGRESS_BAR_WIDTH = 24
 const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 
 // Original "scope" mark: a monitor screen with a pulse waveform.
@@ -24,6 +27,189 @@ type WelcomeScreenProps = {
   logDir: string
 }
 
+export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
+  const theme = useTheme((s) => s.theme)
+  const setKeybindings = useFooter((s) => s.setKeybindings)
+  const resetKeybindings = useFooter((s) => s.resetKeybindings)
+  const parseProgress = useSession((s) => s.parseProgress)
+  const parseError = useSession((s) => s.parseError)
+  const startParse = useSession((s) => s.startParse)
+  const parsing = parseProgress !== null
+
+  const [mongoLogs, setMongoLogs] = useState<string[]>([])
+  const [dirLogs, setDirLogs] = useState<string[]>([])
+  const [activeSection, setActiveSection] = useState(0)
+  const [selectedIndexes, setSelectedIndexes] = useState<[number, number]>([0, 0])
+
+  useEffect(
+    function loadLogFileLists() {
+      let cancelled = false
+
+      async function load() {
+        const [mongo, dir] = await Promise.all([
+          listLogFiles(MONGODB_DEFAULT_LOG_DIR),
+          listLogFiles(logDir),
+        ])
+        if (cancelled) return
+        setMongoLogs(mongo)
+        setDirLogs(dir)
+        setSelectedIndexes([0, 0])
+      }
+
+      void load()
+
+      return function cancelLoadLogFileLists() {
+        cancelled = true
+      }
+    },
+    [logDir],
+  )
+
+  useEffect(
+    function syncWelcomeFooterKeybindings() {
+      setKeybindings(
+        parsing
+          ? [{ keys: '…', label: 'parsing' }]
+          : [
+              { keys: '↑/↓', label: 'navigate' },
+              { keys: 'tab', label: 'section' },
+              { keys: 'enter', label: 'analyze' },
+            ],
+      )
+      return function resetWelcomeFooterKeybindings() {
+        resetKeybindings()
+      }
+    },
+    [setKeybindings, resetKeybindings, parsing],
+  )
+
+  useEffect(
+    function clampSelectionToFiles() {
+      setSelectedIndexes(([mongoIndex, dirIndex]) => [
+        mongoLogs.length === 0 ? 0 : Math.min(mongoIndex, mongoLogs.length - 1),
+        dirLogs.length === 0 ? 0 : Math.min(dirIndex, dirLogs.length - 1),
+      ])
+    },
+    [mongoLogs.length, dirLogs.length],
+  )
+
+  useKeyboard(function welcomeScreenKeyHandler(key: KeyEvent) {
+    if (parsing) {
+      key.preventDefault()
+      return
+    }
+
+    if (key.name === 'return' || key.name === 'enter') {
+      const files = activeSection === 0 ? mongoLogs : dirLogs
+      const dir = activeSection === 0 ? MONGODB_DEFAULT_LOG_DIR : logDir
+      const selectedIndex = selectedIndexes[activeSection] ?? 0
+      const name = files[selectedIndex]
+      if (!name) return
+      key.preventDefault()
+      void startParse(join(dir, name))
+      return
+    }
+
+    if (key.name === 'tab') {
+      key.preventDefault()
+      setActiveSection((section) => (section === 0 ? 1 : 0))
+      return
+    }
+
+    if (key.name !== 'up' && key.name !== 'down') return
+
+    const files = activeSection === 0 ? mongoLogs : dirLogs
+    if (files.length === 0) return
+
+    key.preventDefault()
+    const delta = key.name === 'up' ? -1 : 1
+    setSelectedIndexes((indexes) => {
+      const next = [...indexes] as [number, number]
+      const current = next[activeSection] ?? 0
+      next[activeSection] = (current + delta + files.length) % files.length
+      return next
+    })
+  })
+
+  return (
+    <box
+      flexGrow={1}
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
+      paddingTop={1}
+      maxWidth={320}
+      gap={0}
+    >
+      <box
+        flexShrink={0}
+        flexDirection="row"
+        alignItems="center"
+        justifyContent="center"
+        marginBottom={2}
+      >
+        <text content={SCOPE} fg={theme.accent} />
+        <box flexDirection="column" alignItems="flex-start">
+          <ascii-font text="MongoScope" color={theme.text} />
+          <text content="a lens into your MongoDB" fg={theme.textMuted} />
+        </box>
+      </box>
+      <text content="Select a log file to analyze" fg={theme.textMuted} />
+      <box
+        flexDirection="column"
+        paddingLeft={1}
+        paddingRight={1}
+        width={MAX_SECTION_WIDTH}
+        maxWidth={MAX_SECTION_WIDTH}
+      >
+        <LogFileSection
+          sectionId="mongo"
+          title="MongoDB logs"
+          dir={MONGODB_DEFAULT_LOG_DIR}
+          files={mongoLogs}
+          active={activeSection === 0}
+          selectedIndex={selectedIndexes[0]}
+          onSelectIndex={(index) => {
+            if (parsing) return
+            setActiveSection(0)
+            setSelectedIndexes((indexes) => [index, indexes[1]])
+          }}
+        />
+        <LogFileSection
+          sectionId="log-dir"
+          title="Log directory"
+          dir={logDir}
+          files={dirLogs}
+          active={activeSection === 1}
+          selectedIndex={selectedIndexes[1]}
+          onSelectIndex={(index) => {
+            if (parsing) return
+            setActiveSection(1)
+            setSelectedIndexes((indexes) => [indexes[0], index])
+          }}
+        />
+        {parseProgress !== null ? (
+          <box flexDirection="column" marginTop={1} gap={0}>
+            <text fg={theme.textMuted}>
+              Parsing… {parseProgress}% {progressBar(parseProgress)}
+            </text>
+          </box>
+        ) : null}
+        {parseError ? (
+          <text fg={theme.error} marginTop={1}>
+            {parseError}
+          </text>
+        ) : null}
+      </box>
+    </box>
+  )
+}
+
+function progressBar(percent: number): string {
+  const filled = Math.round((percent / 100) * PROGRESS_BAR_WIDTH)
+  return `[${'█'.repeat(filled)}${'░'.repeat(PROGRESS_BAR_WIDTH - filled)}]`
+}
+
 type LogFileSectionProps = {
   sectionId: string
   title: string
@@ -31,7 +217,6 @@ type LogFileSectionProps = {
   files: string[]
   active: boolean
   selectedIndex: number
-  scrollRef: RefObject<ScrollBoxRenderable | null>
   onSelectIndex: (index: number) => void
 }
 
@@ -42,13 +227,23 @@ function LogFileSection({
   files,
   active,
   selectedIndex,
-  scrollRef,
   onSelectIndex,
 }: LogFileSectionProps) {
   const theme = useTheme((s) => s.theme)
   const highlightFg = selectedForeground(theme)
   const needsScroll = files.length > MAX_VISIBLE_FILES
   const listHeight = Math.min(Math.max(files.length, 1), MAX_VISIBLE_FILES)
+  const scrollRef = useRef<ScrollBoxRenderable | null>(null)
+
+  useEffect(
+    function scrollHighlightedFileIntoView() {
+      if (!active || !needsScroll) return
+      const scroll = scrollRef.current
+      if (!scroll) return
+      scroll.scrollChildIntoView(`${sectionId}-file-${selectedIndex}`)
+    },
+    [active, needsScroll, sectionId, selectedIndex],
+  )
 
   const rows =
     files.length > 0 ? (
@@ -115,162 +310,6 @@ function LogFileSection({
           {rows}
         </box>
       )}
-    </box>
-  )
-}
-
-export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
-  const theme = useTheme((s) => s.theme)
-  const setKeybindings = useFooter((s) => s.setKeybindings)
-  const resetKeybindings = useFooter((s) => s.resetKeybindings)
-
-  const [mongoLogs, setMongoLogs] = useState<string[]>([])
-  const [dirLogs, setDirLogs] = useState<string[]>([])
-  const [activeSection, setActiveSection] = useState(0)
-  const [selectedIndexes, setSelectedIndexes] = useState<[number, number]>([0, 0])
-
-  const mongoScrollRef = useRef<ScrollBoxRenderable | null>(null)
-  const dirScrollRef = useRef<ScrollBoxRenderable | null>(null)
-
-  useEffect(
-    function loadLogFileLists() {
-      let cancelled = false
-
-      async function load() {
-        const [mongo, dir] = await Promise.all([
-          listLogFiles(MONGODB_DEFAULT_LOG_DIR),
-          listLogFiles(logDir),
-        ])
-        if (cancelled) return
-        setMongoLogs(mongo)
-        setDirLogs(dir)
-        setSelectedIndexes([0, 0])
-      }
-
-      void load()
-
-      return function cancelLoadLogFileLists() {
-        cancelled = true
-      }
-    },
-    [logDir],
-  )
-
-  useEffect(
-    function syncWelcomeFooterKeybindings() {
-      setKeybindings([
-        { keys: '↑/↓', label: 'navigate' },
-        { keys: 'tab', label: 'section' },
-      ])
-      return function resetWelcomeFooterKeybindings() {
-        resetKeybindings()
-      }
-    },
-    [setKeybindings, resetKeybindings],
-  )
-
-  useEffect(
-    function clampSelectionToFiles() {
-      setSelectedIndexes(([mongoIndex, dirIndex]) => [
-        mongoLogs.length === 0 ? 0 : Math.min(mongoIndex, mongoLogs.length - 1),
-        dirLogs.length === 0 ? 0 : Math.min(dirIndex, dirLogs.length - 1),
-      ])
-    },
-    [mongoLogs.length, dirLogs.length],
-  )
-
-  useEffect(
-    function scrollHighlightedFileIntoView() {
-      const files = activeSection === 0 ? mongoLogs : dirLogs
-      if (files.length <= MAX_VISIBLE_FILES) return
-      const scroll = activeSection === 0 ? mongoScrollRef.current : dirScrollRef.current
-      if (!scroll) return
-      const sectionId = activeSection === 0 ? 'mongo' : 'log-dir'
-      scroll.scrollChildIntoView(`${sectionId}-file-${selectedIndexes[activeSection]}`)
-    },
-    [activeSection, selectedIndexes, mongoLogs.length, dirLogs.length],
-  )
-
-  useKeyboard(function welcomeScreenKeyHandler(key: KeyEvent) {
-    if (key.name === 'tab') {
-      key.preventDefault()
-      setActiveSection((section) => (section === 0 ? 1 : 0))
-      return
-    }
-
-    if (key.name !== 'up' && key.name !== 'down') return
-
-    const files = activeSection === 0 ? mongoLogs : dirLogs
-    if (files.length === 0) return
-
-    key.preventDefault()
-    const delta = key.name === 'up' ? -1 : 1
-    setSelectedIndexes((indexes) => {
-      const next = [...indexes] as [number, number]
-      const current = next[activeSection] ?? 0
-      next[activeSection] = (current + delta + files.length) % files.length
-      return next
-    })
-  })
-
-  return (
-    <box
-      flexGrow={1}
-      flexDirection="column"
-      justifyContent="center"
-      alignItems="center"
-      paddingTop={1}
-      maxWidth={320}
-      gap={0}
-    >
-      <box
-        flexShrink={0}
-        flexDirection="row"
-        alignItems="center"
-        justifyContent="center"
-        marginBottom={2}
-      >
-        <text content={SCOPE} fg={theme.accent} />
-        <box flexDirection="column" alignItems="flex-start">
-          <ascii-font text="MongoScope" color={theme.text} />
-          <text content="a lens into your MongoDB" fg={theme.textMuted} />
-        </box>
-      </box>
-      <text content="Select a log file to analyze" fg={theme.textMuted} />
-      <box
-        flexDirection="column"
-        paddingLeft={1}
-        paddingRight={1}
-        width={MAX_SECTION_WIDTH}
-        maxWidth={MAX_SECTION_WIDTH}
-      >
-        <LogFileSection
-          sectionId="mongo"
-          title="MongoDB logs"
-          dir={MONGODB_DEFAULT_LOG_DIR}
-          files={mongoLogs}
-          active={activeSection === 0}
-          selectedIndex={selectedIndexes[0]}
-          scrollRef={mongoScrollRef}
-          onSelectIndex={(index) => {
-            setActiveSection(0)
-            setSelectedIndexes((indexes) => [index, indexes[1]])
-          }}
-        />
-        <LogFileSection
-          sectionId="log-dir"
-          title="Log directory"
-          dir={logDir}
-          files={dirLogs}
-          active={activeSection === 1}
-          selectedIndex={selectedIndexes[1]}
-          scrollRef={dirScrollRef}
-          onSelectIndex={(index) => {
-            setActiveSection(1)
-            setSelectedIndexes((indexes) => [indexes[0], index])
-          }}
-        />
-      </box>
     </box>
   )
 }
