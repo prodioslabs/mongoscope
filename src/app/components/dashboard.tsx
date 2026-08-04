@@ -3,6 +3,7 @@ import { match } from 'ts-pattern'
 import { useFooter } from '../stores/footer'
 import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
+import { SlowQueriesTab } from './slow-queries/slow-queries-tab'
 import { TabBar } from './tab-bar'
 
 export function Dashboard() {
@@ -25,6 +26,11 @@ export function Dashboard() {
 
   useEffect(
     function syncDashboardFooterStatus() {
+      // Slow Queries owns the mid-footer status while that tab is active.
+      if (activeTab === 'slow-queries') {
+        return
+      }
+
       if (logPath == null || parseDurationMs == null) {
         setStatus(null)
         return function clearDashboardFooterStatus() {
@@ -37,11 +43,11 @@ export function Dashboard() {
         setStatus(null)
       }
     },
-    [logPath, parseDurationMs, setStatus],
+    [activeTab, logPath, parseDurationMs, setStatus],
   )
 
   const content = match(activeTab)
-    .with('slow-queries', () => <TabPlaceholder name="Slow Queries" />)
+    .with('slow-queries', () => <SlowQueriesTab />)
     .with('live-ops', () => <TabPlaceholder name="Live Ops" />)
     .with('timeline', () => <TabPlaceholder name="Timeline" />)
     .with('replication', () => <TabPlaceholder name="Replication" />)
@@ -50,7 +56,7 @@ export function Dashboard() {
     .exhaustive()
 
   return (
-    <box flexGrow={1} flexDirection="column" width="100%">
+    <box flexGrow={1} flexShrink={1} flexDirection="column" width="100%">
       <TabBar />
       {content}
     </box>
