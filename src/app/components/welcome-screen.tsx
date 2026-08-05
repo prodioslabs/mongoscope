@@ -1,8 +1,9 @@
-import { RGBA, ScrollBoxRenderable, TextAttributes, type KeyEvent } from '@opentui/core'
-import { useKeyboard } from '@opentui/react'
+import { RGBA, ScrollBoxRenderable, TextAttributes } from '@opentui/core'
+import { useBindings } from '@opentui/keymap/react'
 import { join } from 'node:path'
 import { useEffect, useRef, useState } from 'react'
 import { listLogFiles, MONGODB_DEFAULT_LOG_DIR } from '../lib/list-log-files'
+import { type AppKeymapMode } from '../lib/keymap-mode'
 import { type FooterKeybinding } from '../stores/footer'
 import { useFooterKeybindings } from '../stores/footer-keybindings'
 import { useSession } from '../stores/session'
@@ -84,43 +85,81 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
     [mongoLogs.length, dirLogs.length],
   )
 
-  useKeyboard(function welcomeScreenKeyHandler(key: KeyEvent) {
-    if (parsing) {
-      key.preventDefault()
-      return
-    }
+  const activeSectionRef = useRef(activeSection)
+  const selectedIndexesRef = useRef(selectedIndexes)
+  const mongoLogsRef = useRef(mongoLogs)
+  const dirLogsRef = useRef(dirLogs)
+  const logDirRef = useRef(logDir)
+  const startParseRef = useRef(startParse)
 
-    if (key.name === 'return' || key.name === 'enter') {
-      const files = activeSection === 0 ? mongoLogs : dirLogs
-      const dir = activeSection === 0 ? MONGODB_DEFAULT_LOG_DIR : logDir
-      const selectedIndex = selectedIndexes[activeSection] ?? 0
-      const name = files[selectedIndex]
-      if (!name) return
-      key.preventDefault()
-      void startParse(join(dir, name))
-      return
-    }
+  activeSectionRef.current = activeSection
+  selectedIndexesRef.current = selectedIndexes
+  mongoLogsRef.current = mongoLogs
+  dirLogsRef.current = dirLogs
+  logDirRef.current = logDir
+  startParseRef.current = startParse
 
-    if (key.name === 'tab') {
-      key.preventDefault()
-      setActiveSection((section) => (section === 0 ? 1 : 0))
-      return
-    }
+  useBindings(
+    function createWelcomeScreenLayer() {
+      function moveSelection(delta: number) {
+        const section = activeSectionRef.current
+        const files = section === 0 ? mongoLogsRef.current : dirLogsRef.current
+        if (files.length === 0) return
 
-    if (key.name !== 'up' && key.name !== 'down') return
+        setSelectedIndexes((indexes) => {
+          const next = [...indexes] as [number, number]
+          const current = next[section] ?? 0
+          next[section] = (current + delta + files.length) % files.length
+          return next
+        })
+      }
 
-    const files = activeSection === 0 ? mongoLogs : dirLogs
-    if (files.length === 0) return
-
-    key.preventDefault()
-    const delta = key.name === 'up' ? -1 : 1
-    setSelectedIndexes((indexes) => {
-      const next = [...indexes] as [number, number]
-      const current = next[activeSection] ?? 0
-      next[activeSection] = (current + delta + files.length) % files.length
-      return next
-    })
-  })
+      return {
+        appMode: 'base' satisfies AppKeymapMode,
+        enabled: !parsing,
+        commands: [
+          {
+            name: 'welcome.analyze',
+            run() {
+              const section = activeSectionRef.current
+              const files = section === 0 ? mongoLogsRef.current : dirLogsRef.current
+              const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
+              const selectedIndex = selectedIndexesRef.current[section] ?? 0
+              const name = files[selectedIndex]
+              if (!name) return
+              void startParseRef.current(join(dir, name))
+            },
+          },
+          {
+            name: 'welcome.toggle-section',
+            run() {
+              setActiveSection((section) => (section === 0 ? 1 : 0))
+            },
+          },
+          {
+            name: 'welcome.move-up',
+            run() {
+              moveSelection(-1)
+            },
+          },
+          {
+            name: 'welcome.move-down',
+            run() {
+              moveSelection(1)
+            },
+          },
+        ],
+        bindings: [
+          { key: 'return', cmd: 'welcome.analyze' },
+          { key: 'enter', cmd: 'welcome.analyze' },
+          { key: 'tab', cmd: 'welcome.toggle-section' },
+          { key: 'up', cmd: 'welcome.move-up' },
+          { key: 'down', cmd: 'welcome.move-down' },
+        ],
+      }
+    },
+    [parsing],
+  )
 
   return (
     <box

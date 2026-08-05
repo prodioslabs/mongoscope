@@ -1,6 +1,8 @@
-import { RGBA, type KeyEvent } from '@opentui/core'
-import { useKeyboard, useRenderer, useTerminalDimensions } from '@opentui/react'
+import { RGBA } from '@opentui/core'
+import { useBindings } from '@opentui/keymap/react'
+import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useRef, type ReactNode } from 'react'
+import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { useTheme } from '../../stores/theme'
 
 type DialogProps = {
@@ -18,12 +20,24 @@ export function Dialog({ open, onClose, children, width: widthProp }: DialogProp
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
-  useKeyboard(function dialogKeyHandler(key: KeyEvent) {
-    if (!open) return
-    if (key.name !== 'escape') return
-    key.preventDefault()
-    onCloseRef.current?.()
-  })
+  useBindings(
+    function createDialogLayer() {
+      return {
+        appMode: 'palette' satisfies AppKeymapMode,
+        enabled: open,
+        commands: [
+          {
+            name: 'dialog.close',
+            run() {
+              onCloseRef.current?.()
+            },
+          },
+        ],
+        bindings: [{ key: 'escape', cmd: 'dialog.close' }],
+      }
+    },
+    [open],
+  )
 
   if (!open) return null
 

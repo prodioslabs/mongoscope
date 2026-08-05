@@ -1,13 +1,9 @@
-import {
-  InputRenderable,
-  RGBA,
-  ScrollBoxRenderable,
-  TextAttributes,
-  type KeyEvent,
-} from '@opentui/core'
-import { useKeyboard, useRenderer, useTerminalDimensions } from '@opentui/react'
+import { InputRenderable, RGBA, ScrollBoxRenderable, TextAttributes } from '@opentui/core'
+import { useBindings } from '@opentui/keymap/react'
+import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { matchSorter } from 'match-sorter'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { type AppKeymapMode } from '../lib/keymap-mode'
 import { useFooter, type FooterKeybinding } from '../stores/footer'
 import { useTheme } from '../stores/theme'
 import { selectedForeground } from '../theme'
@@ -300,31 +296,46 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     runCommand(option.value)
   }
 
-  useKeyboard(function commandPaletteKeyHandler(key: KeyEvent) {
-    if (!open) return
+  const submitCurrentRef = useRef(submitCurrent)
+  submitCurrentRef.current = submitCurrent
 
-    const items = flatRef.current
-    if (items.length === 0) return
-
-    if (key.name === 'up') {
-      key.preventDefault()
-      setInputMode('keyboard')
-      setSelected((index) => (index - 1 + items.length) % items.length)
-      return
+  useBindings(function createCommandPaletteLayer() {
+    return {
+      appMode: 'palette' satisfies AppKeymapMode,
+      commands: [
+        {
+          name: 'palette.navigate-up',
+          run() {
+            const items = flatRef.current
+            if (items.length === 0) return
+            setInputMode('keyboard')
+            setSelected((index) => (index - 1 + items.length) % items.length)
+          },
+        },
+        {
+          name: 'palette.navigate-down',
+          run() {
+            const items = flatRef.current
+            if (items.length === 0) return
+            setInputMode('keyboard')
+            setSelected((index) => (index + 1) % items.length)
+          },
+        },
+        {
+          name: 'palette.submit',
+          run() {
+            submitCurrentRef.current()
+          },
+        },
+      ],
+      bindings: [
+        { key: 'up', cmd: 'palette.navigate-up' },
+        { key: 'down', cmd: 'palette.navigate-down' },
+        { key: 'return', cmd: 'palette.submit' },
+        { key: 'enter', cmd: 'palette.submit' },
+      ],
     }
-
-    if (key.name === 'down') {
-      key.preventDefault()
-      setInputMode('keyboard')
-      setSelected((index) => (index + 1) % items.length)
-      return
-    }
-
-    if (key.name === 'return' || key.name === 'enter') {
-      key.preventDefault()
-      submitCurrent()
-    }
-  })
+  }, [])
 
   return (
     <Dialog open={open} onClose={handleClose}>
