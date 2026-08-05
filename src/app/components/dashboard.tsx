@@ -1,6 +1,6 @@
 import { match } from 'ts-pattern'
 import { type FooterKeybinding } from '../stores/footer'
-import { FooterKeybindingScope } from '../stores/footer-keybindings'
+import { FooterKeybindingScope } from './footer-keybindings'
 import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
 import { SlowQueriesTab } from './slow-queries/slow-queries-tab'

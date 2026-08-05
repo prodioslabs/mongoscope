@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useId, type ReactNode } from 'react'
-import { useFooter, type FooterKeybinding } from './footer'
+import { useFooter, type FooterKeybinding } from '../stores/footer'
 
 const FooterPathContext = createContext('')
 
@@ -9,11 +9,7 @@ type FooterKeybindingScopeProps = {
   children?: ReactNode
 }
 
-export function FooterKeybindingScope({
-  bindings,
-  status,
-  children,
-}: FooterKeybindingScopeProps) {
+export function FooterKeybindingScope({ bindings, status, children }: FooterKeybindingScopeProps) {
   const path = useFooterPath()
 
   return (
