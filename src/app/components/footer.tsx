@@ -57,12 +57,13 @@ export function Footer() {
           wrapMode="none"
           truncate
         />
-      ) : null}
+      ) : (
+        <text flexGrow={1} />
+      )}
       <box
         flexDirection="row"
         gap={2}
         justifyContent="flex-end"
-        // flexGrow={status ? 0 : 1}
         flexGrow={1}
         flexShrink={1}
         maxWidth={SCOPE_MAX_WIDTH}
