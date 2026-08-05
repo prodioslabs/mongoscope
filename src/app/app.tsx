@@ -72,7 +72,7 @@ export function App({ options }: AppProps) {
     .exhaustive()
 
   return (
-    <box width="100%" height="100%" flexDirection="column">
+    <box flexGrow={1} flexDirection="column">
       {body}
       <Footer />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />

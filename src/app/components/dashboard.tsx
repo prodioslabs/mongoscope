@@ -29,7 +29,7 @@ export function Dashboard() {
 
   return (
     <FooterKeybindingScope bindings={DASHBOARD_KEYBINDINGS} status={status}>
-      <box flexGrow={1} flexShrink={1} flexDirection="column" width="100%">
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
         <TabBar />
         {content}
       </box>

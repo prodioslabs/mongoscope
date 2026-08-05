@@ -17,8 +17,6 @@ export function TabBar() {
       flexShrink={0}
       flexDirection="row"
       gap={1}
-      paddingLeft={1}
-      paddingRight={1}
       backgroundColor={theme.backgroundPanel}
     >
       {TABS.map((tab) => {

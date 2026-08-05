@@ -31,11 +31,16 @@ import {
 
 type SortBy = 'count' | 'avgMs' | 'plan'
 
-/** Rows reserved for tab bar, paddings, footer, and table chrome. */
-const CHROME_ROWS = 7
+/**
+ * Non-data lines: tab bar, footer, header content line, and outer/header border
+ * overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
+ */
+const CHROME_ROWS = 5
 
 /** Approximate height of one data row (content line + inner border). */
 const ROW_STRIDE = 2
+
+const COLUMN_COUNT = 8
 
 const SLOW_QUERIES_KEYBINDINGS: FooterKeybinding[] = [
   { keys: '↑↓/jk', label: 'navigate' },
@@ -130,7 +135,8 @@ export function SlowQueriesTab() {
 
     key.preventDefault()
     const prev = selectedIndexRef.current
-    const next = (prev + delta + length) % length
+    const next = Math.max(0, Math.min(length - 1, prev + delta))
+    if (next === prev) return
     setSelectedIndex(next)
 
     const cap = capacityRef.current
@@ -139,48 +145,35 @@ export function SlowQueriesTab() {
       setScrollOffset(next)
     } else if (next >= offset + cap) {
       setScrollOffset(next - cap + 1)
-    } else if (prev === length - 1 && next === 0) {
-      setScrollOffset(0)
-    } else if (prev === 0 && next === length - 1) {
-      setScrollOffset(Math.max(0, length - cap))
     }
   })
 
   const visible = sortedPatterns.slice(scrollOffset, scrollOffset + capacity)
   const content =
     sortedPatterns.length > 0
-      ? buildTableContent(visible, selectedIndex - scrollOffset, theme)
+      ? buildTableContent(visible, selectedIndex - scrollOffset, theme, capacity)
       : null
 
   return (
-    <box
-      flexGrow={1}
-      flexShrink={1}
-      flexDirection="column"
-      width="100%"
-      paddingLeft={1}
-      paddingRight={1}
-      paddingTop={1}
-    >
+    <box flexGrow={1} flexShrink={1} flexDirection="column">
       {content == null ? (
-        <box flexGrow={1} flexShrink={1} paddingTop={1}>
+        <box flexGrow={1} flexShrink={1}>
           <text content="no slow queries" fg={theme.textMuted} />
         </box>
       ) : (
-        <box flexGrow={1} flexShrink={1} width="100%">
-          <textTable
-            content={content}
-            width="100%"
-            border
-            outerBorder
-            borderStyle="single"
-            borderColor={theme.border}
-            columnWidthMode="content"
-            wrapMode="none"
-            cellPaddingX={0}
-            selectable={false}
-          />
-        </box>
+        <textTable
+          content={content}
+          flexGrow={1}
+          border
+          outerBorder
+          borderStyle="single"
+          borderColor={theme.border}
+          wrapMode="none"
+          cellPaddingX={0}
+          selectable={false}
+          height="100%"
+          width="100%"
+        />
       )}
     </box>
   )
@@ -208,6 +201,7 @@ function buildTableContent(
   patterns: QueryPattern[],
   selectedIndex: number,
   theme: Theme,
+  rowCapacity: number,
 ): TextTableContent {
   const header: TextChunk[][] = [
     headerCell('NAMESPACE', theme),
@@ -233,7 +227,15 @@ function buildTableContent(
     rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme))
   }
 
+  while (rows.length - 1 < rowCapacity) {
+    rows.push(emptyRow())
+  }
+
   return rows
+}
+
+function emptyRow(): TextChunk[][] {
+  return Array.from({ length: COLUMN_COUNT }, () => [])
 }
 
 function buildPatternRow(
@@ -252,7 +254,7 @@ function buildPatternRow(
     selected
       ? cell(namespace, selectedForeground(theme, theme.primary), theme.primary)
       : cell(pattern.namespace, theme.info),
-    cell(pattern.op, theme.textMuted),
+    cell(truncateShape(pattern.op), theme.textMuted),
     cell(truncateShape(pattern.shape), theme.textMuted),
     cell(formatCount(pattern.count), theme.textMuted),
     cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),

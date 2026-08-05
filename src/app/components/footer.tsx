@@ -42,7 +42,6 @@ export function Footer() {
       paddingLeft={1}
       paddingRight={1}
       paddingBottom={0}
-      justifyContent="space-between"
       flexDirection="row"
       gap={2}
       backgroundColor={theme.backgroundPanel}
@@ -63,7 +62,8 @@ export function Footer() {
         flexDirection="row"
         gap={2}
         justifyContent="flex-end"
-        flexGrow={status ? 0 : 1}
+        // flexGrow={status ? 0 : 1}
+        flexGrow={1}
         flexShrink={1}
         maxWidth={SCOPE_MAX_WIDTH}
         overflow="hidden"
