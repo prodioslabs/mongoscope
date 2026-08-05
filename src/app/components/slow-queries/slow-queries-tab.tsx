@@ -1,19 +1,13 @@
-import {
-  bg,
-  bold,
-  fg,
-  type KeyEvent,
-  type RGBA,
-  type TextChunk,
-  type TextTableContent,
-} from '@opentui/core'
-import { useKeyboard, useTerminalDimensions } from '@opentui/react'
+import { bg, bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
+import { useBindings } from '@opentui/keymap/react'
+import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { type FooterKeybinding } from '../../stores/footer'
 import { useFooterKeybindings, useFooterStatus } from '../../stores/footer-keybindings'
+import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
-import { selectedForeground, type Theme } from '../../theme'
+import { type Theme } from '../../theme'
 import '../../lib/opentui-text-table'
 import type { QueryPattern } from '../../../query-patterns'
 import {
@@ -25,7 +19,7 @@ import {
   planSeverity,
   planSortRank,
   sparkline,
-  truncateShape,
+  truncateCell,
   type Severity,
 } from './format'
 
@@ -116,37 +110,79 @@ export function SlowQueriesTab() {
     [sortedPatterns.length],
   )
 
-  useKeyboard(function slowQueriesKeyHandler(key: KeyEvent) {
-    const length = sortedLengthRef.current
-    if (length === 0) return
+  useBindings(function createSlowQueriesLayer() {
+    function moveSelection(delta: number) {
+      const length = sortedLengthRef.current
+      if (length === 0) return
 
-    if (key.name === 'c' || key.name === 'a' || key.name === 'p') {
-      key.preventDefault()
-      const next: SortBy = key.name === 'c' ? 'count' : key.name === 'a' ? 'avgMs' : 'plan'
-      setSortBy(next)
-      setSelectedIndex(0)
-      setScrollOffset(0)
-      return
+      const prev = selectedIndexRef.current
+      const next = Math.max(0, Math.min(length - 1, prev + delta))
+      if (next === prev) return
+      setSelectedIndex(next)
+
+      const cap = capacityRef.current
+      const offset = scrollOffsetRef.current
+      if (next < offset) {
+        setScrollOffset(next)
+      } else if (next >= offset + cap) {
+        setScrollOffset(next - cap + 1)
+      }
     }
 
-    const delta =
-      key.name === 'up' || key.name === 'k' ? -1 : key.name === 'down' || key.name === 'j' ? 1 : 0
-    if (delta === 0) return
-
-    key.preventDefault()
-    const prev = selectedIndexRef.current
-    const next = Math.max(0, Math.min(length - 1, prev + delta))
-    if (next === prev) return
-    setSelectedIndex(next)
-
-    const cap = capacityRef.current
-    const offset = scrollOffsetRef.current
-    if (next < offset) {
-      setScrollOffset(next)
-    } else if (next >= offset + cap) {
-      setScrollOffset(next - cap + 1)
+    return {
+      appMode: 'base' satisfies AppKeymapMode,
+      commands: [
+        {
+          name: 'slow-queries.sort-count',
+          run() {
+            if (sortedLengthRef.current === 0) return
+            setSortBy('count')
+            setSelectedIndex(0)
+            setScrollOffset(0)
+          },
+        },
+        {
+          name: 'slow-queries.sort-avg',
+          run() {
+            if (sortedLengthRef.current === 0) return
+            setSortBy('avgMs')
+            setSelectedIndex(0)
+            setScrollOffset(0)
+          },
+        },
+        {
+          name: 'slow-queries.sort-plan',
+          run() {
+            if (sortedLengthRef.current === 0) return
+            setSortBy('plan')
+            setSelectedIndex(0)
+            setScrollOffset(0)
+          },
+        },
+        {
+          name: 'slow-queries.move-up',
+          run() {
+            moveSelection(-1)
+          },
+        },
+        {
+          name: 'slow-queries.move-down',
+          run() {
+            moveSelection(1)
+          },
+        },
+      ],
+      bindings: [
+        { key: 'c', cmd: 'slow-queries.sort-count' },
+        { key: 'a', cmd: 'slow-queries.sort-avg' },
+        { key: 'p', cmd: 'slow-queries.sort-plan' },
+        { key: 'up', cmd: 'slow-queries.move-up' },
+        { key: 'k', cmd: 'slow-queries.move-up' },
+        { key: 'down', cmd: 'slow-queries.move-down' },
+        { key: 'j', cmd: 'slow-queries.move-down' },
+      ],
     }
-  })
+  }, [])
 
   const visible = sortedPatterns.slice(scrollOffset, scrollOffset + capacity)
   const content =
@@ -206,7 +242,6 @@ function buildTableContent(
   const header: TextChunk[][] = [
     headerCell('NAMESPACE', theme),
     headerCell('OP', theme),
-    headerCell('SHAPE', theme),
     headerCell('COUNT', theme),
     headerCell('AVG MS', theme),
     headerCell('EXAMINED/RET', theme),
@@ -248,14 +283,9 @@ function buildPatternRow(
   const examSeverity = examinedSeverity(pattern.avgDocsExamined, pattern.avgDocsReturned)
   const pSeverity = planSeverity(pattern.plan)
 
-  const namespace = padEnd(pattern.namespace, namespaceWidth)
-
   return [
-    selected
-      ? cell(namespace, selectedForeground(theme, theme.primary), theme.primary)
-      : cell(pattern.namespace, theme.info),
-    cell(truncateShape(pattern.op), theme.textMuted),
-    cell(truncateShape(pattern.shape), theme.textMuted),
+    selected ? cell(`${pattern.namespace} ●`, theme.primary) : cell(pattern.namespace, theme.info),
+    cell(truncateCell(pattern.op), theme.textMuted),
     cell(formatCount(pattern.count), theme.textMuted),
     cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),
     cell(
@@ -265,11 +295,6 @@ function buildPatternRow(
     cell(pattern.plan, severityColor(theme, pSeverity)),
     cell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
   ]
-}
-
-function padEnd(text: string, width: number): string {
-  if (text.length >= width) return text
-  return text + ' '.repeat(width - text.length)
 }
 
 function headerCell(label: string, theme: Theme): TextChunk[] {

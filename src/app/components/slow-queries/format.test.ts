@@ -7,7 +7,7 @@ import {
   formatWindowLabel,
   planSeverity,
   sparkline,
-  truncateShape,
+  truncateCell,
 } from './format'
 
 describe('formatCount', () => {
@@ -25,12 +25,12 @@ describe('formatExaminedRet', () => {
 
 describe('truncateShape', () => {
   it('leaves short shapes unchanged', () => {
-    expect(truncateShape('{status:1}')).toBe('{status:1}')
+    expect(truncateCell('{status:1}')).toBe('{status:1}')
   })
 
   it('truncates long shapes with an ellipsis', () => {
     const shape = `{${'a,'.repeat(40)}}`
-    const truncated = truncateShape(shape, 20)
+    const truncated = truncateCell(shape, 20)
     expect(truncated).toHaveLength(20)
     expect(truncated.endsWith('…')).toBe(true)
   })

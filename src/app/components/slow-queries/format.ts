@@ -14,9 +14,9 @@ export function formatExaminedRet(examined: number, returned: number): string {
 }
 
 /** Max characters shown for the SHAPE column before truncating with an ellipsis. */
-export const SHAPE_MAX_LEN = 40
+export const CELL_MAX_LEN = 20
 
-export function truncateShape(shape: string, maxLen: number = SHAPE_MAX_LEN): string {
+export function truncateCell(shape: string, maxLen: number = CELL_MAX_LEN): string {
   if (shape.length <= maxLen) return shape
   if (maxLen <= 1) return '…'
   return `${shape.slice(0, maxLen - 1)}…`
