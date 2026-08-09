@@ -18,7 +18,7 @@ const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 const WELCOME_PARSING_KEYBINDINGS: FooterKeybinding[] = [{ keys: '…', label: 'parsing' }]
 
 const WELCOME_IDLE_KEYBINDINGS: FooterKeybinding[] = [
-  { keys: '↑/↓', label: 'navigate' },
+  { keys: '↑↓/jk', label: 'navigate' },
   { keys: 'tab', label: 'section' },
   { keys: 'enter', label: 'analyze' },
 ]
@@ -101,17 +101,35 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
 
   useBindings(
     function createWelcomeScreenLayer() {
-      function moveSelection(delta: number) {
-        const section = activeSectionRef.current
-        const files = section === 0 ? mongoLogsRef.current : dirLogsRef.current
-        if (files.length === 0) return
+      function filesForSection(section: number) {
+        return section === 0 ? mongoLogsRef.current : dirLogsRef.current
+      }
 
+      function setIndexInSection(section: number, index: number) {
         setSelectedIndexes((indexes) => {
+          if (indexes[section] === index) return indexes
           const next = [...indexes] as [number, number]
-          const current = next[section] ?? 0
-          next[section] = (current + delta + files.length) % files.length
+          next[section] = index
           return next
         })
+      }
+
+      function moveSelection(delta: number) {
+        const section = activeSectionRef.current
+        const files = filesForSection(section)
+        const nextIndex = (selectedIndexesRef.current[section] ?? 0) + delta
+
+        if (files.length > 0 && nextIndex >= 0 && nextIndex < files.length) {
+          setIndexInSection(section, nextIndex)
+          return
+        }
+
+        const other = 1 - section
+        const otherFiles = filesForSection(other)
+        setActiveSection(other)
+        if (otherFiles.length > 0) {
+          setIndexInSection(other, delta < 0 ? otherFiles.length - 1 : 0)
+        }
       }
 
       return {
@@ -122,18 +140,17 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
             name: 'welcome.analyze',
             run() {
               const section = activeSectionRef.current
-              const files = section === 0 ? mongoLogsRef.current : dirLogsRef.current
-              const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
-              const selectedIndex = selectedIndexesRef.current[section] ?? 0
-              const name = files[selectedIndex]
+              const files = filesForSection(section)
+              const name = files[selectedIndexesRef.current[section] ?? 0]
               if (!name) return
+              const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
               void startParseRef.current(join(dir, name))
             },
           },
           {
             name: 'welcome.toggle-section',
             run() {
-              setActiveSection((section) => (section === 0 ? 1 : 0))
+              setActiveSection((section) => 1 - section)
             },
           },
           {
@@ -154,7 +171,9 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
           { key: 'enter', cmd: 'welcome.analyze' },
           { key: 'tab', cmd: 'welcome.toggle-section' },
           { key: 'up', cmd: 'welcome.move-up' },
+          { key: 'k', cmd: 'welcome.move-up' },
           { key: 'down', cmd: 'welcome.move-down' },
+          { key: 'j', cmd: 'welcome.move-down' },
         ],
       }
     },
@@ -321,6 +340,7 @@ function LogFileSection({
       {needsScroll ? (
         <scrollbox
           ref={scrollRef}
+          focusable={false}
           height={MAX_VISIBLE_FILES}
           backgroundColor={theme.backgroundElement}
           rootOptions={{ backgroundColor: theme.backgroundElement }}
