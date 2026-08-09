@@ -43,20 +43,35 @@ function slowLine(opts: {
   planSummary?: string
   id?: number
   msg?: string
+  appName?: string
+  remote?: string
+  keysExamined?: number
+  numYields?: number
+  reslen?: number
+  cpuNanos?: number
 }): string {
   const id = opts.id ?? SLOW_QUERY_ID
   const msg = opts.msg ?? 'Slow query'
   const attr = {
     type: 'command',
     ns: opts.ns,
+    appName: opts.appName,
+    remote: opts.remote,
+    protocol: 'op_msg',
     command: {
       find: opts.ns.split('.')[1] ?? 'col',
       filter: opts.filter,
       $db: opts.ns.split('.')[0] ?? 'db',
+      lsid: { id: { $uuid: '00000000-0000-0000-0000-000000000000' } },
+      $clusterTime: { clusterTime: { $timestamp: { t: 1, i: 1 } } },
     },
     planSummary: opts.planSummary ?? 'COLLSCAN',
     docsExamined: opts.docsExamined ?? 0,
+    keysExamined: opts.keysExamined,
     nreturned: opts.nreturned ?? 0,
+    numYields: opts.numYields,
+    reslen: opts.reslen,
+    cpuNanos: opts.cpuNanos,
     durationMillis: opts.durationMillis,
   }
   return JSON.stringify({
@@ -151,6 +166,12 @@ describe('buildQueryPatternStore', () => {
         durationMillis: 842,
         docsExamined: 96400,
         nreturned: 40,
+        appName: 'api',
+        remote: '10.0.0.2:51234',
+        keysExamined: 0,
+        numYields: 3,
+        reslen: 128,
+        cpuNanos: 12_500_000,
       }),
     ].join('\n')
 
@@ -161,6 +182,7 @@ describe('buildQueryPatternStore', () => {
 
     const explain = await getPatternExplain(store, patterns, 0)
     expect(explain.namespace).toBe('govdb.applications')
+    expect(explain.op).toBe('find')
     expect(explain.plan).toBe('COLLSCAN')
     expect(explain.docsExamined).toBe(96400)
     expect(explain.nReturned).toBe(40)
@@ -169,6 +191,18 @@ describe('buildQueryPatternStore', () => {
     expect(explain.stageDetail).toContain('COLLSCAN')
     expect(explain.suggestedIndex).not.toBeNull()
     expect(explain.suggestedIndex!.command).toBe('db.applications.createIndex({ status: 1 })')
+    expect(explain.appName).toBe('api')
+    expect(explain.remote).toBe('10.0.0.2:51234')
+    expect(explain.protocol).toBe('op_msg')
+    expect(explain.ctx).toBe('conn1')
+    expect(explain.keysExamined).toBe(0)
+    expect(explain.numYields).toBe(3)
+    expect(explain.reslen).toBe(128)
+    expect(explain.cpuNanos).toBe(12_500_000)
+    expect(explain.commandDisplay).toContain('"find"')
+    expect(explain.commandDisplay).not.toContain('lsid')
+    expect(explain.commandDisplay).not.toContain('$clusterTime')
+    expect(explain.rawDisplay).toContain('Slow query')
   })
 
   it('returns empty store when no slow queries', async () => {
