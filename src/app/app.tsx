@@ -1,6 +1,6 @@
-import { useBindings, useKeymap } from '@opentui/keymap/react'
+import { useBindings } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { match } from 'ts-pattern'
 import { CommandPalette } from './components/command-palette'
 import { Dashboard } from './components/dashboard'
@@ -27,7 +27,6 @@ type AppProps = {
 
 export function App({ options }: AppProps) {
   const renderer = useRenderer()
-  const keymap = useKeymap()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const screen = useSession((s) => s.screen)
@@ -48,13 +47,6 @@ export function App({ options }: AppProps) {
   setRef.current = set
   setTabRef.current = setTab
   setPaletteOpenRef.current = setPaletteOpen
-
-  useEffect(
-    function syncPaletteKeymapMode() {
-      keymap.setData('app.mode', (paletteOpen ? 'palette' : 'base') satisfies AppKeymapMode)
-    },
-    [keymap, paletteOpen],
-  )
 
   useBindings(function createAlwaysOnAppLayer() {
     return {
