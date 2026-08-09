@@ -31,6 +31,7 @@ type FooterState = {
 
 const DEFAULT_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'ctrl+k', label: 'commands' },
+  { keys: '?', label: 'help' },
   { keys: 'q', label: 'quit' },
 ]
 

@@ -5,6 +5,7 @@ import { match } from 'ts-pattern'
 import { CommandPalette } from './components/command-palette'
 import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
+import { HelpMenu } from './components/help-menu'
 import { WelcomeScreen } from './components/welcome-screen'
 import { type AppKeymapMode } from './lib/keymap-mode'
 import { TABS, tabFromKey, useSession } from './stores/session'
@@ -30,6 +31,7 @@ export function App({ options }: AppProps) {
   const keymap = useKeymap()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const screen = useSession((s) => s.screen)
   const setTab = useSession((s) => s.setTab)
 
@@ -40,6 +42,7 @@ export function App({ options }: AppProps) {
   const setRef = useRef(set)
   const setTabRef = useRef(setTab)
   const setPaletteOpenRef = useRef(setPaletteOpen)
+  const setHelpOpenRef = useRef(setHelpOpen)
 
   modeRef.current = mode
   selectedRef.current = selected
@@ -48,12 +51,14 @@ export function App({ options }: AppProps) {
   setRef.current = set
   setTabRef.current = setTab
   setPaletteOpenRef.current = setPaletteOpen
+  setHelpOpenRef.current = setHelpOpen
 
   useEffect(
-    function syncPaletteKeymapMode() {
-      keymap.setData('app.mode', (paletteOpen ? 'palette' : 'base') satisfies AppKeymapMode)
+    function syncOverlayKeymapMode() {
+      const overlayOpen = paletteOpen || helpOpen
+      keymap.setData('app.mode', (overlayOpen ? 'palette' : 'base') satisfies AppKeymapMode)
     },
-    [keymap, paletteOpen],
+    [keymap, paletteOpen, helpOpen],
   )
 
   useBindings(function createAlwaysOnAppLayer() {
@@ -62,11 +67,22 @@ export function App({ options }: AppProps) {
         {
           name: 'app.toggle-palette',
           run() {
+            setHelpOpenRef.current(false)
             setPaletteOpenRef.current((open) => !open)
           },
         },
+        {
+          name: 'app.toggle-help',
+          run() {
+            setPaletteOpenRef.current(false)
+            setHelpOpenRef.current((open) => !open)
+          },
+        },
       ],
-      bindings: [{ key: 'ctrl+k', cmd: 'app.toggle-palette' }],
+      bindings: [
+        { key: 'ctrl+k', cmd: 'app.toggle-palette' },
+        { key: '?', cmd: 'app.toggle-help' },
+      ],
     }
   }, [])
 
@@ -137,7 +153,15 @@ export function App({ options }: AppProps) {
     <box flexGrow={1} flexDirection="column">
       {body}
       <Footer />
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        onOpenHelp={() => {
+          setPaletteOpen(false)
+          setHelpOpen(true)
+        }}
+      />
+      <HelpMenu open={helpOpen} onOpenChange={setHelpOpen} />
     </box>
   )
 }
