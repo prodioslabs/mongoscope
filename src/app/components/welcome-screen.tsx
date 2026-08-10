@@ -101,11 +101,11 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
 
   useBindings(
     function createWelcomeScreenLayer() {
-      function filesForSection(section: number) {
+      function logFilesForSection(section: number) {
         return section === 0 ? mongoLogsRef.current : dirLogsRef.current
       }
 
-      function setIndexInSection(section: number, index: number) {
+      function selectIndexInSection(section: number, index: number) {
         setSelectedIndexes((indexes) => {
           if (indexes[section] === index) return indexes
           const next = [...indexes] as [number, number]
@@ -114,21 +114,21 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
         })
       }
 
-      function moveSelection(delta: number) {
+      function navigateSelection(delta: number) {
         const section = activeSectionRef.current
-        const files = filesForSection(section)
+        const files = logFilesForSection(section)
         const nextIndex = (selectedIndexesRef.current[section] ?? 0) + delta
 
         if (files.length > 0 && nextIndex >= 0 && nextIndex < files.length) {
-          setIndexInSection(section, nextIndex)
+          selectIndexInSection(section, nextIndex)
           return
         }
 
-        const other = 1 - section
-        const otherFiles = filesForSection(other)
-        setActiveSection(other)
-        if (otherFiles.length > 0) {
-          setIndexInSection(other, delta < 0 ? otherFiles.length - 1 : 0)
+        const otherSection = 1 - section
+        const otherSectionFiles = logFilesForSection(otherSection)
+        setActiveSection(otherSection)
+        if (otherSectionFiles.length > 0) {
+          selectIndexInSection(otherSection, delta < 0 ? otherSectionFiles.length - 1 : 0)
         }
       }
 
@@ -140,7 +140,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
             name: 'welcome.analyze',
             run() {
               const section = activeSectionRef.current
-              const files = filesForSection(section)
+              const files = logFilesForSection(section)
               const name = files[selectedIndexesRef.current[section] ?? 0]
               if (!name) return
               const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
@@ -156,13 +156,13 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
           {
             name: 'welcome.move-up',
             run() {
-              moveSelection(-1)
+              navigateSelection(-1)
             },
           },
           {
             name: 'welcome.move-down',
             run() {
-              moveSelection(1)
+              navigateSelection(1)
             },
           },
         ],
