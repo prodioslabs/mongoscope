@@ -18,7 +18,7 @@ const PALETTE_OVERLAY_KEYBINDINGS: FooterKeybinding[] = [
 type CommandPaletteProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onOpenHelp?: () => void
+  onOpenHelpMenu?: () => void
 }
 
 type CommandOption = {
@@ -99,7 +99,7 @@ function CommandOptionRow({
   )
 }
 
-export function CommandPalette({ open, onOpenChange, onOpenHelp }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPaletteProps) {
   const renderer = useRenderer()
   const dimensions = useTerminalDimensions()
   const theme = useTheme((s) => s.theme)
@@ -121,7 +121,7 @@ export function CommandPalette({ open, onOpenChange, onOpenHelp }: CommandPalett
   const selectedRef = useRef(0)
   const viewRef = useRef(view)
   const onOpenChangeRef = useRef(onOpenChange)
-  const onOpenHelpRef = useRef(onOpenHelp)
+  const onOpenHelpMenuRef = useRef(onOpenHelpMenu)
 
   const commandOptions = useMemo(
     (): CommandOption[] => [
@@ -187,7 +187,7 @@ export function CommandPalette({ open, onOpenChange, onOpenHelp }: CommandPalett
   selectedRef.current = selected
   viewRef.current = view
   onOpenChangeRef.current = onOpenChange
-  onOpenHelpRef.current = onOpenHelp
+  onOpenHelpMenuRef.current = onOpenHelpMenu
 
   const rows = useMemo(() => {
     const headers = grouped.reduce((acc, [category], index) => {
@@ -290,7 +290,7 @@ export function CommandPalette({ open, onOpenChange, onOpenHelp }: CommandPalett
     }
 
     if (value === 'help') {
-      onOpenHelpRef.current?.()
+      onOpenHelpMenuRef.current?.()
       return
     }
 

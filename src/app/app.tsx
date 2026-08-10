@@ -31,7 +31,7 @@ export function App({ options }: AppProps) {
   const keymap = useKeymap()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const [helpOpen, setHelpOpen] = useState(false)
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false)
   const screen = useSession((s) => s.screen)
   const setTab = useSession((s) => s.setTab)
 
@@ -42,7 +42,7 @@ export function App({ options }: AppProps) {
   const setRef = useRef(set)
   const setTabRef = useRef(setTab)
   const setPaletteOpenRef = useRef(setPaletteOpen)
-  const setHelpOpenRef = useRef(setHelpOpen)
+  const setHelpMenuOpenRef = useRef(setHelpMenuOpen)
 
   modeRef.current = mode
   selectedRef.current = selected
@@ -51,14 +51,14 @@ export function App({ options }: AppProps) {
   setRef.current = set
   setTabRef.current = setTab
   setPaletteOpenRef.current = setPaletteOpen
-  setHelpOpenRef.current = setHelpOpen
+  setHelpMenuOpenRef.current = setHelpMenuOpen
 
   useEffect(
     function syncOverlayKeymapMode() {
-      const overlayOpen = paletteOpen || helpOpen
+      const overlayOpen = paletteOpen || helpMenuOpen
       keymap.setData('app.mode', (overlayOpen ? 'palette' : 'base') satisfies AppKeymapMode)
     },
-    [keymap, paletteOpen, helpOpen],
+    [keymap, paletteOpen, helpMenuOpen],
   )
 
   useBindings(function createAlwaysOnAppLayer() {
@@ -67,7 +67,7 @@ export function App({ options }: AppProps) {
         {
           name: 'app.toggle-palette',
           run() {
-            setHelpOpenRef.current(false)
+            setHelpMenuOpenRef.current(false)
             setPaletteOpenRef.current((open) => !open)
           },
         },
@@ -75,7 +75,7 @@ export function App({ options }: AppProps) {
           name: 'app.toggle-help',
           run() {
             setPaletteOpenRef.current(false)
-            setHelpOpenRef.current((open) => !open)
+            setHelpMenuOpenRef.current((open) => !open)
           },
         },
       ],
@@ -156,12 +156,12 @@ export function App({ options }: AppProps) {
       <CommandPalette
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
-        onOpenHelp={() => {
+        onOpenHelpMenu={() => {
           setPaletteOpen(false)
-          setHelpOpen(true)
+          setHelpMenuOpen(true)
         }}
       />
-      <HelpMenu open={helpOpen} onOpenChange={setHelpOpen} />
+      <HelpMenu open={helpMenuOpen} onOpenChange={setHelpMenuOpen} />
     </box>
   )
 }
