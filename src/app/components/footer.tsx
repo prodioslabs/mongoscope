@@ -47,19 +47,15 @@ export function Footer() {
       backgroundColor={theme.backgroundPanel}
     >
       <text content={clock} fg={theme.text} flexShrink={0} />
-      {status ? (
-        <text
-          content={status}
-          fg={theme.textMuted}
-          flexGrow={1}
-          flexShrink={1}
-          maxWidth={STATUS_MAX_WIDTH}
-          wrapMode="none"
-          truncate
-        />
-      ) : (
-        <text flexGrow={1} />
-      )}
+      <text
+        content={status ?? ''}
+        fg={theme.textMuted}
+        flexGrow={1}
+        flexShrink={1}
+        maxWidth={STATUS_MAX_WIDTH}
+        wrapMode="none"
+        truncate
+      />
       <box
         flexDirection="row"
         gap={2}

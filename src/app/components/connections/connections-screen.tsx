@@ -2,6 +2,7 @@ import { TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
 import { connectionStore, connectionsFilePath, type ConnectionProfile } from '../../../connections'
+import { displayText } from '../../../lib/display-text'
 import { formatConnectionError } from '../../../lib/format-connection-error'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { type FooterKeybinding } from '../../stores/footer'
@@ -72,7 +73,7 @@ export function ConnectionsScreen() {
           if (cancelled) {
             return
           }
-          setLoadError(error instanceof Error ? error.message : String(error))
+          setLoadError(formatConnectionError(error))
           setProfiles([])
         } finally {
           if (!cancelled) {
@@ -225,15 +226,16 @@ export function ConnectionsScreen() {
       paddingTop={1}
       gap={1}
     >
-      <text fg={theme.text} attributes={TextAttributes.BOLD}>
-        Connections
-      </text>
-      <text fg={theme.textMuted}>
-        {listStatus} · metadata in {configPath} · URI in OS keychain · no live connect yet
-      </text>
+      <text content="Connections" fg={theme.text} attributes={TextAttributes.BOLD} />
+      <text
+        content={displayText(
+          `${listStatus} · metadata in ${configPath} · URI in OS keychain · no live connect yet`,
+        )}
+        fg={theme.textMuted}
+      />
 
       {loadError ? (
-        <text fg={theme.error}>{loadError}</text>
+        <text content={displayText(loadError)} fg={theme.error} />
       ) : loading ? null : profiles.length === 0 ? null : (
         <box flexDirection="column" gap={0}>
           {profiles.map((profile, index) => {
@@ -249,18 +251,18 @@ export function ConnectionsScreen() {
                 backgroundColor={highlighted ? theme.primary : undefined}
               >
                 <text
-                  content={profile.name}
+                  content={displayText(profile.name, '—')}
                   fg={fg}
-                  attributes={highlighted ? TextAttributes.BOLD : undefined}
+                  {...(highlighted ? { attributes: TextAttributes.BOLD } : {})}
                   flexShrink={0}
                 />
                 <text
-                  content={profile.hostLabel}
+                  content={displayText(profile.hostLabel, '—')}
                   fg={highlighted ? highlightFg : theme.textMuted}
                 />
                 {profile.tags.length > 0 ? (
                   <text
-                    content={profile.tags.join(', ')}
+                    content={displayText(profile.tags.join(', '))}
                     fg={highlighted ? highlightFg : theme.textMuted}
                   />
                 ) : null}
@@ -270,7 +272,7 @@ export function ConnectionsScreen() {
         </box>
       )}
 
-      {actionError ? <text fg={theme.error}>{actionError}</text> : null}
+      {actionError ? <text content={displayText(actionError)} fg={theme.error} /> : null}
 
       <Dialog
         open={pendingDelete != null}
@@ -279,15 +281,20 @@ export function ConnectionsScreen() {
         }}
       >
         <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-          <text fg={theme.text} attributes={TextAttributes.BOLD}>
-            Delete connection?
-          </text>
-          <text fg={theme.textMuted}>
-            {pendingDelete
-              ? `Remove “${pendingDelete.name}” (${pendingDelete.hostLabel}) from this machine.`
-              : ''}
-          </text>
-          <text fg={theme.textMuted}>enter confirm · esc cancel</text>
+          <text
+            content="Delete connection?"
+            fg={theme.text}
+            attributes={TextAttributes.BOLD}
+          />
+          <text
+            content={displayText(
+              pendingDelete
+                ? `Remove “${pendingDelete.name}” (${pendingDelete.hostLabel}) from this machine.`
+                : '',
+            )}
+            fg={theme.textMuted}
+          />
+          <text content="enter confirm · esc cancel" fg={theme.textMuted} />
         </box>
       </Dialog>
     </box>

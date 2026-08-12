@@ -2,6 +2,7 @@ import { InputRenderable, TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
 import { connectionStore } from '../../../connections'
+import { displayText } from '../../../lib/display-text'
 import { formatConnectionError } from '../../../lib/format-connection-error'
 import { DEFAULT_LOCAL_MONGODB_URI } from '../../../lib/mongodb-uri'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
@@ -153,15 +154,17 @@ export function AddConnectionScreen() {
       paddingTop={1}
       gap={1}
     >
-      <text fg={theme.text} attributes={TextAttributes.BOLD}>
-        Add connection
-      </text>
-      <text fg={theme.textMuted}>
-        Stores the URI in the OS keychain. Metadata (name, host) is saved locally.
-      </text>
+      <text content="Add connection" fg={theme.text} attributes={TextAttributes.BOLD} />
+      <text
+        content="Stores the URI in the OS keychain. Metadata (name, host) is saved locally."
+        fg={theme.textMuted}
+      />
 
       <box flexDirection="column" gap={0}>
-        <text fg={focusField === 'name' ? theme.accent : theme.textMuted}>Name</text>
+        <text
+          content="Name"
+          fg={focusField === 'name' ? theme.accent : theme.textMuted}
+        />
         <input
           ref={nameInputRef}
           value={name}
@@ -178,7 +181,10 @@ export function AddConnectionScreen() {
       </box>
 
       <box flexDirection="column" gap={0}>
-        <text fg={focusField === 'uri' ? theme.accent : theme.textMuted}>URI</text>
+        <text
+          content="URI"
+          fg={focusField === 'uri' ? theme.accent : theme.textMuted}
+        />
         <input
           ref={uriInputRef}
           value={uri}
@@ -196,8 +202,8 @@ export function AddConnectionScreen() {
         />
       </box>
 
-      {error ? <text fg={theme.error}>{error}</text> : null}
-      {saving ? <text fg={theme.textMuted}>Saving…</text> : null}
+      {error ? <text content={displayText(error)} fg={theme.error} /> : null}
+      {saving ? <text content="Saving…" fg={theme.textMuted} /> : null}
     </box>
   )
 }
