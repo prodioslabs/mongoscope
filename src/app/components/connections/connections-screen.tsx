@@ -1,11 +1,7 @@
 import { TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
-import {
-  connectionStore,
-  connectionsFilePath,
-  type ConnectionProfile,
-} from '../../../connections'
+import { connectionStore, connectionsFilePath, type ConnectionProfile } from '../../../connections'
 import { formatConnectionError } from '../../../lib/format-connection-error'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { type FooterKeybinding } from '../../stores/footer'
@@ -221,7 +217,14 @@ export function ConnectionsScreen() {
   }
 
   return (
-    <box flexGrow={1} flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} gap={1}>
+    <box
+      flexGrow={1}
+      flexDirection="column"
+      paddingLeft={2}
+      paddingRight={2}
+      paddingTop={1}
+      gap={1}
+    >
       <text fg={theme.text} attributes={TextAttributes.BOLD}>
         Connections
       </text>
@@ -251,7 +254,10 @@ export function ConnectionsScreen() {
                   attributes={highlighted ? TextAttributes.BOLD : undefined}
                   flexShrink={0}
                 />
-                <text content={profile.hostLabel} fg={highlighted ? highlightFg : theme.textMuted} />
+                <text
+                  content={profile.hostLabel}
+                  fg={highlighted ? highlightFg : theme.textMuted}
+                />
                 {profile.tags.length > 0 ? (
                   <text
                     content={profile.tags.join(', ')}

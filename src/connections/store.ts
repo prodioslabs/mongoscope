@@ -1,8 +1,4 @@
-import {
-  connectionsFilePath,
-  loadConnections,
-  saveConnections,
-} from './config'
+import { connectionsFilePath, loadConnections, saveConnections } from './config'
 import { hostLabelFromUri } from '../lib/mongodb-uri'
 import { defaultSecretStore, type SecretStore } from './secret-store'
 import type { ConnectionProfile, ConnectionsFile } from './types'

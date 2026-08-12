@@ -46,15 +46,7 @@ function createMemoryBackend(): SecretBackend & {
     async get({ service, name }: { service: string; name: string }) {
       return values.get(`${service}\0${name}`) ?? null
     },
-    async set({
-      service,
-      name,
-      value,
-    }: {
-      service: string
-      name: string
-      value: string
-    }) {
+    async set({ service, name, value }: { service: string; name: string; value: string }) {
       backend.setCalls += 1
       if (backend.failNextSet) {
         const error = backend.failNextSet
@@ -151,9 +143,9 @@ describe('createConnectionStore', () => {
     })
 
     await store.add({ name: 'local', uri: 'mongodb://localhost:27017' })
-    await expect(
-      store.add({ name: 'Local', uri: 'mongodb://localhost:27018' }),
-    ).rejects.toThrow(/already exists/)
+    await expect(store.add({ name: 'Local', uri: 'mongodb://localhost:27018' })).rejects.toThrow(
+      /already exists/,
+    )
     expect(backend.setCalls).toBe(1)
   })
 

@@ -93,9 +93,7 @@ export function validateConnectionsFile(value: unknown, filePath?: string): Conn
   const record = value as Record<string, unknown>
 
   if (record.version !== 1) {
-    throw new Error(
-      `Invalid connections config${locationSuffix}: unsupported version (expected 1)`,
-    )
+    throw new Error(`Invalid connections config${locationSuffix}: unsupported version (expected 1)`)
   }
 
   if (!Array.isArray(record.connections)) {
@@ -108,18 +106,13 @@ export function validateConnectionsFile(value: unknown, filePath?: string): Conn
 
   for (let index = 0; index < record.connections.length; index++) {
     const entry = record.connections[index]
-    const profile = validateConnectionProfile(
-      entry,
-      `${locationSuffix} (connections[${index}])`,
-    )
+    const profile = validateConnectionProfile(entry, `${locationSuffix} (connections[${index}])`)
     if (seenIds.has(profile.id)) {
       throw new Error(`Invalid connections config${locationSuffix}: duplicate id ${profile.id}`)
     }
     const normalizedName = profile.name.toLowerCase()
     if (seenNames.has(normalizedName)) {
-      throw new Error(
-        `Invalid connections config${locationSuffix}: duplicate name ${profile.name}`,
-      )
+      throw new Error(`Invalid connections config${locationSuffix}: duplicate name ${profile.name}`)
     }
     seenIds.add(profile.id)
     seenNames.add(normalizedName)
@@ -141,9 +134,7 @@ function validateConnectionProfile(value: unknown, locationSuffix: string): Conn
   const createdAt = requireNonEmptyString(record.createdAt, 'createdAt', locationSuffix)
 
   if (!Array.isArray(record.tags) || record.tags.some((tag) => typeof tag !== 'string')) {
-    throw new Error(
-      `Invalid connection profile${locationSuffix}: tags must be an array of strings`,
-    )
+    throw new Error(`Invalid connection profile${locationSuffix}: tags must be an array of strings`)
   }
 
   return {

@@ -145,7 +145,14 @@ export function AddConnectionScreen() {
   )
 
   return (
-    <box flexGrow={1} flexDirection="column" paddingLeft={2} paddingRight={2} paddingTop={1} gap={1}>
+    <box
+      flexGrow={1}
+      flexDirection="column"
+      paddingLeft={2}
+      paddingRight={2}
+      paddingTop={1}
+      gap={1}
+    >
       <text fg={theme.text} attributes={TextAttributes.BOLD}>
         Add connection
       </text>
