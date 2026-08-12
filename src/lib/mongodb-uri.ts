@@ -1,3 +1,5 @@
+export const DEFAULT_LOCAL_MONGODB_URI = 'mongodb://localhost:27017'
+
 /**
  * Derive a display host label from a MongoDB URI without retaining credentials.
  */

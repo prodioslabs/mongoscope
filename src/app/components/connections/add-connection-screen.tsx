@@ -3,6 +3,7 @@ import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
 import { connectionStore } from '../../../connections'
 import { formatConnectionError } from '../../../lib/format-connection-error'
+import { DEFAULT_LOCAL_MONGODB_URI } from '../../../lib/mongodb-uri'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { type FooterKeybinding } from '../../stores/footer'
 import { useSession } from '../../stores/session'
@@ -11,6 +12,7 @@ import { useFooterKeybindings } from '../footer-keybindings'
 
 const ADD_CONNECTION_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'tab', label: 'field' },
+  { keys: '→', label: 'local URI' },
   { keys: 'enter', label: 'save' },
   { keys: 'esc', label: 'cancel' },
 ]
@@ -87,13 +89,24 @@ export function AddConnectionScreen() {
 
   useBindings(
     function createAddConnectionLayer() {
+      const canAcceptDefaultUri = focusField === 'uri' && uri === ''
+
       return {
         appMode: 'palette' satisfies AppKeymapMode,
         // CommandPalette also uses palette mode and binds enter → palette.submit
         // (including when closed). Win over that layer so Enter saves here.
-        priority: 10,
+        priority: canAcceptDefaultUri ? 100 : 10,
         enabled: !saving,
         commands: [
+          {
+            name: 'connection-add.accept-uri-default',
+            run() {
+              if (focusFieldRef.current !== 'uri' || uriRef.current !== '') {
+                return false
+              }
+              setUri(DEFAULT_LOCAL_MONGODB_URI)
+            },
+          },
           {
             name: 'connection-add.submit',
             run() {
@@ -118,6 +131,9 @@ export function AddConnectionScreen() {
           },
         ],
         bindings: [
+          ...(canAcceptDefaultUri
+            ? [{ key: 'right' as const, cmd: 'connection-add.accept-uri-default' as const }]
+            : []),
           { key: 'return', cmd: 'connection-add.submit' },
           { key: 'enter', cmd: 'connection-add.submit' },
           { key: 'tab', cmd: 'connection-add.toggle-field' },
@@ -125,7 +141,7 @@ export function AddConnectionScreen() {
         ],
       }
     },
-    [goToConnections, saving],
+    [focusField, goToConnections, saving, uri],
   )
 
   return (
@@ -168,7 +184,7 @@ export function AddConnectionScreen() {
           cursorColor={theme.primary}
           focusedTextColor={theme.text}
           textColor={theme.text}
-          placeholder="mongodb://localhost:27017"
+          placeholder={DEFAULT_LOCAL_MONGODB_URI}
           placeholderColor={theme.textMuted}
         />
       </box>
