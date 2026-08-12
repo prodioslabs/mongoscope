@@ -1,10 +1,10 @@
 import { InputRenderable, TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
-import { connectionStore } from '../../../connections'
 import { displayText } from '../../../lib/display-text'
 import { formatConnectionError } from '../../../lib/format-connection-error'
 import { DEFAULT_LOCAL_MONGODB_URI } from '../../../lib/mongodb-uri'
+import { useAddConnection } from '../../../queries/connection'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { type FooterKeybinding } from '../../stores/footer'
 import { useSession } from '../../stores/session'
@@ -23,23 +23,21 @@ type FocusField = 'name' | 'uri'
 export function AddConnectionScreen() {
   const theme = useTheme((s) => s.theme)
   const goToConnections = useSession((s) => s.goToConnections)
+  const addConnection = useAddConnection()
 
   const [name, setName] = useState('')
   const [uri, setUri] = useState('')
   const [focusField, setFocusField] = useState<FocusField>('name')
-  const [error, setError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
   const nameInputRef = useRef<InputRenderable | null>(null)
   const uriInputRef = useRef<InputRenderable | null>(null)
   const nameRef = useRef(name)
   const uriRef = useRef(uri)
-  const savingRef = useRef(saving)
   const focusFieldRef = useRef(focusField)
 
   nameRef.current = name
   uriRef.current = uri
-  savingRef.current = saving
   focusFieldRef.current = focusField
 
   useFooterKeybindings(ADD_CONNECTION_KEYBINDINGS)
@@ -60,33 +58,38 @@ export function AddConnectionScreen() {
     [focusField],
   )
 
-  async function saveConnection() {
-    if (savingRef.current) {
+  function saveConnection() {
+    if (addConnection.isPending) {
       return
     }
 
     const nextName = nameRef.current.trim()
     const nextUri = uriRef.current.trim()
     if (nextName === '' || nextUri === '') {
-      setError('Name and URI are required')
+      setValidationError('Name and URI are required')
       return
     }
 
-    setSaving(true)
-    setError(null)
-
-    try {
-      await connectionStore.add({ name: nextName, uri: nextUri })
-      goToConnections()
-    } catch (caught) {
-      setError(formatConnectionError(caught))
-    } finally {
-      setSaving(false)
-    }
+    setValidationError(null)
+    addConnection.reset()
+    addConnection.mutate(
+      { name: nextName, uri: nextUri },
+      {
+        onSuccess() {
+          goToConnections()
+        },
+      },
+    )
   }
 
   const saveConnectionRef = useRef(saveConnection)
   saveConnectionRef.current = saveConnection
+
+  const mutationError =
+    addConnection.isError && addConnection.error != null
+      ? formatConnectionError(addConnection.error)
+      : null
+  const error = validationError ?? mutationError
 
   useBindings(
     function createAddConnectionLayer() {
@@ -97,7 +100,7 @@ export function AddConnectionScreen() {
         // CommandPalette also uses palette mode and binds enter → palette.submit
         // (including when closed). Win over that layer so Enter saves here.
         priority: canAcceptDefaultUri ? 100 : 10,
-        enabled: !saving,
+        enabled: !addConnection.isPending,
         commands: [
           {
             name: 'connection-add.accept-uri-default',
@@ -114,7 +117,7 @@ export function AddConnectionScreen() {
               if (focusFieldRef.current === 'name') {
                 setFocusField('uri')
               } else {
-                void saveConnectionRef.current()
+                saveConnectionRef.current()
               }
             },
           },
@@ -142,7 +145,7 @@ export function AddConnectionScreen() {
         ],
       }
     },
-    [focusField, goToConnections, saving, uri],
+    [addConnection.isPending, focusField, goToConnections, uri],
   )
 
   return (
@@ -161,10 +164,7 @@ export function AddConnectionScreen() {
       />
 
       <box flexDirection="column" gap={0}>
-        <text
-          content="Name"
-          fg={focusField === 'name' ? theme.accent : theme.textMuted}
-        />
+        <text content="Name" fg={focusField === 'name' ? theme.accent : theme.textMuted} />
         <input
           ref={nameInputRef}
           value={name}
@@ -181,16 +181,13 @@ export function AddConnectionScreen() {
       </box>
 
       <box flexDirection="column" gap={0}>
-        <text
-          content="URI"
-          fg={focusField === 'uri' ? theme.accent : theme.textMuted}
-        />
+        <text content="URI" fg={focusField === 'uri' ? theme.accent : theme.textMuted} />
         <input
           ref={uriInputRef}
           value={uri}
           onInput={setUri}
           onSubmit={() => {
-            void saveConnection()
+            saveConnection()
           }}
           focusedBackgroundColor={theme.backgroundElement}
           backgroundColor={theme.backgroundElement}
@@ -203,7 +200,7 @@ export function AddConnectionScreen() {
       </box>
 
       {error ? <text content={displayText(error)} fg={theme.error} /> : null}
-      {saving ? <text content="Saving…" fg={theme.textMuted} /> : null}
+      {addConnection.isPending ? <text content="Saving…" fg={theme.textMuted} /> : null}
     </box>
   )
 }

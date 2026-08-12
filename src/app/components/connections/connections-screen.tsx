@@ -1,9 +1,10 @@
 import { TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
-import { connectionStore, connectionsFilePath, type ConnectionProfile } from '../../../connections'
+import { connectionsFilePath, type ConnectionProfile } from '../../../connections'
 import { displayText } from '../../../lib/display-text'
 import { formatConnectionError } from '../../../lib/format-connection-error'
+import { useConnectionsList, useRemoveConnection } from '../../../queries/connection'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { type FooterKeybinding } from '../../stores/footer'
 import { useSession } from '../../stores/session'
@@ -29,67 +30,35 @@ export function ConnectionsScreen() {
   const goToWelcome = useSession((s) => s.goToWelcome)
   const goToConnectionAdd = useSession((s) => s.goToConnectionAdd)
 
-  const [profiles, setProfiles] = useState<ConnectionProfile[]>([])
+  const { data, isPending, isError, error } = useConnectionsList()
+  const removeConnection = useRemoveConnection()
+
+  const profiles: ConnectionProfile[] = data ?? []
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<ConnectionProfile | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [reloadToken, setReloadToken] = useState(0)
-  const [loading, setLoading] = useState(true)
 
   const profilesRef = useRef(profiles)
   const selectedIndexRef = useRef(selectedIndex)
   const pendingDeleteRef = useRef(pendingDelete)
-  const busyRef = useRef(busy)
 
   profilesRef.current = profiles
   selectedIndexRef.current = selectedIndex
   pendingDeleteRef.current = pendingDelete
-  busyRef.current = busy
-
-  useFooterKeybindings(pendingDelete ? DELETE_DIALOG_KEYBINDINGS : CONNECTIONS_KEYBINDINGS)
 
   useEffect(
-    function loadConnectionProfiles() {
-      let cancelled = false
-
-      async function load() {
-        setLoading(true)
-        try {
-          const nextProfiles = await connectionStore.list()
-          if (cancelled) {
-            return
-          }
-          setProfiles(nextProfiles)
-          setLoadError(null)
-          setSelectedIndex((index) => {
-            if (nextProfiles.length === 0) {
-              return 0
-            }
-            return Math.min(index, nextProfiles.length - 1)
-          })
-        } catch (error) {
-          if (cancelled) {
-            return
-          }
-          setLoadError(formatConnectionError(error))
-          setProfiles([])
-        } finally {
-          if (!cancelled) {
-            setLoading(false)
-          }
+    function clampSelectedIndexToProfiles() {
+      const length = data?.length ?? 0
+      setSelectedIndex((index) => {
+        if (length === 0) {
+          return 0
         }
-      }
-
-      void load()
-
-      return function cancelLoadConnectionProfiles() {
-        cancelled = true
-      }
+        return Math.min(index, length - 1)
+      })
     },
-    [reloadToken],
+    [data],
   )
+
+  useFooterKeybindings(pendingDelete ? DELETE_DIALOG_KEYBINDINGS : CONNECTIONS_KEYBINDINGS)
 
   useBindings(
     function createConnectionsListLayer() {
@@ -105,7 +74,7 @@ export function ConnectionsScreen() {
 
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: pendingDelete == null && !busy,
+        enabled: pendingDelete == null && !removeConnection.isPending,
         commands: [
           {
             name: 'connections.move-up',
@@ -132,7 +101,7 @@ export function ConnectionsScreen() {
               if (!profile) {
                 return
               }
-              setActionError(null)
+              removeConnection.reset()
               setPendingDelete(profile)
             },
           },
@@ -155,37 +124,30 @@ export function ConnectionsScreen() {
         ],
       }
     },
-    [busy, goToConnectionAdd, goToWelcome, pendingDelete],
+    [goToConnectionAdd, goToWelcome, pendingDelete, removeConnection],
   )
 
   useBindings(
     function createDeleteConfirmLayer() {
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: pendingDelete != null && !busy,
+        enabled: pendingDelete != null && !removeConnection.isPending,
         commands: [
           {
             name: 'connections.delete-confirm',
             run() {
               const profile = pendingDeleteRef.current
-              if (!profile || busyRef.current) {
+              if (!profile || removeConnection.isPending) {
                 return
               }
-              setBusy(true)
-              void connectionStore
-                .remove(profile.id)
-                .then(function onRemoved() {
+              removeConnection.mutate(profile.id, {
+                onSuccess() {
                   setPendingDelete(null)
-                  setActionError(null)
-                  setReloadToken((token) => token + 1)
-                })
-                .catch(function onRemoveFailed(error: unknown) {
-                  setActionError(formatConnectionError(error))
+                },
+                onError() {
                   setPendingDelete(null)
-                })
-                .finally(function clearBusy() {
-                  setBusy(false)
-                })
+                },
+              })
             },
           },
           {
@@ -202,20 +164,26 @@ export function ConnectionsScreen() {
         ],
       }
     },
-    [busy, pendingDelete],
+    [pendingDelete, removeConnection],
   )
 
   const highlightFg = selectedForeground(theme)
   const configPath = connectionsFilePath()
 
   let listStatus: string
-  if (loading) {
+  if (isPending) {
     listStatus = 'Loading saved connections…'
   } else if (profiles.length === 0) {
     listStatus = 'No saved connections yet. Press a to add one.'
   } else {
     listStatus = `${profiles.length} saved connections`
   }
+
+  const loadError = isError ? formatConnectionError(error) : null
+  const actionError =
+    removeConnection.isError && removeConnection.error != null
+      ? formatConnectionError(removeConnection.error)
+      : null
 
   return (
     <box
@@ -236,7 +204,7 @@ export function ConnectionsScreen() {
 
       {loadError ? (
         <text content={displayText(loadError)} fg={theme.error} />
-      ) : loading ? null : profiles.length === 0 ? null : (
+      ) : isPending ? null : profiles.length === 0 ? null : (
         <box flexDirection="column" gap={0}>
           {profiles.map((profile, index) => {
             const highlighted = index === selectedIndex
@@ -281,11 +249,7 @@ export function ConnectionsScreen() {
         }}
       >
         <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-          <text
-            content="Delete connection?"
-            fg={theme.text}
-            attributes={TextAttributes.BOLD}
-          />
+          <text content="Delete connection?" fg={theme.text} attributes={TextAttributes.BOLD} />
           <text
             content={displayText(
               pendingDelete
