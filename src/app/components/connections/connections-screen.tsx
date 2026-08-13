@@ -1,7 +1,7 @@
 import { TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
-import { connectionsFilePath, type ConnectionProfile } from '../../../connections'
+import { type ConnectionProfile } from '../../../connections'
 import { displayText } from '../../../lib/display-text'
 import { formatConnectionError } from '../../../lib/format-connection-error'
 import { useConnectionsList, useRemoveConnection } from '../../../queries/connection'
@@ -168,7 +168,6 @@ export function ConnectionsScreen() {
   )
 
   const highlightFg = selectedForeground(theme)
-  const configPath = connectionsFilePath()
 
   let listStatus: string
   if (isPending) {
@@ -196,9 +195,7 @@ export function ConnectionsScreen() {
     >
       <text content="Connections" fg={theme.text} attributes={TextAttributes.BOLD} />
       <text
-        content={displayText(
-          `${listStatus} · metadata in ${configPath} · URI in OS keychain · no live connect yet`,
-        )}
+        content={displayText(`${listStatus} · stored in OS keychain · no live connect yet`)}
         fg={theme.textMuted}
       />
 

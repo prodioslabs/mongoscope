@@ -6,7 +6,12 @@ export type ConnectionProfile = {
   createdAt: string
 }
 
-export type ConnectionsFile = {
+/** Full connection record as stored in the OS keychain blob (includes URI). */
+export type StoredConnection = ConnectionProfile & {
+  uri: string
+}
+
+export type ConnectionsBlob = {
   version: 1
-  connections: ConnectionProfile[]
+  connections: StoredConnection[]
 }

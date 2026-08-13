@@ -1,6 +1,11 @@
 import { platform } from 'node:os'
+import type { ConnectionsBlob } from './types'
+import { emptyConnectionsBlob, validateConnectionsBlob } from './validate'
 
 export const SECRET_SERVICE = 'com.mongoscope.cli'
+
+/** Fixed secret name for the single connections JSON blob. */
+export const CONNECTIONS_SECRET_NAME = 'connections'
 
 export type SecretStoreCode = 'unavailable' | 'denied' | 'unknown'
 
@@ -22,13 +27,12 @@ export type SecretBackend = {
 }
 
 export type SecretStore = {
-  getUri(id: string): Promise<string | null>
-  setUri(id: string, uri: string): Promise<void>
-  deleteUri(id: string): Promise<boolean>
-}
-
-export function secretNameForConnection(id: string): string {
-  return `connection:${id}`
+  /** Load the connections blob. Missing secret → empty store. */
+  load(): Promise<ConnectionsBlob>
+  /** Persist the connections blob (replaces the previous value). */
+  save(blob: ConnectionsBlob): Promise<void>
+  /** Delete the connections secret entirely. */
+  clear(): Promise<boolean>
 }
 
 /** Uses the Bun global so Vitest can import this module without resolving `bun` as a package. */
@@ -46,34 +50,57 @@ const bunSecretsBackend: SecretBackend = {
 
 export function createSecretStore(backend: SecretBackend = bunSecretsBackend): SecretStore {
   return {
-    async getUri(id) {
+    async load() {
+      let raw: string | null
       try {
-        return await backend.get({
+        raw = await backend.get({
           service: SECRET_SERVICE,
-          name: secretNameForConnection(id),
+          name: CONNECTIONS_SECRET_NAME,
         })
       } catch (error) {
         throw mapSecretError(error, 'retrieve')
       }
+
+      if (raw == null || raw.trim() === '') {
+        return emptyConnectionsBlob()
+      }
+
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(raw)
+      } catch {
+        throw new Error('Invalid connections store in OS keychain: not valid JSON')
+      }
+
+      try {
+        return validateConnectionsBlob(parsed)
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error
+        }
+        throw new Error(String(error))
+      }
     },
 
-    async setUri(id, uri) {
+    async save(blob) {
+      const validated = validateConnectionsBlob(blob)
+      const serialized = JSON.stringify(validated)
       try {
         await backend.set({
           service: SECRET_SERVICE,
-          name: secretNameForConnection(id),
-          value: uri,
+          name: CONNECTIONS_SECRET_NAME,
+          value: serialized,
         })
       } catch (error) {
         throw mapSecretError(error, 'store')
       }
     },
 
-    async deleteUri(id) {
+    async clear() {
       try {
         return await backend.delete({
           service: SECRET_SERVICE,
-          name: secretNameForConnection(id),
+          name: CONNECTIONS_SECRET_NAME,
         })
       } catch (error) {
         throw mapSecretError(error, 'delete')
@@ -134,19 +161,19 @@ function userMessageForSecretError(
 
   if (code === 'unavailable') {
     if (platform() === 'linux') {
-      return `Failed to ${actionVerb} connection credentials: OS secret service (libsecret) is unavailable. Start GNOME Keyring, KWallet, or another Secret Service daemon and try again.`
+      return `Failed to ${actionVerb} connections: OS secret service (libsecret) is unavailable. Start GNOME Keyring, KWallet, or another Secret Service daemon and try again.`
     }
-    return `Failed to ${actionVerb} connection credentials: OS credential store is unavailable.`
+    return `Failed to ${actionVerb} connections: OS credential store is unavailable.`
   }
 
   if (code === 'denied') {
     if (platform() === 'darwin') {
-      return `Failed to ${actionVerb} connection credentials: macOS Keychain access was denied. Allow access in Keychain Access and try again.`
+      return `Failed to ${actionVerb} connections: macOS Keychain access was denied. Allow access in Keychain Access and try again.`
     }
-    return `Failed to ${actionVerb} connection credentials: access to the OS credential store was denied.`
+    return `Failed to ${actionVerb} connections: access to the OS credential store was denied.`
   }
 
-  return `Failed to ${actionVerb} connection credentials via the OS credential store.`
+  return `Failed to ${actionVerb} connections via the OS credential store.`
 }
 
 /** Safe for classification only — never included in SecretStoreError.message. */

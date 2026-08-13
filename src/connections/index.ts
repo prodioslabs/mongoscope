@@ -1,17 +1,10 @@
+export { hostLabelFromUri } from '../lib/mongodb-uri'
 export {
-  connectionsFilePath,
-  emptyConnectionsFile,
-  loadConnections,
-  resolveConfigDir,
-  saveConnections,
-  validateConnectionsFile,
-} from './config'
-export {
+  CONNECTIONS_SECRET_NAME,
   createSecretStore,
   defaultSecretStore,
   SECRET_SERVICE,
   SecretStoreError,
-  secretNameForConnection,
   type SecretBackend,
   type SecretStore,
   type SecretStoreCode,
@@ -26,5 +19,9 @@ export {
   type ConnectionStore,
   type ConnectionStoreDeps,
 } from './store'
-export type { ConnectionProfile, ConnectionsFile } from './types'
-export { hostLabelFromUri } from '../lib/mongodb-uri'
+export type { ConnectionProfile, ConnectionsBlob, StoredConnection } from './types'
+export {
+  emptyConnectionsBlob,
+  toConnectionProfile,
+  validateConnectionsBlob,
+} from './validate'

@@ -1,33 +1,13 @@
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
-import { loadConnections } from './config'
+import { describe, expect, it } from 'vitest'
 import {
+  CONNECTIONS_SECRET_NAME,
   createSecretStore,
   SECRET_SERVICE,
   SecretStoreError,
-  secretNameForConnection,
   type SecretBackend,
 } from './secret-store'
 import { createConnectionStore } from './store'
-
-const temporaryDirectories: string[] = []
-
-afterEach(async function cleanupTemporaryDirectories() {
-  while (temporaryDirectories.length > 0) {
-    const directoryPath = temporaryDirectories.pop()
-    if (directoryPath) {
-      await rm(directoryPath, { recursive: true, force: true })
-    }
-  }
-})
-
-async function makeTemporaryDirectory(): Promise<string> {
-  const directoryPath = await mkdtemp(join(tmpdir(), 'mongoscope-conn-store-'))
-  temporaryDirectories.push(directoryPath)
-  return directoryPath
-}
+import { validateConnectionsBlob } from './validate'
 
 function createMemoryBackend(): SecretBackend & {
   values: Map<string, string>
@@ -35,6 +15,7 @@ function createMemoryBackend(): SecretBackend & {
   deleteCalls: number
   failNextSet?: Error
   failNextDelete?: Error
+  failNextGet?: Error
 } {
   const values = new Map<string, string>()
   const backend = {
@@ -43,7 +24,13 @@ function createMemoryBackend(): SecretBackend & {
     deleteCalls: 0,
     failNextSet: undefined as Error | undefined,
     failNextDelete: undefined as Error | undefined,
+    failNextGet: undefined as Error | undefined,
     async get({ service, name }: { service: string; name: string }) {
+      if (backend.failNextGet) {
+        const error = backend.failNextGet
+        backend.failNextGet = undefined
+        throw error
+      }
       return values.get(`${service}\0${name}`) ?? null
     },
     async set({ service, name, value }: { service: string; name: string; value: string }) {
@@ -69,14 +56,35 @@ function createMemoryBackend(): SecretBackend & {
 }
 
 describe('createSecretStore', () => {
-  it('uses the planned service and name keys', async () => {
+  it('uses a single fixed service and name for the connections blob', async () => {
     const backend = createMemoryBackend()
     const store = createSecretStore(backend)
-    await store.setUri('abc', 'mongodb://localhost:27017')
-    expect([...backend.values.keys()]).toEqual([
-      `${SECRET_SERVICE}\0${secretNameForConnection('abc')}`,
-    ])
-    await expect(store.getUri('abc')).resolves.toBe('mongodb://localhost:27017')
+
+    await store.save({
+      version: 1,
+      connections: [
+        {
+          id: 'abc',
+          name: 'local',
+          hostLabel: 'localhost:27017',
+          tags: [],
+          createdAt: '2026-08-11T12:00:00.000Z',
+          uri: 'mongodb://localhost:27017',
+        },
+      ],
+    })
+
+    expect([...backend.values.keys()]).toEqual([`${SECRET_SERVICE}\0${CONNECTIONS_SECRET_NAME}`])
+
+    const loaded = await store.load()
+    expect(loaded.connections).toHaveLength(1)
+    expect(loaded.connections[0]!.uri).toBe('mongodb://localhost:27017')
+  })
+
+  it('returns an empty blob when the secret is missing', async () => {
+    const backend = createMemoryBackend()
+    const store = createSecretStore(backend)
+    await expect(store.load()).resolves.toEqual({ version: 1, connections: [] })
   })
 
   it('maps keychain failures without including the URI in the message', async () => {
@@ -87,7 +95,19 @@ describe('createSecretStore', () => {
 
     let caught: unknown
     try {
-      await store.setUri('abc', uri)
+      await store.save({
+        version: 1,
+        connections: [
+          {
+            id: 'abc',
+            name: 'local',
+            hostLabel: 'localhost:27017',
+            tags: [],
+            createdAt: '2026-08-11T12:00:00.000Z',
+            uri,
+          },
+        ],
+      })
     } catch (error) {
       caught = error
     }
@@ -101,13 +121,35 @@ describe('createSecretStore', () => {
   })
 })
 
+describe('validateConnectionsBlob', () => {
+  it('rejects unsupported version', () => {
+    expect(() => validateConnectionsBlob({ version: 2, connections: [] })).toThrow(
+      /unsupported version/,
+    )
+  })
+
+  it('requires uri on each connection', () => {
+    expect(() =>
+      validateConnectionsBlob({
+        version: 1,
+        connections: [
+          {
+            id: 'abc',
+            name: 'local',
+            hostLabel: 'localhost:27017',
+            tags: [],
+            createdAt: '2026-08-11T12:00:00.000Z',
+          },
+        ],
+      }),
+    ).toThrow(/uri must be a non-empty string/)
+  })
+})
+
 describe('createConnectionStore', () => {
-  it('adds a profile with URI-only credentials and lists it', async () => {
-    const directoryPath = await makeTemporaryDirectory()
-    const filePath = join(directoryPath, 'connections.json')
+  it('adds a profile, stores URI only in the keychain blob, and lists without URI', async () => {
     const backend = createMemoryBackend()
     const store = createConnectionStore({
-      filePath,
       secrets: createSecretStore(backend),
       createId: () => 'fixed-id',
       now: () => new Date('2026-08-11T12:00:00.000Z'),
@@ -123,22 +165,22 @@ describe('createConnectionStore', () => {
       tags: ['dev'],
       createdAt: '2026-08-11T12:00:00.000Z',
     })
+    expect(profile).not.toHaveProperty('uri')
 
-    const file = await loadConnections(filePath)
-    expect(file.connections).toEqual([profile])
-    expect(JSON.stringify(file)).not.toContain('hunter2')
-    expect(JSON.stringify(file)).not.toContain(uri)
+    const listed = await store.list()
+    expect(listed).toEqual([profile])
+    expect(JSON.stringify(listed)).not.toContain('hunter2')
+    expect(JSON.stringify(listed)).not.toContain(uri)
 
     await expect(store.getUri(profile.id)).resolves.toBe(uri)
-    await expect(store.list()).resolves.toEqual([profile])
+
+    const raw = backend.values.get(`${SECRET_SERVICE}\0${CONNECTIONS_SECRET_NAME}`)
+    expect(raw).toContain(uri)
   })
 
-  it('rejects duplicate names before writing secrets', async () => {
-    const directoryPath = await makeTemporaryDirectory()
-    const filePath = join(directoryPath, 'connections.json')
+  it('rejects duplicate names before writing the blob', async () => {
     const backend = createMemoryBackend()
     const store = createConnectionStore({
-      filePath,
       secrets: createSecretStore(backend),
     })
 
@@ -149,33 +191,9 @@ describe('createConnectionStore', () => {
     expect(backend.setCalls).toBe(1)
   })
 
-  it('rolls back the secret when metadata save fails', async () => {
-    const directoryPath = await makeTemporaryDirectory()
-    const filePath = join(directoryPath, 'connections.json')
+  it('removes a connection and clears the secret when empty', async () => {
     const backend = createMemoryBackend()
     const store = createConnectionStore({
-      filePath,
-      secrets: createSecretStore(backend),
-      createId: () => 'rollback-id',
-      async save() {
-        throw new Error('disk full')
-      },
-    })
-
-    await expect(store.add({ name: 'local', uri: 'mongodb://localhost:27017' })).rejects.toThrow(
-      /disk full/,
-    )
-    expect(backend.setCalls).toBe(1)
-    expect(backend.deleteCalls).toBe(1)
-    expect(backend.values.size).toBe(0)
-  })
-
-  it('removes metadata and deletes the secret', async () => {
-    const directoryPath = await makeTemporaryDirectory()
-    const filePath = join(directoryPath, 'connections.json')
-    const backend = createMemoryBackend()
-    const store = createConnectionStore({
-      filePath,
       secrets: createSecretStore(backend),
       createId: () => 'to-remove',
     })
@@ -185,5 +203,6 @@ describe('createConnectionStore', () => {
 
     await expect(store.list()).resolves.toEqual([])
     expect(backend.values.size).toBe(0)
+    expect(backend.deleteCalls).toBe(1)
   })
 })

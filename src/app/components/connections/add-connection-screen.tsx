@@ -159,7 +159,7 @@ export function AddConnectionScreen() {
     >
       <text content="Add connection" fg={theme.text} attributes={TextAttributes.BOLD} />
       <text
-        content="Stores the URI in the OS keychain. Metadata (name, host) is saved locally."
+        content="Stores connection details (including URI) in the OS keychain."
         fg={theme.textMuted}
       />
 

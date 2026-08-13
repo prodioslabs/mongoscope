@@ -1,11 +1,11 @@
-import { connectionsFilePath, loadConnections, saveConnections } from './config'
 import { hostLabelFromUri } from '../lib/mongodb-uri'
 import { defaultSecretStore, type SecretStore } from './secret-store'
-import type { ConnectionProfile, ConnectionsFile } from './types'
+import type { ConnectionProfile, ConnectionsBlob, StoredConnection } from './types'
+import { toConnectionProfile } from './validate'
 
 export type AddConnectionInput = {
   name: string
-  /** Full MongoDB connection URI — the only credential stored for v1. */
+  /** Full MongoDB connection URI — stored only inside the OS keychain blob. */
   uri: string
   tags?: string[]
 }
@@ -19,26 +19,20 @@ export type ConnectionStore = {
 }
 
 export type ConnectionStoreDeps = {
-  filePath?: string
   secrets?: SecretStore
-  load?: (filePath: string) => Promise<ConnectionsFile>
-  save?: (file: ConnectionsFile, filePath: string) => Promise<void>
   now?: () => Date
   createId?: () => string
 }
 
 export function createConnectionStore(deps: ConnectionStoreDeps = {}): ConnectionStore {
-  const filePath = deps.filePath ?? connectionsFilePath()
   const secrets = deps.secrets ?? defaultSecretStore
-  const load = deps.load ?? loadConnections
-  const save = deps.save ?? saveConnections
   const now = deps.now ?? (() => new Date())
   const createId = deps.createId ?? (() => crypto.randomUUID())
 
   return {
     async list() {
-      const file = await load(filePath)
-      return file.connections.slice()
+      const blob = await secrets.load()
+      return blob.connections.map(toConnectionProfile)
     },
 
     async add(input) {
@@ -47,57 +41,48 @@ export function createConnectionStore(deps: ConnectionStoreDeps = {}): Connectio
       const tags = normalizeTags(input.tags)
       const hostLabel = hostLabelFromUri(uri)
 
-      const file = await load(filePath)
-      assertNameAvailable(file, name)
+      const blob = await secrets.load()
+      assertNameAvailable(blob, name)
 
-      const profile: ConnectionProfile = {
+      const connection: StoredConnection = {
         id: createId(),
         name,
         hostLabel,
         tags,
         createdAt: now().toISOString(),
+        uri,
       }
 
-      await secrets.setUri(profile.id, uri)
-
-      const nextFile: ConnectionsFile = {
+      const nextBlob: ConnectionsBlob = {
         version: 1,
-        connections: [...file.connections, profile],
+        connections: [...blob.connections, connection],
       }
 
-      try {
-        await save(nextFile, filePath)
-      } catch (error) {
-        try {
-          await secrets.deleteUri(profile.id)
-        } catch {
-          // best-effort rollback only
-        }
-        throw error
-      }
-
-      return profile
+      await secrets.save(nextBlob)
+      return toConnectionProfile(connection)
     },
 
     async remove(id) {
       const trimmedId = requireTrimmed(id, 'id')
-      const file = await load(filePath)
-      const remaining = file.connections.filter((profile) => profile.id !== trimmedId)
-      if (remaining.length === file.connections.length) {
+      const blob = await secrets.load()
+      const remaining = blob.connections.filter((connection) => connection.id !== trimmedId)
+      if (remaining.length === blob.connections.length) {
         throw new Error(`Connection not found: ${trimmedId}`)
       }
 
-      await save({ version: 1, connections: remaining }, filePath)
-
-      try {
-        await secrets.deleteUri(trimmedId)
-      } catch {
-        // Metadata already removed; secret cleanup is best-effort.
+      if (remaining.length === 0) {
+        await secrets.clear()
+        return
       }
+
+      await secrets.save({ version: 1, connections: remaining })
     },
 
     async getUri(id) {
-      return secrets.getUri(requireTrimmed(id, 'id'))
+      const trimmedId = requireTrimmed(id, 'id')
+      const blob = await secrets.load()
+      const connection = blob.connections.find((entry) => entry.id === trimmedId)
+      return connection?.uri ?? null
     },
   }
 }
@@ -116,9 +101,9 @@ export async function remove(id: string): Promise<void> {
   return connectionStore.remove(id)
 }
 
-function assertNameAvailable(file: ConnectionsFile, name: string): void {
+function assertNameAvailable(blob: ConnectionsBlob, name: string): void {
   const normalizedName = name.toLowerCase()
-  if (file.connections.some((profile) => profile.name.toLowerCase() === normalizedName)) {
+  if (blob.connections.some((connection) => connection.name.toLowerCase() === normalizedName)) {
     throw new Error(`A connection named "${name}" already exists`)
   }
 }
