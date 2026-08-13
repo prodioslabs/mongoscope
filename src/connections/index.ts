@@ -20,8 +20,4 @@ export {
   type ConnectionStoreDeps,
 } from './store'
 export type { ConnectionProfile, ConnectionsBlob, StoredConnection } from './types'
-export {
-  emptyConnectionsBlob,
-  toConnectionProfile,
-  validateConnectionsBlob,
-} from './validate'
+export { emptyConnectionsBlob, toConnectionProfile, validateConnectionsBlob } from './validate'
