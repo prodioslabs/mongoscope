@@ -5,6 +5,7 @@ import { matchSorter } from 'match-sorter'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { type AppKeymapMode } from '../lib/keymap-mode'
 import { useFooter, type FooterKeybinding } from '../stores/footer'
+import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
 import { selectedForeground } from '../theme'
 import { Dialog } from './ui/dialog'
@@ -108,6 +109,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const setMode = useTheme((s) => s.setMode)
   const set = useTheme((s) => s.set)
   const setOverlayKeybindings = useFooter((s) => s.setOverlayKeybindings)
+  const goToConnections = useSession((s) => s.goToConnections)
+  const goToConnectionAdd = useSession((s) => s.goToConnectionAdd)
 
   const [view, setView] = useState<PaletteView>('commands')
   const [filter, setFilter] = useState('')
@@ -128,6 +131,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         value: 'quit',
         category: 'App',
         footer: 'q',
+      },
+      {
+        title: 'Manage connections',
+        value: 'manage-connections',
+        category: 'Connections',
+        footer: 'c',
+      },
+      {
+        title: 'Add connection',
+        value: 'add-connection',
+        category: 'Connections',
       },
       {
         title: 'Toggle mode',
@@ -282,6 +296,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
     if (value === 'quit') {
       renderer.destroy()
+      return
+    }
+
+    if (value === 'manage-connections') {
+      goToConnections()
+      return
+    }
+
+    if (value === 'add-connection') {
+      goToConnectionAdd()
       return
     }
 

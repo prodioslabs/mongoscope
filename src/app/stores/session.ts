@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import { LogStore, parseLogFile } from '../../parser'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
 
-export type AppScreen = 'welcome' | 'dashboard'
+export type AppScreen = 'welcome' | 'dashboard' | 'connections' | 'connection-add'
 
 export type AppTab = 'slow-queries' | 'live-ops' | 'timeline' | 'replication' | 'indexes' | 'logs'
 
@@ -46,12 +46,18 @@ type SessionState = {
   parseDurationMs: number | null
   parseError: string | null
   setTab: (tab: AppTab) => void
+  setScreen: (screen: AppScreen) => void
+  goToConnections: () => void
+  goToConnectionAdd: () => void
+  goToWelcome: () => void
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
 }
 
 function progressPercent(bytesRead: number, fileSize: number): number {
-  if (fileSize === 0) return 100
+  if (fileSize === 0) {
+    return 100
+  }
   return Math.min(100, Math.round((bytesRead / fileSize) * 100))
 }
 
@@ -69,8 +75,26 @@ export const useSession = create<SessionState>((set, get) => ({
     set({ activeTab: tab })
   },
 
+  setScreen(screen) {
+    set({ screen })
+  },
+
+  goToConnections() {
+    set({ screen: 'connections' })
+  },
+
+  goToConnectionAdd() {
+    set({ screen: 'connection-add' })
+  },
+
+  goToWelcome() {
+    set({ screen: 'welcome' })
+  },
+
   async startParse(path) {
-    if (get().parseProgress !== null) return
+    if (get().parseProgress !== null) {
+      return
+    }
 
     set({
       logPath: path,

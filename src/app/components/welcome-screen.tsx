@@ -21,6 +21,7 @@ const WELCOME_IDLE_KEYBINDINGS: FooterKeybinding[] = [
   { keys: '↑↓/jk', label: 'navigate' },
   { keys: 'tab', label: 'section' },
   { keys: 'enter', label: 'analyze' },
+  { keys: 'c', label: 'connections' },
 ]
 
 // Original "scope" mark: a monitor screen with a pulse waveform.
@@ -42,6 +43,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const parseProgress = useSession((s) => s.parseProgress)
   const parseError = useSession((s) => s.parseError)
   const startParse = useSession((s) => s.startParse)
+  const goToConnections = useSession((s) => s.goToConnections)
   const parsing = parseProgress !== null
 
   const [mongoLogs, setMongoLogs] = useState<string[]>([])
@@ -91,6 +93,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const dirLogsRef = useRef(dirLogs)
   const logDirRef = useRef(logDir)
   const startParseRef = useRef(startParse)
+  const goToConnectionsRef = useRef(goToConnections)
 
   activeSectionRef.current = activeSection
   selectedIndexesRef.current = selectedIndexes
@@ -98,6 +101,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   dirLogsRef.current = dirLogs
   logDirRef.current = logDir
   startParseRef.current = startParse
+  goToConnectionsRef.current = goToConnections
 
   useBindings(
     function createWelcomeScreenLayer() {
@@ -107,7 +111,9 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
 
       function selectIndexInSection(section: number, index: number) {
         setSelectedIndexes((indexes) => {
-          if (indexes[section] === index) return indexes
+          if (indexes[section] === index) {
+            return indexes
+          }
           const next = [...indexes] as [number, number]
           next[section] = index
           return next
@@ -142,7 +148,9 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
               const section = activeSectionRef.current
               const files = logFilesForSection(section)
               const name = files[selectedIndexesRef.current[section] ?? 0]
-              if (!name) return
+              if (!name) {
+                return
+              }
               const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
               void startParseRef.current(join(dir, name))
             },
@@ -165,6 +173,12 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
               navigateSelection(1)
             },
           },
+          {
+            name: 'welcome.open-connections',
+            run() {
+              goToConnectionsRef.current()
+            },
+          },
         ],
         bindings: [
           { key: 'return', cmd: 'welcome.analyze' },
@@ -174,6 +188,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
           { key: 'k', cmd: 'welcome.move-up' },
           { key: 'down', cmd: 'welcome.move-down' },
           { key: 'j', cmd: 'welcome.move-down' },
+          { key: 'c', cmd: 'welcome.open-connections' },
         ],
       }
     },
