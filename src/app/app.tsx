@@ -1,7 +1,9 @@
-import { useBindings } from '@opentui/keymap/react'
+import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { match } from 'ts-pattern'
+import { AddConnectionScreen } from './components/connections/add-connection-screen'
+import { ConnectionsScreen } from './components/connections/connections-screen'
 import { CommandPalette } from './components/command-palette'
 import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
@@ -27,6 +29,7 @@ type AppProps = {
 
 export function App({ options }: AppProps) {
   const renderer = useRenderer()
+  const keymap = useKeymap()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const screen = useSession((s) => s.screen)
@@ -47,6 +50,17 @@ export function App({ options }: AppProps) {
   setRef.current = set
   setTabRef.current = setTab
   setPaletteOpenRef.current = setPaletteOpen
+
+  useEffect(
+    function syncPaletteKeymapMode() {
+      if (paletteOpen || screen === 'connection-add') {
+        keymap.setData('app.mode', 'palette' satisfies AppKeymapMode)
+        return
+      }
+      keymap.setData('app.mode', 'base' satisfies AppKeymapMode)
+    },
+    [keymap, paletteOpen, screen],
+  )
 
   useBindings(function createAlwaysOnAppLayer() {
     return {
@@ -123,6 +137,8 @@ export function App({ options }: AppProps) {
   const body = match(screen)
     .with('welcome', () => <WelcomeScreen logDir={options.logDir ?? '.'} />)
     .with('dashboard', () => <Dashboard />)
+    .with('connections', () => <ConnectionsScreen />)
+    .with('connection-add', () => <AddConnectionScreen />)
     .exhaustive()
 
   return (

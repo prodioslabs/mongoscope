@@ -2,14 +2,14 @@ import { bg, bold, fg, type RGBA, type TextChunk, type TextTableContent } from '
 import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { type FooterKeybinding } from '../../stores/footer'
-import { useFooterKeybindings, useFooterStatus } from '../footer-keybindings'
+import type { QueryPattern } from '../../../query-patterns'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
+import { type FooterKeybinding } from '../../stores/footer'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { type Theme } from '../../theme'
 import '../../lib/opentui-text-table'
-import type { QueryPattern } from '../../../query-patterns'
+import { useFooterKeybindings, useFooterStatus } from '../footer-keybindings'
 import {
   avgMsSeverity,
   examinedSeverity,
@@ -25,6 +25,7 @@ import {
 import { QueryDetailDialog } from './query-detail-dialog'
 
 type SortBy = 'count' | 'avgMs' | 'plan'
+type SortDirection = 'asc' | 'desc'
 
 /**
  * Non-data lines: tab bar, footer, header content line, and outer/header border
@@ -35,7 +36,7 @@ const CHROME_ROWS = 5
 /** Approximate height of one data row (content line + inner border). */
 const ROW_STRIDE = 2
 
-const COLUMN_COUNT = 8
+const COLUMN_COUNT = 7
 
 const SLOW_QUERIES_KEYBINDINGS: FooterKeybinding[] = [
   { keys: '↑↓/jk', label: 'navigate' },
@@ -54,13 +55,19 @@ export function SlowQueriesTab() {
   const [scrollOffset, setScrollOffset] = useState(0)
   const [sortBy, setSortBy] = useState<SortBy>('count')
   const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const selectedIndexRef = useRef(0)
   const scrollOffsetRef = useRef(0)
   const capacityRef = useRef(1)
   const sortedLengthRef = useRef(0)
   const sortedPatternsRef = useRef<QueryPattern[]>([])
+  const sortByRef = useRef(sortBy)
+  const sortDirectionRef = useRef(sortDirection)
 
-  const sortedPatterns = useMemo(() => sortPatterns(patterns, sortBy), [patterns, sortBy])
+  const sortedPatterns = useMemo(
+    () => sortPatterns(patterns, sortBy, sortDirection),
+    [patterns, sortBy, sortDirection],
+  )
   const detailPattern =
     detailPatternId == null
       ? null
@@ -79,11 +86,15 @@ export function SlowQueriesTab() {
   useEffect(
     function clampSlowQueriesSelection() {
       setSelectedIndex((index) => {
-        if (sortedPatterns.length === 0) return 0
+        if (sortedPatterns.length === 0) {
+          return 0
+        }
         return Math.min(index, sortedPatterns.length - 1)
       })
       setScrollOffset((offset) => {
-        if (sortedPatterns.length === 0) return 0
+        if (sortedPatterns.length === 0) {
+          return 0
+        }
         const maxOffset = Math.max(0, sortedPatterns.length - capacity)
         return Math.min(offset, maxOffset)
       })
@@ -126,14 +137,32 @@ export function SlowQueriesTab() {
     [sortedPatterns],
   )
 
+  useEffect(
+    function syncSortByRef() {
+      sortByRef.current = sortBy
+    },
+    [sortBy],
+  )
+
+  useEffect(
+    function syncSortDirectionRef() {
+      sortDirectionRef.current = sortDirection
+    },
+    [sortDirection],
+  )
+
   useBindings(function createSlowQueriesLayer() {
     function moveSelection(delta: number) {
       const length = sortedLengthRef.current
-      if (length === 0) return
+      if (length === 0) {
+        return
+      }
 
       const prev = selectedIndexRef.current
       const next = Math.max(0, Math.min(length - 1, prev + delta))
-      if (next === prev) return
+      if (next === prev) {
+        return
+      }
       setSelectedIndex(next)
 
       const cap = capacityRef.current
@@ -151,34 +180,39 @@ export function SlowQueriesTab() {
       setDetailPatternId(pattern.id)
     }
 
+    function applySort(next: SortBy) {
+      if (sortedLengthRef.current === 0) {
+        return
+      }
+      if (sortByRef.current === next) {
+        setSortDirection((direction) => (direction === 'desc' ? 'asc' : 'desc'))
+      } else {
+        setSortBy(next)
+        setSortDirection('desc')
+      }
+      setSelectedIndex(0)
+      setScrollOffset(0)
+    }
+
     return {
       appMode: 'base' satisfies AppKeymapMode,
       commands: [
         {
           name: 'slow-queries.sort-count',
           run() {
-            if (sortedLengthRef.current === 0) return
-            setSortBy('count')
-            setSelectedIndex(0)
-            setScrollOffset(0)
+            applySort('count')
           },
         },
         {
           name: 'slow-queries.sort-avg',
           run() {
-            if (sortedLengthRef.current === 0) return
-            setSortBy('avgMs')
-            setSelectedIndex(0)
-            setScrollOffset(0)
+            applySort('avgMs')
           },
         },
         {
           name: 'slow-queries.sort-plan',
           run() {
-            if (sortedLengthRef.current === 0) return
-            setSortBy('plan')
-            setSelectedIndex(0)
-            setScrollOffset(0)
+            applySort('plan')
           },
         },
         {
@@ -217,7 +251,14 @@ export function SlowQueriesTab() {
   const visible = sortedPatterns.slice(scrollOffset, scrollOffset + capacity)
   const content =
     sortedPatterns.length > 0
-      ? buildTableContent(visible, selectedIndex - scrollOffset, theme, capacity)
+      ? buildTableContent(
+          visible,
+          selectedIndex - scrollOffset,
+          theme,
+          capacity,
+          sortBy,
+          sortDirection,
+        )
       : null
 
   return (
@@ -252,22 +293,49 @@ export function SlowQueriesTab() {
   )
 }
 
-function sortPatterns(patterns: QueryPattern[], sortBy: SortBy): QueryPattern[] {
+function sortPatterns(
+  patterns: QueryPattern[],
+  sortBy: SortBy,
+  sortDirection: SortDirection,
+): QueryPattern[] {
   const copy = patterns.slice()
+  const ascending = sortDirection === 'asc'
   copy.sort(function comparePatterns(a, b) {
     if (sortBy === 'count') {
-      if (b.count !== a.count) return b.count - a.count
-      return b.avgMs - a.avgMs
+      if (b.count !== a.count) {
+        return ascending ? a.count - b.count : b.count - a.count
+      }
+      return ascending ? a.avgMs - b.avgMs : b.avgMs - a.avgMs
     }
     if (sortBy === 'avgMs') {
-      if (b.avgMs !== a.avgMs) return b.avgMs - a.avgMs
-      return b.count - a.count
+      if (b.avgMs !== a.avgMs) {
+        return ascending ? a.avgMs - b.avgMs : b.avgMs - a.avgMs
+      }
+      return ascending ? a.count - b.count : b.count - a.count
     }
     const rankDiff = planSortRank(a.plan) - planSortRank(b.plan)
-    if (rankDiff !== 0) return rankDiff
-    return b.count - a.count
+    if (rankDiff !== 0) {
+      return ascending ? -rankDiff : rankDiff
+    }
+    return ascending ? a.count - b.count : b.count - a.count
   })
   return copy
+}
+
+function sortArrow(sortDirection: SortDirection): string {
+  return sortDirection === 'desc' ? '▼' : '▲'
+}
+
+function headerLabel(
+  base: string,
+  column: SortBy | null,
+  sortBy: SortBy,
+  sortDirection: SortDirection,
+): string {
+  if (column == null || column !== sortBy) {
+    return base
+  }
+  return `${base}${sortArrow(sortDirection)}`
 }
 
 function buildTableContent(
@@ -275,20 +343,24 @@ function buildTableContent(
   selectedIndex: number,
   theme: Theme,
   rowCapacity: number,
+  sortBy: SortBy,
+  sortDirection: SortDirection,
 ): TextTableContent {
   const header: TextChunk[][] = [
     headerCell('NAMESPACE', theme),
     headerCell('OP', theme),
-    headerCell('COUNT', theme),
-    headerCell('AVG MS', theme),
+    headerCell(headerLabel('COUNT', 'count', sortBy, sortDirection), theme),
+    headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme),
     headerCell('EXAMINED/RET', theme),
-    headerCell('PLAN', theme),
+    headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme),
     headerCell('TREND', theme),
   ]
 
   let namespaceWidth = 'NAMESPACE'.length
   for (const pattern of patterns) {
-    if (pattern.namespace.length > namespaceWidth) namespaceWidth = pattern.namespace.length
+    if (pattern.namespace.length > namespaceWidth) {
+      namespaceWidth = pattern.namespace.length
+    }
   }
 
   const rows: TextTableContent = [header]
@@ -340,7 +412,9 @@ function headerCell(label: string, theme: Theme): TextChunk[] {
 
 function cell(text: string, color: RGBA, background?: RGBA): TextChunk[] {
   const colored = fg(color)(text)
-  if (background) return [bg(background)(colored)]
+  if (background) {
+    return [bg(background)(colored)]
+  }
   return [colored]
 }
 
