@@ -4,7 +4,7 @@ import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QueryPattern } from '../../../query-patterns'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
-import { type FooterKeybinding } from '../../stores/footer'
+import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../shortcuts'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { type Theme } from '../../theme'
@@ -37,11 +37,6 @@ const ROW_STRIDE = 2
 
 const COLUMN_COUNT = 7
 
-const SLOW_QUERIES_KEYBINDINGS: FooterKeybinding[] = [
-  { keys: '↑↓/jk', label: 'navigate' },
-  { keys: 'c/a/p', label: 'sort count/avg/plan' },
-]
-
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
   const queryPatterns = useSession((s) => s.queryPatterns)
@@ -71,7 +66,7 @@ export function SlowQueriesTab() {
       ? formatWindowLabel(queryPatterns.windowStartMs, queryPatterns.windowEndMs)
       : 'full log'
 
-  useFooterKeybindings(SLOW_QUERIES_KEYBINDINGS)
+  useFooterKeybindings(SLOW_QUERIES_FOOTER)
   useFooterStatus(windowLabel)
 
   useEffect(
@@ -206,15 +201,7 @@ export function SlowQueriesTab() {
           },
         },
       ],
-      bindings: [
-        { key: 'c', cmd: 'slow-queries.sort-count' },
-        { key: 'a', cmd: 'slow-queries.sort-avg' },
-        { key: 'p', cmd: 'slow-queries.sort-plan' },
-        { key: 'up', cmd: 'slow-queries.move-up' },
-        { key: 'k', cmd: 'slow-queries.move-up' },
-        { key: 'down', cmd: 'slow-queries.move-down' },
-        { key: 'j', cmd: 'slow-queries.move-down' },
-      ],
+      bindings: toBindings(SLOW_QUERIES_SHORTCUTS),
     }
   }, [])
 

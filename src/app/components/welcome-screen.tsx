@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { useEffect, useRef, useState } from 'react'
 import { listLogFiles, MONGODB_DEFAULT_LOG_DIR } from '../lib/list-log-files'
 import { type AppKeymapMode } from '../lib/keymap-mode'
-import { type FooterKeybinding } from '../stores/footer'
+import { toBindings, toFooter, WELCOME_PARSING_FOOTER, WELCOME_SHORTCUTS } from '../shortcuts'
 import { useFooterKeybindings } from './footer-keybindings'
 import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
@@ -15,14 +15,7 @@ const MAX_SECTION_WIDTH = 80
 const PROGRESS_BAR_WIDTH = 24
 const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 
-const WELCOME_PARSING_KEYBINDINGS: FooterKeybinding[] = [{ keys: '…', label: 'parsing' }]
-
-const WELCOME_IDLE_KEYBINDINGS: FooterKeybinding[] = [
-  { keys: '↑↓/jk', label: 'navigate' },
-  { keys: 'tab', label: 'section' },
-  { keys: 'enter', label: 'analyze' },
-  { keys: 'c', label: 'connections' },
-]
+const WELCOME_IDLE_KEYBINDINGS = toFooter(WELCOME_SHORTCUTS)
 
 // Original "scope" mark: a monitor screen with a pulse waveform.
 const SCOPE = [
@@ -51,7 +44,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const [activeSection, setActiveSection] = useState(0)
   const [selectedIndexes, setSelectedIndexes] = useState<[number, number]>([0, 0])
 
-  useFooterKeybindings(parsing ? WELCOME_PARSING_KEYBINDINGS : WELCOME_IDLE_KEYBINDINGS)
+  useFooterKeybindings(parsing ? WELCOME_PARSING_FOOTER : WELCOME_IDLE_KEYBINDINGS)
 
   useEffect(
     function loadLogFileLists() {
@@ -180,16 +173,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
             },
           },
         ],
-        bindings: [
-          { key: 'return', cmd: 'welcome.analyze' },
-          { key: 'enter', cmd: 'welcome.analyze' },
-          { key: 'tab', cmd: 'welcome.toggle-section' },
-          { key: 'up', cmd: 'welcome.move-up' },
-          { key: 'k', cmd: 'welcome.move-up' },
-          { key: 'down', cmd: 'welcome.move-down' },
-          { key: 'j', cmd: 'welcome.move-down' },
-          { key: 'c', cmd: 'welcome.open-connections' },
-        ],
+        bindings: toBindings(WELCOME_SHORTCUTS),
       }
     },
     [parsing],

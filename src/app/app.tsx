@@ -7,9 +7,16 @@ import { ConnectionsScreen } from './components/connections/connections-screen'
 import { CommandPalette } from './components/command-palette'
 import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
+import { HelpMenu } from './components/help-menu'
 import { WelcomeScreen } from './components/welcome-screen'
 import { type AppKeymapMode } from './lib/keymap-mode'
-import { TABS, tabFromKey, useSession } from './stores/session'
+import {
+  DASHBOARD_SHORTCUTS,
+  GLOBAL_ALWAYS_ON_SHORTCUTS,
+  GLOBAL_BASE_SHORTCUTS,
+  toBindings,
+} from './shortcuts'
+import { tabFromKey, useSession } from './stores/session'
 import { useTheme } from './stores/theme'
 
 export type AppOptions = {
@@ -32,6 +39,7 @@ export function App({ options }: AppProps) {
   const keymap = useKeymap()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false)
   const screen = useSession((s) => s.screen)
   const setTab = useSession((s) => s.setTab)
 
@@ -42,6 +50,7 @@ export function App({ options }: AppProps) {
   const setRef = useRef(set)
   const setTabRef = useRef(setTab)
   const setPaletteOpenRef = useRef(setPaletteOpen)
+  const setHelpMenuOpenRef = useRef(setHelpMenuOpen)
 
   modeRef.current = mode
   selectedRef.current = selected
@@ -50,16 +59,14 @@ export function App({ options }: AppProps) {
   setRef.current = set
   setTabRef.current = setTab
   setPaletteOpenRef.current = setPaletteOpen
+  setHelpMenuOpenRef.current = setHelpMenuOpen
 
   useEffect(
-    function syncPaletteKeymapMode() {
-      if (paletteOpen || screen === 'connection-add') {
-        keymap.setData('app.mode', 'palette' satisfies AppKeymapMode)
-        return
-      }
-      keymap.setData('app.mode', 'base' satisfies AppKeymapMode)
+    function syncAppKeymapMode() {
+      const usePaletteMode = paletteOpen || helpMenuOpen || screen === 'connection-add'
+      keymap.setData('app.mode', (usePaletteMode ? 'palette' : 'base') satisfies AppKeymapMode)
     },
-    [keymap, paletteOpen, screen],
+    [keymap, paletteOpen, helpMenuOpen, screen],
   )
 
   useBindings(function createAlwaysOnAppLayer() {
@@ -68,11 +75,19 @@ export function App({ options }: AppProps) {
         {
           name: 'app.toggle-palette',
           run() {
+            setHelpMenuOpenRef.current(false)
             setPaletteOpenRef.current((open) => !open)
           },
         },
+        {
+          name: 'app.toggle-help',
+          run() {
+            setPaletteOpenRef.current(false)
+            setHelpMenuOpenRef.current((open) => !open)
+          },
+        },
       ],
-      bindings: [{ key: 'ctrl+k', cmd: 'app.toggle-palette' }],
+      bindings: toBindings(GLOBAL_ALWAYS_ON_SHORTCUTS),
     }
   }, [])
 
@@ -103,11 +118,7 @@ export function App({ options }: AppProps) {
             },
           },
         ],
-        bindings: [
-          { key: 'q', cmd: 'app.quit' },
-          { key: 'm', cmd: 'app.toggle-mode' },
-          { key: 't', cmd: 'app.cycle-theme' },
-        ],
+        bindings: toBindings(GLOBAL_BASE_SHORTCUTS),
       }
     },
     [renderer],
@@ -128,7 +139,7 @@ export function App({ options }: AppProps) {
             },
           },
         ],
-        bindings: TABS.map((tab) => ({ key: tab.key, cmd: 'app.select-tab' as const })),
+        bindings: toBindings(DASHBOARD_SHORTCUTS),
       }
     },
     [screen],
@@ -145,7 +156,15 @@ export function App({ options }: AppProps) {
     <box flexGrow={1} flexDirection="column">
       {body}
       <Footer />
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        onOpenHelpMenu={() => {
+          setPaletteOpen(false)
+          setHelpMenuOpen(true)
+        }}
+      />
+      <HelpMenu open={helpMenuOpen} onOpenChange={setHelpMenuOpen} />
     </box>
   )
 }
