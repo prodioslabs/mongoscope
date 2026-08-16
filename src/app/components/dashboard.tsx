@@ -1,12 +1,12 @@
 import { match } from 'ts-pattern'
-import { type FooterKeybinding } from '../stores/footer'
+import { DASHBOARD_SHORTCUTS, toFooter } from '../shortcuts'
 import { FooterKeybindingScope } from './footer-keybindings'
 import { useSession } from '../stores/session'
 import { useTheme } from '../stores/theme'
 import { SlowQueriesTab } from './slow-queries/slow-queries-tab'
 import { TabBar } from './tab-bar'
 
-const DASHBOARD_KEYBINDINGS: FooterKeybinding[] = [{ keys: '1-6', label: 'tabs' }]
+const DASHBOARD_KEYBINDINGS = toFooter(DASHBOARD_SHORTCUTS)
 
 export function Dashboard() {
   const activeTab = useSession((s) => s.activeTab)

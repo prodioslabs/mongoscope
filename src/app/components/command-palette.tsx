@@ -19,6 +19,7 @@ const PALETTE_OVERLAY_KEYBINDINGS: FooterKeybinding[] = [
 type CommandPaletteProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onOpenHelpMenu?: () => void
 }
 
 type CommandOption = {
@@ -99,7 +100,7 @@ function CommandOptionRow({
   )
 }
 
-export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPaletteProps) {
   const renderer = useRenderer()
   const dimensions = useTerminalDimensions()
   const theme = useTheme((s) => s.theme)
@@ -124,9 +125,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const selectedRef = useRef(0)
   const viewRef = useRef(view)
   const onOpenChangeRef = useRef(onOpenChange)
+  const onOpenHelpMenuRef = useRef(onOpenHelpMenu)
 
   const commandOptions = useMemo(
     (): CommandOption[] => [
+      {
+        title: 'Keyboard shortcuts',
+        value: 'help',
+        category: 'App',
+        footer: '?',
+      },
       {
         title: 'Quit',
         value: 'quit',
@@ -194,6 +202,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   selectedRef.current = selected
   viewRef.current = view
   onOpenChangeRef.current = onOpenChange
+  onOpenHelpMenuRef.current = onOpenHelpMenu
 
   const rows = useMemo(() => {
     const headers = grouped.reduce((acc, [category], index) => {
@@ -296,6 +305,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
     if (view === 'themes') {
       set(value)
+      return
+    }
+
+    if (value === 'help') {
+      onOpenHelpMenuRef.current?.()
       return
     }
 
