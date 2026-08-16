@@ -48,7 +48,7 @@ function deriveKeybindings(
   overlay: FooterKeybinding[] | null,
 ): FooterKeybinding[] {
   if (overlay != null) {
-    return withDefaults(overlay)
+    return overlay
   }
   return withDefaults(flattenScopes(scopes))
 }
