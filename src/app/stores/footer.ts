@@ -10,6 +10,11 @@ type FooterKeybindingScope = {
   bindings: FooterKeybinding[]
 }
 
+type FooterOverlay = {
+  id: string
+  bindings: FooterKeybinding[]
+}
+
 type FooterStatusScope = {
   path: string
   status: string | null
@@ -18,13 +23,14 @@ type FooterStatusScope = {
 type FooterState = {
   keybindings: FooterKeybinding[]
   scopes: FooterKeybindingScope[]
-  overlay: FooterKeybinding[] | null
+  overlays: FooterOverlay[]
   /** Optional mid-footer status (e.g. log path + parse time) */
   status: string | null
   statusScopes: FooterStatusScope[]
   contributeKeybindings: (path: string, bindings: FooterKeybinding[]) => void
   withdrawKeybindings: (path: string) => void
-  setOverlayKeybindings: (bindings: FooterKeybinding[] | null) => void
+  pushOverlayKeybindings: (id: string, bindings: FooterKeybinding[]) => void
+  popOverlayKeybindings: (id: string) => void
   contributeStatus: (path: string, status: string | null) => void
   withdrawStatus: (path: string) => void
 }
@@ -42,14 +48,33 @@ function flattenScopes(scopes: FooterKeybindingScope[]): FooterKeybinding[] {
   return scopes.flatMap((scope) => scope.bindings)
 }
 
+function topOverlayBindings(overlays: FooterOverlay[]): FooterKeybinding[] | null {
+  return overlays.at(-1)?.bindings ?? null
+}
+
 function deriveKeybindings(
   scopes: FooterKeybindingScope[],
-  overlay: FooterKeybinding[] | null,
+  overlays: FooterOverlay[],
 ): FooterKeybinding[] {
+  const overlay = topOverlayBindings(overlays)
   if (overlay != null) {
     return withDefaults(overlay)
   }
   return withDefaults(flattenScopes(scopes))
+}
+
+function upsertOverlay(
+  overlays: FooterOverlay[],
+  id: string,
+  bindings: FooterKeybinding[],
+): FooterOverlay[] {
+  const index = overlays.findIndex((overlay) => overlay.id === id)
+  if (index === -1) {
+    return [...overlays, { id, bindings }]
+  }
+  const next = overlays.slice()
+  next[index] = { id, bindings }
+  return next
 }
 
 function deriveStatus(statusScopes: FooterStatusScope[]): string | null {
@@ -76,27 +101,33 @@ function withoutPathAndDescendants<T extends { path: string }>(items: T[], path:
 export const useFooter = create<FooterState>((set) => ({
   keybindings: DEFAULT_KEYBINDINGS,
   scopes: [],
-  overlay: null,
+  overlays: [],
   status: null,
   statusScopes: [],
   contributeKeybindings(path, bindings) {
     set((state) => {
       const without = state.scopes.filter((scope) => scope.path !== path)
       const scopes = sortByPath([...without, { path, bindings }])
-      return { scopes, keybindings: deriveKeybindings(scopes, state.overlay) }
+      return { scopes, keybindings: deriveKeybindings(scopes, state.overlays) }
     })
   },
   withdrawKeybindings(path) {
     set((state) => {
       const scopes = withoutPathAndDescendants(state.scopes, path)
-      return { scopes, keybindings: deriveKeybindings(scopes, state.overlay) }
+      return { scopes, keybindings: deriveKeybindings(scopes, state.overlays) }
     })
   },
-  setOverlayKeybindings(bindings) {
-    set((state) => ({
-      overlay: bindings,
-      keybindings: deriveKeybindings(state.scopes, bindings),
-    }))
+  pushOverlayKeybindings(id, bindings) {
+    set((state) => {
+      const overlays = upsertOverlay(state.overlays, id, bindings)
+      return { overlays, keybindings: deriveKeybindings(state.scopes, overlays) }
+    })
+  },
+  popOverlayKeybindings(id) {
+    set((state) => {
+      const overlays = state.overlays.filter((overlay) => overlay.id !== id)
+      return { overlays, keybindings: deriveKeybindings(state.scopes, overlays) }
+    })
   },
   contributeStatus(path, status) {
     set((state) => {

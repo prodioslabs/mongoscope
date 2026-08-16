@@ -1,6 +1,6 @@
-import { useBindings, useKeymap } from '@opentui/keymap/react'
+import { useBindings } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { match } from 'ts-pattern'
 import { AddConnectionScreen } from './components/connections/add-connection-screen'
 import { ConnectionsScreen } from './components/connections/connections-screen'
@@ -29,7 +29,6 @@ type AppProps = {
 
 export function App({ options }: AppProps) {
   const renderer = useRenderer()
-  const keymap = useKeymap()
   const { mode, setMode, set, selected, all } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const screen = useSession((s) => s.screen)
@@ -50,17 +49,6 @@ export function App({ options }: AppProps) {
   setRef.current = set
   setTabRef.current = setTab
   setPaletteOpenRef.current = setPaletteOpen
-
-  useEffect(
-    function syncPaletteKeymapMode() {
-      if (paletteOpen || screen === 'connection-add') {
-        keymap.setData('app.mode', 'palette' satisfies AppKeymapMode)
-        return
-      }
-      keymap.setData('app.mode', 'base' satisfies AppKeymapMode)
-    },
-    [keymap, paletteOpen, screen],
-  )
 
   useBindings(function createAlwaysOnAppLayer() {
     return {

@@ -1,12 +1,10 @@
 import { RGBA } from '@opentui/core'
 import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
+import { createOverlayOwnerId, overlayMode } from '../../lib/overlay-mode'
 import { useTheme } from '../../stores/theme'
-
-/** Nested dialogs share one palette-mode session via refcount. */
-let openDialogCount = 0
 
 type DialogProps = {
   open: boolean
@@ -26,6 +24,7 @@ export function Dialog({
 }: DialogProps) {
   const renderer = useRenderer()
   const keymap = useKeymap()
+  const [overlayId] = useState(() => createOverlayOwnerId('dialog'))
   const dimensions = useTerminalDimensions()
   const theme = useTheme((s) => s.theme)
   const dismissRef = useRef(false)
@@ -36,18 +35,12 @@ export function Dialog({
     function syncDialogKeymapMode() {
       if (!open) return
 
-      openDialogCount += 1
-      keymap.setData('app.mode', 'palette' satisfies AppKeymapMode)
-
+      overlayMode.acquire(overlayId, keymap)
       return function restoreDialogKeymapMode() {
-        openDialogCount = Math.max(0, openDialogCount - 1)
-        keymap.setData(
-          'app.mode',
-          (openDialogCount > 0 ? 'palette' : 'base') satisfies AppKeymapMode,
-        )
+        overlayMode.release(overlayId, keymap)
       }
     },
-    [keymap, open],
+    [keymap, open, overlayId],
   )
 
   useBindings(
@@ -57,16 +50,16 @@ export function Dialog({
         enabled: open,
         commands: [
           {
-            name: 'dialog.close',
+            name: `dialog.close.${overlayId}`,
             run() {
               onCloseRef.current?.()
             },
           },
         ],
-        bindings: [{ key: 'escape', cmd: 'dialog.close' }],
+        bindings: [{ key: 'escape', cmd: `dialog.close.${overlayId}` }],
       }
     },
-    [open],
+    [open, overlayId],
   )
 
   if (!open) return null

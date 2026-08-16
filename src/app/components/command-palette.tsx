@@ -108,7 +108,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const all = useTheme((s) => s.all)
   const setMode = useTheme((s) => s.setMode)
   const set = useTheme((s) => s.set)
-  const setOverlayKeybindings = useFooter((s) => s.setOverlayKeybindings)
+  const pushOverlayKeybindings = useFooter((s) => s.pushOverlayKeybindings)
+  const popOverlayKeybindings = useFooter((s) => s.popOverlayKeybindings)
   const goToConnections = useSession((s) => s.goToConnections)
   const goToConnectionAdd = useSession((s) => s.goToConnectionAdd)
 
@@ -221,12 +222,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   useEffect(
     function syncFooterOverlayKeybindings() {
       if (!open) return
-      setOverlayKeybindings(PALETTE_OVERLAY_KEYBINDINGS)
+      pushOverlayKeybindings('command-palette', PALETTE_OVERLAY_KEYBINDINGS)
       return function clearFooterOverlayKeybindings() {
-        setOverlayKeybindings(null)
+        popOverlayKeybindings('command-palette')
       }
     },
-    [open, setOverlayKeybindings],
+    [open, pushOverlayKeybindings, popOverlayKeybindings],
   )
 
   useEffect(
@@ -277,6 +278,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       setFilter('')
       return
     }
+    const input = inputRef.current
+    if (input && !input.isDestroyed) {
+      input.blur()
+    }
     onOpenChangeRef.current(false)
   }
 
@@ -323,43 +328,47 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const submitCurrentRef = useRef(submitCurrent)
   submitCurrentRef.current = submitCurrent
 
-  useBindings(function createCommandPaletteLayer() {
-    return {
-      appMode: 'palette' satisfies AppKeymapMode,
-      commands: [
-        {
-          name: 'palette.navigate-up',
-          run() {
-            const items = flatRef.current
-            if (items.length === 0) return
-            setInputMode('keyboard')
-            setSelected((index) => (index - 1 + items.length) % items.length)
+  useBindings(
+    function createCommandPaletteLayer() {
+      return {
+        appMode: 'palette' satisfies AppKeymapMode,
+        enabled: open,
+        commands: [
+          {
+            name: 'palette.navigate-up',
+            run() {
+              const items = flatRef.current
+              if (items.length === 0) return
+              setInputMode('keyboard')
+              setSelected((index) => (index - 1 + items.length) % items.length)
+            },
           },
-        },
-        {
-          name: 'palette.navigate-down',
-          run() {
-            const items = flatRef.current
-            if (items.length === 0) return
-            setInputMode('keyboard')
-            setSelected((index) => (index + 1) % items.length)
+          {
+            name: 'palette.navigate-down',
+            run() {
+              const items = flatRef.current
+              if (items.length === 0) return
+              setInputMode('keyboard')
+              setSelected((index) => (index + 1) % items.length)
+            },
           },
-        },
-        {
-          name: 'palette.submit',
-          run() {
-            submitCurrentRef.current()
+          {
+            name: 'palette.submit',
+            run() {
+              submitCurrentRef.current()
+            },
           },
-        },
-      ],
-      bindings: [
-        { key: 'up', cmd: 'palette.navigate-up' },
-        { key: 'down', cmd: 'palette.navigate-down' },
-        { key: 'return', cmd: 'palette.submit' },
-        { key: 'enter', cmd: 'palette.submit' },
-      ],
-    }
-  }, [])
+        ],
+        bindings: [
+          { key: 'up', cmd: 'palette.navigate-up' },
+          { key: 'down', cmd: 'palette.navigate-down' },
+          { key: 'return', cmd: 'palette.submit' },
+          { key: 'enter', cmd: 'palette.submit' },
+        ],
+      }
+    },
+    [open],
+  )
 
   return (
     <Dialog open={open} onClose={handleClose}>

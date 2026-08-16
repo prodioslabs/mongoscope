@@ -1,5 +1,5 @@
 import { ScrollBoxRenderable, TextAttributes, type RGBA } from '@opentui/core'
-import { useBindings } from '@opentui/keymap/react'
+import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
@@ -10,6 +10,7 @@ import {
 } from '../../../query-patterns'
 import type { LogStore } from '../../../parser'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
+import { overlayMode } from '../../lib/overlay-mode'
 import { useFooter, type FooterKeybinding } from '../../stores/footer'
 import { useTheme } from '../../stores/theme'
 import { type Theme } from '../../theme'
@@ -48,22 +49,37 @@ export function QueryDetailDialog({
   onClose,
 }: QueryDetailDialogProps) {
   const theme = useTheme((s) => s.theme)
+  const keymap = useKeymap()
   const dimensions = useTerminalDimensions()
-  const setOverlayKeybindings = useFooter((s) => s.setOverlayKeybindings)
+  const pushOverlayKeybindings = useFooter((s) => s.pushOverlayKeybindings)
+  const popOverlayKeybindings = useFooter((s) => s.popOverlayKeybindings)
   const scrollRef = useRef<ScrollBoxRenderable | null>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   const [explain, setExplain] = useState<PatternExplain | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
 
   useEffect(
-    function syncDetailFooterOverlay() {
+    function syncQueryDetailOverlayMode() {
       if (!open) return
-      setOverlayKeybindings(detailOverlayKeybindings(showRaw))
-      return function clearDetailFooterOverlay() {
-        setOverlayKeybindings(null)
+      overlayMode.acquire('query-detail', keymap)
+      return function restoreQueryDetailOverlayMode() {
+        overlayMode.release('query-detail', keymap)
       }
     },
-    [open, showRaw, setOverlayKeybindings],
+    [keymap, open],
+  )
+
+  useEffect(
+    function syncDetailFooterOverlay() {
+      if (!open) return
+      pushOverlayKeybindings('query-detail', detailOverlayKeybindings(showRaw))
+      return function clearDetailFooterOverlay() {
+        popOverlayKeybindings('query-detail')
+      }
+    },
+    [open, showRaw, pushOverlayKeybindings, popOverlayKeybindings],
   )
 
   useEffect(
@@ -147,6 +163,12 @@ export function QueryDetailDialog({
               scrollRef.current?.scrollBy(1, 'viewport')
             },
           },
+          {
+            name: 'query-detail.close',
+            run() {
+              onCloseRef.current()
+            },
+          },
         ],
         bindings: [
           { key: 'r', cmd: 'query-detail.toggle-raw' },
@@ -156,6 +178,7 @@ export function QueryDetailDialog({
           { key: 'j', cmd: 'query-detail.scroll-down' },
           { key: 'pageup', cmd: 'query-detail.page-up' },
           { key: 'pagedown', cmd: 'query-detail.page-down' },
+          { key: 'escape', cmd: 'query-detail.close' },
         ],
       }
     },
@@ -227,7 +250,11 @@ export function QueryDetailDialog({
               ) : (
                 <>
                   <DetailSection title="Diagnosis" theme={theme}>
-                    <DetailRow label="Namespace" value={explain.namespace} valueColor={theme.info} />
+                    <DetailRow
+                      label="Namespace"
+                      value={explain.namespace}
+                      valueColor={theme.info}
+                    />
                     <DetailRow label="Op" value={explain.op} />
                     <DetailRow
                       label="Plan"
