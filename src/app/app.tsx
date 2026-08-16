@@ -10,7 +10,13 @@ import { Footer } from './components/footer'
 import { HelpMenu } from './components/help-menu'
 import { WelcomeScreen } from './components/welcome-screen'
 import { type AppKeymapMode } from './lib/keymap-mode'
-import { TABS, tabFromKey, useSession } from './stores/session'
+import {
+  DASHBOARD_SHORTCUTS,
+  GLOBAL_ALWAYS_ON_SHORTCUTS,
+  GLOBAL_BASE_SHORTCUTS,
+  toBindings,
+} from './shortcuts'
+import { tabFromKey, useSession } from './stores/session'
 import { useTheme } from './stores/theme'
 
 export type AppOptions = {
@@ -81,10 +87,7 @@ export function App({ options }: AppProps) {
           },
         },
       ],
-      bindings: [
-        { key: 'ctrl+k', cmd: 'app.toggle-palette' },
-        { key: '?', cmd: 'app.toggle-help' },
-      ],
+      bindings: toBindings(GLOBAL_ALWAYS_ON_SHORTCUTS),
     }
   }, [])
 
@@ -115,11 +118,7 @@ export function App({ options }: AppProps) {
             },
           },
         ],
-        bindings: [
-          { key: 'q', cmd: 'app.quit' },
-          { key: 'm', cmd: 'app.toggle-mode' },
-          { key: 't', cmd: 'app.cycle-theme' },
-        ],
+        bindings: toBindings(GLOBAL_BASE_SHORTCUTS),
       }
     },
     [renderer],
@@ -140,7 +139,7 @@ export function App({ options }: AppProps) {
             },
           },
         ],
-        bindings: TABS.map((tab) => ({ key: tab.key, cmd: 'app.select-tab' as const })),
+        bindings: toBindings(DASHBOARD_SHORTCUTS),
       }
     },
     [screen],

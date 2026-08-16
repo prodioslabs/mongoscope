@@ -1,56 +1,11 @@
 import { TextAttributes } from '@opentui/core'
 import { useEffect, useRef } from 'react'
+import { HELP_SECTIONS, type HelpBinding } from '../shortcuts'
 import { useFooter, type FooterKeybinding } from '../stores/footer'
 import { useTheme } from '../stores/theme'
 import { Dialog } from './ui/dialog'
 
 const HELP_OVERLAY_KEYBINDINGS: FooterKeybinding[] = [{ keys: 'esc', label: 'close' }]
-
-type HelpBinding = {
-  keys: string
-  label: string
-}
-
-type HelpSection = {
-  title: string
-  bindings: HelpBinding[]
-}
-
-const HELP_SECTIONS: HelpSection[] = [
-  {
-    title: 'Global',
-    bindings: [
-      { keys: 'ctrl+k', label: 'Open command palette' },
-      { keys: '?', label: 'Show this help' },
-      { keys: 'q', label: 'Quit' },
-      { keys: 'm', label: 'Toggle light/dark mode' },
-      { keys: 't', label: 'Cycle theme' },
-    ],
-  },
-  {
-    title: 'Welcome',
-    bindings: [
-      { keys: '↑/↓', label: 'Navigate log files' },
-      { keys: 'tab', label: 'Switch section' },
-      { keys: 'enter', label: 'Analyze selected log' },
-    ],
-  },
-  {
-    title: 'Dashboard',
-    bindings: [
-      { keys: '1–6', label: 'Switch tabs' },
-    ],
-  },
-  {
-    title: 'Slow Queries',
-    bindings: [
-      { keys: '↑/↓ / j/k', label: 'Navigate rows' },
-      { keys: 'c', label: 'Sort by count' },
-      { keys: 'a', label: 'Sort by avg ms' },
-      { keys: 'p', label: 'Sort by plan' },
-    ],
-  },
-]
 
 type HelpMenuProps = {
   open: boolean

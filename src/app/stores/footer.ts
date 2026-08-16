@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { GLOBAL_FOOTER_SHORTCUTS } from '../shortcuts/global'
+import { toFooter } from '../shortcuts/types'
 
 export type FooterKeybinding = {
   keys: string
@@ -29,11 +31,7 @@ type FooterState = {
   withdrawStatus: (path: string) => void
 }
 
-const DEFAULT_KEYBINDINGS: FooterKeybinding[] = [
-  { keys: 'ctrl+k', label: 'commands' },
-  { keys: '?', label: 'help' },
-  { keys: 'q', label: 'quit' },
-]
+const DEFAULT_KEYBINDINGS: FooterKeybinding[] = toFooter(GLOBAL_FOOTER_SHORTCUTS)
 
 function withDefaults(custom: FooterKeybinding[]): FooterKeybinding[] {
   return [...custom, ...DEFAULT_KEYBINDINGS]
