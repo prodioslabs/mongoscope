@@ -1,4 +1,5 @@
 import { RGBA } from '@opentui/core'
+import { getThemeCatalog } from './catalog'
 import catppuccin from './assets/catppuccin.json' with { type: 'json' }
 import catppuccinFrappe from './assets/catppuccin-frappe.json' with { type: 'json' }
 import catppuccinMacchiato from './assets/catppuccin-macchiato.json' with { type: 'json' }
@@ -99,7 +100,7 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
 }
 
 export function allThemes() {
-  return DEFAULT_THEMES
+  return getThemeCatalog()
 }
 
 export function isTheme(theme: unknown): theme is ThemeJson {
@@ -109,7 +110,9 @@ export function isTheme(theme: unknown): theme is ThemeJson {
 }
 
 export function hasTheme(name: string) {
-  if (!name) return false
+  if (!name) {
+    return false
+  }
   return allThemes()[name] !== undefined
 }
 

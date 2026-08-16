@@ -2,6 +2,8 @@ import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
 import { useEffect, useRef, useState } from 'react'
 import { match } from 'ts-pattern'
+import { AddConnectionScreen } from './components/connections/add-connection-screen'
+import { ConnectionsScreen } from './components/connections/connections-screen'
 import { CommandPalette } from './components/command-palette'
 import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
@@ -54,11 +56,11 @@ export function App({ options }: AppProps) {
   setHelpMenuOpenRef.current = setHelpMenuOpen
 
   useEffect(
-    function syncOverlayKeymapMode() {
-      const overlayOpen = paletteOpen || helpMenuOpen
-      keymap.setData('app.mode', (overlayOpen ? 'palette' : 'base') satisfies AppKeymapMode)
+    function syncAppKeymapMode() {
+      const usePaletteMode = paletteOpen || helpMenuOpen || screen === 'connection-add'
+      keymap.setData('app.mode', (usePaletteMode ? 'palette' : 'base') satisfies AppKeymapMode)
     },
-    [keymap, paletteOpen, helpMenuOpen],
+    [keymap, paletteOpen, helpMenuOpen, screen],
   )
 
   useBindings(function createAlwaysOnAppLayer() {
@@ -147,6 +149,8 @@ export function App({ options }: AppProps) {
   const body = match(screen)
     .with('welcome', () => <WelcomeScreen logDir={options.logDir ?? '.'} />)
     .with('dashboard', () => <Dashboard />)
+    .with('connections', () => <ConnectionsScreen />)
+    .with('connection-add', () => <AddConnectionScreen />)
     .exhaustive()
 
   return (

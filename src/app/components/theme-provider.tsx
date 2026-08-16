@@ -14,13 +14,16 @@ export function ThemeProvider({ mode, theme: themeName, children }: ThemeProvide
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const setMode = useTheme((s) => s.setMode)
-  const set = useTheme((s) => s.set)
+  const hydrate = useTheme((s) => s.hydrate)
 
   useEffect(
     function syncThemeFromProps() {
-      if (typeof themeName === 'string' && hasTheme(themeName)) set(themeName)
+      // Hydrate (no persist) so boot props don't clobber config.json before/without user action.
+      if (typeof themeName === 'string' && hasTheme(themeName)) {
+        hydrate(themeName)
+      }
     },
-    [themeName, set],
+    [themeName, hydrate],
   )
 
   useEffect(
