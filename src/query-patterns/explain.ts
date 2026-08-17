@@ -3,7 +3,7 @@ import { extractSlowQueryAttr, formatJson, normalizePlanSummary } from './attr'
 import { suggestIndex } from './suggest-index'
 import type { PatternExplain, QueryPatternStore } from './types'
 
-/** Meta keys that drown the useful command body in slow-query logs. */
+
 const COMMAND_STRIP_KEYS = new Set([
   'lsid',
   '$clusterTime',
@@ -13,9 +13,6 @@ const COMMAND_STRIP_KEYS = new Set([
   '$db',
 ])
 
-/**
- * Build an explain payload for a pattern using its slowest sample row.
- */
 export async function getPatternExplain(
   logStore: LogStore,
   patterns: QueryPatternStore,

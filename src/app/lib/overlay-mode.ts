@@ -6,7 +6,7 @@ export type OverlayModeKeymap = {
 
 let nextOwnerId = 0
 
-/** Stable id for an overlay owner. Avoids `useId()` colons in keymap command names. */
+
 export function createOverlayOwnerId(prefix: string): string {
   nextOwnerId += 1
   return `${prefix}-${nextOwnerId}`

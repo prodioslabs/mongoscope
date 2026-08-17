@@ -11,7 +11,6 @@ type DialogProps = {
   onClose?: () => void
   children?: ReactNode
   width?: number
-  /** Vertical offset from the top of the terminal (default: ~1/4 height). */
   paddingTop?: number
 }
 
