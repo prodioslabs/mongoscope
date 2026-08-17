@@ -11,7 +11,8 @@ import {
 import type { LogStore } from '../../../parser'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { overlayMode } from '../../lib/overlay-mode'
-import { useFooter, type FooterKeybinding } from '../../stores/footer'
+import { QUERY_DETAIL_SHORTCUTS, queryDetailFooter, toBindings } from '../../shortcuts'
+import { useFooter } from '../../stores/footer'
 import { useTheme } from '../../stores/theme'
 import { type Theme } from '../../theme'
 import { Dialog } from '../ui/dialog'
@@ -24,14 +25,6 @@ import {
   sparkline,
   type Severity,
 } from './format'
-
-function detailOverlayKeybindings(showRaw: boolean): FooterKeybinding[] {
-  return [
-    { keys: '↑↓', label: 'scroll' },
-    { keys: 'r', label: showRaw ? 'curated' : 'raw' },
-    { keys: 'esc', label: 'close' },
-  ]
-}
 
 type QueryDetailDialogProps = {
   open: boolean
@@ -74,7 +67,7 @@ export function QueryDetailDialog({
   useEffect(
     function syncDetailFooterOverlay() {
       if (!open) return
-      pushOverlayKeybindings('query-detail', detailOverlayKeybindings(showRaw))
+      pushOverlayKeybindings('query-detail', queryDetailFooter(showRaw))
       return function clearDetailFooterOverlay() {
         popOverlayKeybindings('query-detail')
       }
@@ -170,16 +163,7 @@ export function QueryDetailDialog({
             },
           },
         ],
-        bindings: [
-          { key: 'r', cmd: 'query-detail.toggle-raw' },
-          { key: 'up', cmd: 'query-detail.scroll-up' },
-          { key: 'k', cmd: 'query-detail.scroll-up' },
-          { key: 'down', cmd: 'query-detail.scroll-down' },
-          { key: 'j', cmd: 'query-detail.scroll-down' },
-          { key: 'pageup', cmd: 'query-detail.page-up' },
-          { key: 'pagedown', cmd: 'query-detail.page-down' },
-          { key: 'escape', cmd: 'query-detail.close' },
-        ],
+        bindings: toBindings(QUERY_DETAIL_SHORTCUTS),
       }
     },
     [open],

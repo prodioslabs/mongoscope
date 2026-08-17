@@ -1,5 +1,6 @@
 import { DASHBOARD_SHORTCUTS } from './dashboard'
 import { GLOBAL_SHORTCUTS } from './global'
+import { QUERY_DETAIL_SHORTCUTS } from './query-detail'
 import { SLOW_QUERIES_SHORTCUTS } from './slow-queries'
 import { toHelpSection, type HelpSection } from './types'
 import { WELCOME_SHORTCUTS } from './welcome'
@@ -11,6 +12,7 @@ export {
   GLOBAL_FOOTER_SHORTCUTS,
   GLOBAL_SHORTCUTS,
 } from './global'
+export { QUERY_DETAIL_SHORTCUTS, queryDetailFooter } from './query-detail'
 export { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS } from './slow-queries'
 export { toBindings, toFooter, toHelpSection, type HelpBinding, type HelpSection, type Shortcut } from './types'
 export { WELCOME_PARSING_FOOTER, WELCOME_SHORTCUTS } from './welcome'
@@ -20,4 +22,5 @@ export const HELP_SECTIONS: HelpSection[] = [
   toHelpSection('Welcome', WELCOME_SHORTCUTS),
   toHelpSection('Dashboard', DASHBOARD_SHORTCUTS),
   toHelpSection('Slow Queries', SLOW_QUERIES_SHORTCUTS),
+  toHelpSection('Query Detail', QUERY_DETAIL_SHORTCUTS),
 ]

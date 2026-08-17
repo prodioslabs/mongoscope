@@ -39,8 +39,8 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
   },
 ]
 
-/** Footer collapses the three sort keys into one chip. */
+/** Footer collapses the three sort keys into one chip. Enter is help-only so chips stay readable. */
 export const SLOW_QUERIES_FOOTER: FooterChip[] = [
-  ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!, SLOW_QUERIES_SHORTCUTS[1]!]),
+  ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   { keys: 'c/a/p', label: 'sort count/avg/plan' },
 ]
