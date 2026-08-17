@@ -14,6 +14,15 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
     ],
   },
   {
+    keys: 'enter',
+    helpLabel: 'Open query details',
+    footerLabel: 'details',
+    bindings: [
+      { key: 'enter', cmd: 'slow-queries.open-details' },
+      { key: 'return', cmd: 'slow-queries.open-details' },
+    ],
+  },
+  {
     keys: 'c',
     helpLabel: 'Sort by count',
     bindings: [{ key: 'c', cmd: 'slow-queries.sort-count' }],
@@ -30,7 +39,7 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
   },
 ]
 
-/** Footer collapses the three sort keys into one chip. */
+/** Footer collapses the three sort keys into one chip. Enter is help-only so chips stay readable. */
 export const SLOW_QUERIES_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   { keys: 'c/a/p', label: 'sort count/avg/plan' },

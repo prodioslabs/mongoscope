@@ -1,8 +1,9 @@
 import { RGBA } from '@opentui/core'
-import { useBindings } from '@opentui/keymap/react'
+import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
-import { useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
+import { createOverlayOwnerId, overlayMode } from '../../lib/overlay-mode'
 import { useTheme } from '../../stores/theme'
 
 type DialogProps = {
@@ -10,15 +11,36 @@ type DialogProps = {
   onClose?: () => void
   children?: ReactNode
   width?: number
+  paddingTop?: number
 }
 
-export function Dialog({ open, onClose, children, width: widthProp }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  children,
+  width: widthProp,
+  paddingTop: paddingTopProp,
+}: DialogProps) {
   const renderer = useRenderer()
+  const keymap = useKeymap()
+  const [overlayId] = useState(() => createOverlayOwnerId('dialog'))
   const dimensions = useTerminalDimensions()
   const theme = useTheme((s) => s.theme)
   const dismissRef = useRef(false)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+
+  useEffect(
+    function syncDialogKeymapMode() {
+      if (!open) return
+
+      overlayMode.acquire(overlayId, keymap)
+      return function restoreDialogKeymapMode() {
+        overlayMode.release(overlayId, keymap)
+      }
+    },
+    [keymap, open, overlayId],
+  )
 
   useBindings(
     function createDialogLayer() {
@@ -27,21 +49,22 @@ export function Dialog({ open, onClose, children, width: widthProp }: DialogProp
         enabled: open,
         commands: [
           {
-            name: 'dialog.close',
+            name: `dialog.close.${overlayId}`,
             run() {
               onCloseRef.current?.()
             },
           },
         ],
-        bindings: [{ key: 'escape', cmd: 'dialog.close' }],
+        bindings: [{ key: 'escape', cmd: `dialog.close.${overlayId}` }],
       }
     },
-    [open],
+    [open, overlayId],
   )
 
   if (!open) return null
 
   const width = widthProp ?? Math.min(60, dimensions.width - 2)
+  const paddingTop = paddingTopProp ?? Math.floor(dimensions.height / 4)
 
   return (
     <box
@@ -50,7 +73,7 @@ export function Dialog({ open, onClose, children, width: widthProp }: DialogProp
       alignItems="center"
       position="absolute"
       zIndex={3000}
-      paddingTop={Math.floor(dimensions.height / 4)}
+      paddingTop={paddingTop}
       left={0}
       top={0}
       backgroundColor={RGBA.fromInts(0, 0, 0, 150)}

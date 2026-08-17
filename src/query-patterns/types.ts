@@ -35,13 +35,32 @@ export type IndexSuggestion = {
 
 export type PatternExplain = {
   namespace: string
+  op: string
   plan: string
+  /** Full `planSummary` string when present (not the short UI label). */
+  planSummary: string | null
   filter: string
   docsExamined: number
   nReturned: number
   totalMillis: number
   stageDetail: string
   suggestedIndex: IndexSuggestion | null
+  /** Sample log timestamp (ms since epoch), or NaN if unknown. */
+  timestampMs: number
+  ctx: string
+  appName: string | null
+  remote: string | null
+  protocol: string | null
+  keysExamined: number | null
+  numYields: number | null
+  reslen: number | null
+  cpuNanos: number | null
+  workingMillis: number | null
+  waitForWriteConcernDurationMillis: number | null
+  /** Pretty command JSON with session/cluster meta stripped. */
+  commandDisplay: string
+  /** Pretty full log envelope (or raw line) for the sample. */
+  rawDisplay: string
 }
 
 /** Fields extracted from a single Slow query `attr` object. */

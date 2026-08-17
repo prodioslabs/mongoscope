@@ -22,6 +22,7 @@ import {
   truncateCell,
   type Severity,
 } from './format'
+import { QueryDetailDialog } from './query-detail-dialog'
 
 type SortBy = 'count' | 'avgMs' | 'plan'
 type SortDirection = 'asc' | 'desc'
@@ -40,17 +41,20 @@ const COLUMN_COUNT = 7
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
   const queryPatterns = useSession((s) => s.queryPatterns)
+  const logStore = useSession((s) => s.logStore)
   const { height: terminalHeight } = useTerminalDimensions()
 
   const patterns = queryPatterns?.patterns ?? []
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [scrollOffset, setScrollOffset] = useState(0)
   const [sortBy, setSortBy] = useState<SortBy>('count')
+  const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const selectedIndexRef = useRef(0)
   const scrollOffsetRef = useRef(0)
   const capacityRef = useRef(1)
   const sortedLengthRef = useRef(0)
+  const sortedPatternsRef = useRef<QueryPattern[]>([])
   const sortByRef = useRef(sortBy)
   const sortDirectionRef = useRef(sortDirection)
 
@@ -58,6 +62,10 @@ export function SlowQueriesTab() {
     () => sortPatterns(patterns, sortBy, sortDirection),
     [patterns, sortBy, sortDirection],
   )
+  const detailPattern =
+    detailPatternId == null
+      ? null
+      : (sortedPatterns.find((pattern) => pattern.id === detailPatternId) ?? null)
 
   const capacity = Math.max(1, Math.floor((terminalHeight - CHROME_ROWS) / ROW_STRIDE))
 
@@ -117,6 +125,13 @@ export function SlowQueriesTab() {
   )
 
   useEffect(
+    function syncSortedPatternsRef() {
+      sortedPatternsRef.current = sortedPatterns
+    },
+    [sortedPatterns],
+  )
+
+  useEffect(
     function syncSortByRef() {
       sortByRef.current = sortBy
     },
@@ -151,6 +166,12 @@ export function SlowQueriesTab() {
       } else if (next >= offset + cap) {
         setScrollOffset(next - cap + 1)
       }
+    }
+
+    function openSelectedDetails() {
+      const pattern = sortedPatternsRef.current[selectedIndexRef.current]
+      if (pattern == null) return
+      setDetailPatternId(pattern.id)
     }
 
     function applySort(next: SortBy) {
@@ -200,6 +221,12 @@ export function SlowQueriesTab() {
             moveSelection(1)
           },
         },
+        {
+          name: 'slow-queries.open-details',
+          run() {
+            openSelectedDetails()
+          },
+        },
       ],
       bindings: toBindings(SLOW_QUERIES_SHORTCUTS),
     }
@@ -239,6 +266,13 @@ export function SlowQueriesTab() {
           width="100%"
         />
       )}
+      <QueryDetailDialog
+        open={detailPatternId != null}
+        pattern={detailPattern}
+        logStore={logStore}
+        queryPatterns={queryPatterns}
+        onClose={() => setDetailPatternId(null)}
+      />
     </box>
   )
 }

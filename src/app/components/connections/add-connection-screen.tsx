@@ -1,11 +1,12 @@
 import { InputRenderable, TextAttributes } from '@opentui/core'
-import { useBindings } from '@opentui/keymap/react'
+import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
 import { displayText } from '../../../lib/display-text'
 import { formatConnectionError } from '../../../lib/format-connection-error'
 import { DEFAULT_LOCAL_MONGODB_URI } from '../../../lib/mongodb-uri'
 import { useAddConnection } from '../../../queries/connection'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
+import { overlayMode } from '../../lib/overlay-mode'
 import { type FooterKeybinding } from '../../stores/footer'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
@@ -22,6 +23,7 @@ type FocusField = 'name' | 'uri'
 
 export function AddConnectionScreen() {
   const theme = useTheme((s) => s.theme)
+  const keymap = useKeymap()
   const goToConnections = useSession((s) => s.goToConnections)
   const addConnection = useAddConnection()
 
@@ -41,6 +43,16 @@ export function AddConnectionScreen() {
   focusFieldRef.current = focusField
 
   useFooterKeybindings(ADD_CONNECTION_KEYBINDINGS)
+
+  useEffect(
+    function syncConnectionAddOverlayMode() {
+      overlayMode.acquire('connection-add', keymap)
+      return function restoreConnectionAddOverlayMode() {
+        overlayMode.release('connection-add', keymap)
+      }
+    },
+    [keymap],
+  )
 
   useEffect(
     function focusActiveFieldInput() {
@@ -97,9 +109,8 @@ export function AddConnectionScreen() {
 
       return {
         appMode: 'palette' satisfies AppKeymapMode,
-        // CommandPalette also uses palette mode and binds enter → palette.submit
-        // (including when closed). Win over that layer so Enter saves here.
-        priority: canAcceptDefaultUri ? 100 : 10,
+        // Empty URI field: win right-arrow over other palette-mode layers.
+        ...(canAcceptDefaultUri ? { priority: 100 } : {}),
         enabled: !addConnection.isPending,
         commands: [
           {
