@@ -1,4 +1,5 @@
 import { TextAttributes } from '@opentui/core'
+import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef } from 'react'
 import { HELP_SECTIONS, type HelpBinding } from '../shortcuts'
 import { useFooter, type FooterKeybinding } from '../stores/footer'
@@ -14,6 +15,7 @@ type HelpMenuProps = {
 
 export function HelpMenu({ open, onOpenChange }: HelpMenuProps) {
   const theme = useTheme((s) => s.theme)
+  const dimensions = useTerminalDimensions()
   const pushOverlayKeybindings = useFooter((s) => s.pushOverlayKeybindings)
   const popOverlayKeybindings = useFooter((s) => s.popOverlayKeybindings)
   const onOpenChangeRef = useRef(onOpenChange)
@@ -34,8 +36,11 @@ export function HelpMenu({ open, onOpenChange }: HelpMenuProps) {
     onOpenChangeRef.current(false)
   }
 
+  const paddingTop = Math.max(1, Math.floor(dimensions.height / 10))
+  const bodyHeight = Math.max(8, dimensions.height - paddingTop - 6)
+
   return (
-    <Dialog open={open} onClose={handleClose} width={56}>
+    <Dialog open={open} onClose={handleClose} width={56} paddingTop={paddingTop}>
       <box gap={1} paddingBottom={1}>
         <box paddingLeft={3} paddingRight={3}>
           <box flexDirection="row" justifyContent="space-between">
@@ -47,20 +52,30 @@ export function HelpMenu({ open, onOpenChange }: HelpMenuProps) {
             </text>
           </box>
         </box>
-        <box paddingLeft={2} paddingRight={2} gap={1}>
-          {HELP_SECTIONS.map((section) => (
-            <box key={section.title} flexDirection="column" gap={0}>
-              <box paddingLeft={1} paddingBottom={0}>
-                <text fg={theme.accent} attributes={TextAttributes.BOLD}>
-                  {section.title}
-                </text>
+        <scrollbox
+          height={bodyHeight}
+          width="100%"
+          scrollX={false}
+          scrollY
+          paddingLeft={2}
+          paddingRight={2}
+          horizontalScrollbarOptions={{ visible: false }}
+        >
+          <box flexDirection="column" gap={1} flexShrink={0}>
+            {HELP_SECTIONS.map((section) => (
+              <box key={section.title} flexDirection="column" gap={0}>
+                <box paddingLeft={1} paddingBottom={0}>
+                  <text fg={theme.accent} attributes={TextAttributes.BOLD}>
+                    {section.title}
+                  </text>
+                </box>
+                {section.bindings.map((binding) => (
+                  <HelpBindingRow key={`${section.title}:${binding.keys}`} binding={binding} />
+                ))}
               </box>
-              {section.bindings.map((binding) => (
-                <HelpBindingRow key={`${section.title}:${binding.keys}`} binding={binding} />
-              ))}
-            </box>
-          ))}
-        </box>
+            ))}
+          </box>
+        </scrollbox>
       </box>
     </Dialog>
   )

@@ -25,6 +25,7 @@ export function Footer() {
   const theme = useTheme((s) => s.theme)
   const keybindings = useFooter((s) => s.keybindings)
   const status = useFooter((s) => s.status)
+  const overlayActive = useFooter((s) => s.overlays.length > 0)
   const [clock, setClock] = useState(() => formatClock(new Date()))
 
   useEffect(function tickClock() {
@@ -47,31 +48,33 @@ export function Footer() {
       backgroundColor={theme.backgroundPanel}
     >
       <text content={clock} fg={theme.text} flexShrink={0} />
-      <text
-        content={status ?? ''}
-        fg={theme.textMuted}
-        flexGrow={1}
-        flexShrink={1}
-        maxWidth={STATUS_MAX_WIDTH}
-        wrapMode="none"
-        truncate
-      />
+      {!overlayActive ? (
+        <text
+          content={status ?? ''}
+          fg={theme.textMuted}
+          flexGrow={1}
+          flexShrink={1}
+          maxWidth={STATUS_MAX_WIDTH}
+          wrapMode="none"
+          truncate
+        />
+      ) : null}
       <box
         flexDirection="row"
         gap={2}
         justifyContent="flex-end"
         flexGrow={1}
-        flexShrink={1}
-        maxWidth={SCOPE_MAX_WIDTH}
+        flexShrink={overlayActive ? 0 : 1}
+        maxWidth={overlayActive ? undefined : SCOPE_MAX_WIDTH}
         overflow="hidden"
       >
         {keybindings.map((binding) => (
           <text
             key={`${binding.keys}:${binding.label}`}
             content={t`${bold(fg(theme.text)(binding.keys))} ${fg(theme.textMuted)(binding.label)}`}
-            flexShrink={1}
+            flexShrink={overlayActive ? 0 : 1}
             wrapMode="none"
-            truncate
+            truncate={!overlayActive}
           />
         ))}
       </box>
