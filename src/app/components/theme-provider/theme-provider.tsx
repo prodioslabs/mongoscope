@@ -1,8 +1,8 @@
 import { CliRenderEvents } from '@opentui/core'
 import { useRenderer } from '@opentui/react'
 import { useEffect, type ReactNode } from 'react'
-import { useTheme, type ThemeMode } from '../stores/theme'
-import { hasTheme } from '../theme'
+import { useTheme, type ThemeMode } from '../../stores/theme'
+import { hasTheme } from '../../theme'
 
 type ThemeProviderProps = {
   mode?: ThemeMode

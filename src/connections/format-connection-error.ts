@@ -1,4 +1,4 @@
-import { SecretStoreError } from '../connections/secret-store'
+import { SecretStoreError } from './secret-store'
 
 /** User-facing message for connection save/load/delete failures. Never includes secrets. */
 export function formatConnectionError(error: unknown): string {

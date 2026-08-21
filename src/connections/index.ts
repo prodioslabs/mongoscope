@@ -1,4 +1,5 @@
 export { hostLabelFromUri } from '../lib/mongodb-uri'
+export { formatConnectionError } from './format-connection-error'
 export {
   CONNECTIONS_SECRET_NAME,
   createSecretStore,

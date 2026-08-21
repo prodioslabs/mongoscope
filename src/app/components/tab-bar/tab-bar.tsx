@@ -1,7 +1,7 @@
 import { RGBA, TextAttributes } from '@opentui/core'
-import { TABS, useSession } from '../stores/session'
-import { useTheme } from '../stores/theme'
-import { selectedForeground } from '../theme'
+import { TABS, useSession } from '../../stores/session'
+import { useTheme } from '../../stores/theme'
+import { selectedForeground } from '../../theme'
 
 const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 

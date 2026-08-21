@@ -7,15 +7,15 @@ import {
   type PatternExplain,
   type QueryPattern,
   type QueryPatternStore,
-} from '../../../query-patterns'
-import type { LogStore } from '../../../parser'
-import { type AppKeymapMode } from '../../lib/keymap-mode'
-import { overlayMode } from '../../lib/overlay-mode'
-import { QUERY_DETAIL_SHORTCUTS, queryDetailFooter, toBindings } from '../../shortcuts'
-import { useFooter } from '../../stores/footer'
-import { useTheme } from '../../stores/theme'
-import { type Theme } from '../../theme'
-import { Dialog } from '../ui/dialog'
+} from '../../../../query-patterns'
+import type { LogStore } from '../../../../parser'
+import { type AppKeymapMode } from '../../../lib/keymap-mode'
+import { overlayMode } from '../../../lib/overlay-mode'
+import { QUERY_DETAIL_SHORTCUTS, queryDetailFooter, toBindings } from '../../../shortcuts'
+import { useFooter } from '../../../stores/footer'
+import { useTheme } from '../../../stores/theme'
+import { type Theme } from '../../../theme'
+import { Dialog } from '../../ui/dialog'
 import {
   avgMsSeverity,
   examinedSeverity,
@@ -24,7 +24,7 @@ import {
   planSeverity,
   sparkline,
   type Severity,
-} from './format'
+} from '../format'
 
 type QueryDetailDialogProps = {
   open: boolean

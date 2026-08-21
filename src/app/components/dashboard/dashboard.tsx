@@ -1,10 +1,10 @@
 import { match } from 'ts-pattern'
-import { DASHBOARD_SHORTCUTS, toFooter } from '../shortcuts'
-import { FooterKeybindingScope } from './footer-keybindings'
-import { useSession } from '../stores/session'
-import { useTheme } from '../stores/theme'
-import { SlowQueriesTab } from './slow-queries/slow-queries-tab'
-import { TabBar } from './tab-bar'
+import { DASHBOARD_SHORTCUTS, toFooter } from '../../shortcuts'
+import { FooterKeybindingScope } from '../footer-keybindings'
+import { useSession } from '../../stores/session'
+import { useTheme } from '../../stores/theme'
+import { SlowQueriesTab } from '../slow-queries/slow-queries-tab'
+import { TabBar } from '../tab-bar'
 
 const DASHBOARD_KEYBINDINGS = toFooter(DASHBOARD_SHORTCUTS)
 

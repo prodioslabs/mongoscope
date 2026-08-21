@@ -2,21 +2,19 @@
 /* eslint-disable no-console */
 
 import {
-  createReadStream,
   existsSync,
   mkdirSync,
   statSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs'
-import { createInterface } from 'node:readline'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { LogStore, parseLogFile } from '../src/parser'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const FIXTURE = join(root, 'src/parser/fixtures/mongod_latest_tail_100k.log')
+const FIXTURE = join(root, 'mongod_latest_tail_100k.log')
 const SYNTHETIC_LINES = 1_000_000
 
 type BenchResult = {
@@ -144,6 +142,14 @@ async function benchScanner(
   }
 }
 
+function iterateUtf8Lines(fileText: string): string[] {
+  const lines = fileText.split('\n')
+  if (lines.length > 0 && lines[lines.length - 1] === '') {
+    lines.pop()
+  }
+  return lines.map((line) => (line.endsWith('\r') ? line.slice(0, -1) : line))
+}
+
 async function benchNaive(path: string, label: string): Promise<BenchResult> {
   gc()
   await Bun.sleep(50)
@@ -162,12 +168,7 @@ async function benchNaive(path: string, label: string): Promise<BenchResult> {
   }
   const rows: Row[] = []
 
-  const rl = createInterface({
-    input: createReadStream(path, { encoding: 'utf8' }),
-    crlfDelay: Infinity,
-  })
-
-  for await (const text of rl) {
+  for (const text of iterateUtf8Lines(await Bun.file(path).text())) {
     try {
       const obj = JSON.parse(text) as {
         t?: { $date?: string }
