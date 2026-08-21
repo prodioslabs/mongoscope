@@ -1,10 +1,10 @@
 import { TextAttributes } from '@opentui/core'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef } from 'react'
-import { HELP_SECTIONS, type HelpBinding } from '../shortcuts'
-import { useFooter, type FooterKeybinding } from '../stores/footer'
-import { useTheme } from '../stores/theme'
-import { Dialog } from './ui/dialog'
+import { HELP_SECTIONS, type HelpBinding } from '../../shortcuts'
+import { useFooter, type FooterKeybinding } from '../../stores/footer'
+import { useTheme } from '../../stores/theme'
+import { Dialog } from '../ui/dialog'
 
 const HELP_OVERLAY_KEYBINDINGS: FooterKeybinding[] = [{ keys: 'esc', label: 'close' }]
 

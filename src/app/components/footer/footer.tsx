@@ -1,7 +1,7 @@
 import { bold, fg, t } from '@opentui/core'
 import { useEffect, useState } from 'react'
-import { useFooter } from '../stores/footer'
-import { useTheme } from '../stores/theme'
+import { useFooter } from '../../stores/footer'
+import { useTheme } from '../../stores/theme'
 
 /** Cap mid-footer status so long log paths don't crowd keybindings on narrow terminals. */
 const STATUS_MAX_WIDTH = '45%'

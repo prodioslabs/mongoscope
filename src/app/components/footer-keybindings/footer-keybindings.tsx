@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useId, type ReactNode } from 'react'
-import { useFooter, type FooterKeybinding } from '../stores/footer'
+import { useFooter, type FooterKeybinding } from '../../stores/footer'
 
 const FooterPathContext = createContext('')
 

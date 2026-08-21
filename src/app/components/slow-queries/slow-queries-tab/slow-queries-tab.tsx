@@ -2,14 +2,14 @@ import { bg, bold, fg, type RGBA, type TextChunk, type TextTableContent } from '
 import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { QueryPattern } from '../../../query-patterns'
-import { type AppKeymapMode } from '../../lib/keymap-mode'
-import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../shortcuts'
-import { useSession } from '../../stores/session'
-import { useTheme } from '../../stores/theme'
-import { type Theme } from '../../theme'
-import '../../lib/opentui-text-table'
-import { useFooterKeybindings, useFooterStatus } from '../footer-keybindings'
+import type { QueryPattern } from '../../../../query-patterns'
+import { type AppKeymapMode } from '../../../lib/keymap-mode'
+import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../../shortcuts'
+import { useSession } from '../../../stores/session'
+import { useTheme } from '../../../stores/theme'
+import { type Theme } from '../../../theme'
+import '../../../lib/opentui-text-table'
+import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 import {
   avgMsSeverity,
   examinedSeverity,
@@ -21,8 +21,8 @@ import {
   sparkline,
   truncateCell,
   type Severity,
-} from './format'
-import { QueryDetailDialog } from './query-detail-dialog'
+} from '../format'
+import { QueryDetailDialog } from '../query-detail-dialog'
 
 type SortBy = 'count' | 'avgMs' | 'plan'
 type SortDirection = 'asc' | 'desc'

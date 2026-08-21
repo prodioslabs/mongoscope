@@ -3,12 +3,12 @@ import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { matchSorter } from 'match-sorter'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { type AppKeymapMode } from '../lib/keymap-mode'
-import { useFooter, type FooterKeybinding } from '../stores/footer'
-import { useSession } from '../stores/session'
-import { useTheme } from '../stores/theme'
-import { selectedForeground } from '../theme'
-import { Dialog } from './ui/dialog'
+import { type AppKeymapMode } from '../../lib/keymap-mode'
+import { useFooter, type FooterKeybinding } from '../../stores/footer'
+import { useSession } from '../../stores/session'
+import { useTheme } from '../../stores/theme'
+import { selectedForeground } from '../../theme'
+import { Dialog } from '../ui/dialog'
 
 const PALETTE_OVERLAY_KEYBINDINGS: FooterKeybinding[] = [
   { keys: '↑/↓', label: 'navigate' },

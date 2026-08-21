@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { connectionStore, type AddConnectionInput } from '../connections'
+import { connectionStore, type AddConnectionInput } from '../../connections'
 
 export const connectionKeys = {
   all: ['connections'] as const,
