@@ -8,6 +8,7 @@ import { WELCOME_SHORTCUTS } from './welcome'
 
 export { CONNECTIONS_TAB_FOOTER, CONNECTIONS_TAB_SHORTCUTS } from './connections-tab'
 export { DASHBOARD_SHORTCUTS } from './dashboard'
+export { nextTab, previousTab } from './dashboard'
 export {
   GLOBAL_ALWAYS_ON_SHORTCUTS,
   GLOBAL_BASE_SHORTCUTS,

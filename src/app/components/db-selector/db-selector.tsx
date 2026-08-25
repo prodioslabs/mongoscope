@@ -76,6 +76,7 @@ export function DbSelector() {
         <AddConnectionForm
           appMode="base"
           enabled={!dialogOpen}
+          autoFocus
           showFooterKeybindings={!dialogOpen}
           onSuccess={function onInlineAddSuccess(profile) {
             setActiveConnectionId(profile.id)

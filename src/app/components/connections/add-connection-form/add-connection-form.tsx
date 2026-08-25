@@ -25,6 +25,8 @@ type FocusField = 'name' | 'uri'
 type AddConnectionFormProps = {
   appMode: AppKeymapMode
   enabled?: boolean
+  /** When false, do not steal focus on mount (keeps dashboard 1–6 usable). */
+  autoFocus?: boolean
   showFooterKeybindings?: boolean
   onSuccess: (profile: ConnectionProfile) => void
   onCancel: () => void
@@ -33,6 +35,7 @@ type AddConnectionFormProps = {
 export function AddConnectionForm({
   appMode,
   enabled = true,
+  autoFocus = true,
   showFooterKeybindings = false,
   onSuccess,
   onCancel,
@@ -63,23 +66,27 @@ export function AddConnectionForm({
     showFooterKeybindings ? ADD_CONNECTION_FORM_KEYBINDINGS : EMPTY_FOOTER_KEYBINDINGS,
   )
 
+  function focusFieldInput(field: FocusField) {
+    const input = field === 'name' ? nameInputRef.current : uriInputRef.current
+    if (input == null || input.isDestroyed) {
+      return
+    }
+    input.focus()
+  }
+
   useEffect(
     function focusActiveFieldInput() {
-      if (!enabled) {
+      if (!enabled || !autoFocus) {
         return
       }
       const timer = setTimeout(function focusInput() {
-        const input = focusField === 'name' ? nameInputRef.current : uriInputRef.current
-        if (!input || input.isDestroyed) {
-          return
-        }
-        input.focus()
+        focusFieldInput(focusField)
       }, 1)
       return function clearFocusTimer() {
         clearTimeout(timer)
       }
     },
-    [enabled, focusField],
+    [autoFocus, enabled, focusField],
   )
 
   function saveConnection() {
@@ -121,7 +128,9 @@ export function AddConnectionForm({
 
       return {
         appMode,
-        ...(canAcceptDefaultUri ? { priority: 100 } : {}),
+        // Above dashboard Tab-cycle (200) so Name↔URI wins; 1–6 still hit the dashboard layer
+        // because this layer does not bind digit keys.
+        priority: 250,
         enabled: enabled && !addConnection.isPending,
         commands: [
           {
@@ -138,6 +147,7 @@ export function AddConnectionForm({
             run() {
               if (focusFieldRef.current === 'name') {
                 setFocusField('uri')
+                focusFieldInput('uri')
               } else {
                 saveConnectionRef.current()
               }
@@ -146,7 +156,9 @@ export function AddConnectionForm({
           {
             name: 'connection-add.toggle-field',
             run() {
-              setFocusField((field) => (field === 'name' ? 'uri' : 'name'))
+              const nextField = focusFieldRef.current === 'name' ? 'uri' : 'name'
+              setFocusField(nextField)
+              focusFieldInput(nextField)
             },
           },
           {
@@ -163,6 +175,7 @@ export function AddConnectionForm({
           { key: 'return', cmd: 'connection-add.submit' },
           { key: 'enter', cmd: 'connection-add.submit' },
           { key: 'tab', cmd: 'connection-add.toggle-field' },
+          { key: 'shift+tab', cmd: 'connection-add.toggle-field' },
           { key: 'escape', cmd: 'connection-add.cancel' },
         ],
       }
@@ -184,7 +197,10 @@ export function AddConnectionForm({
           ref={nameInputRef}
           value={name}
           onInput={setName}
-          onSubmit={() => setFocusField('uri')}
+          onSubmit={() => {
+            setFocusField('uri')
+            focusFieldInput('uri')
+          }}
           focusedBackgroundColor={theme.backgroundElement}
           backgroundColor={theme.backgroundElement}
           cursorColor={theme.primary}

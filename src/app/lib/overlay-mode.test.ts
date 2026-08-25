@@ -60,4 +60,16 @@ describe('overlayMode', () => {
     mode.release('query-detail', keymap)
     expect(keymap.mode).toBe('base')
   })
+
+  it('clear drops every hold and restores base mode', () => {
+    const mode = createOverlayMode()
+    const keymap = createMockKeymap()
+
+    mode.acquire('connection-add', keymap)
+    mode.acquire('dialog-1', keymap)
+    expect(keymap.mode).toBe('palette')
+
+    mode.clear(keymap)
+    expect(keymap.mode).toBe('base')
+  })
 })

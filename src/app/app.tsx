@@ -13,6 +13,8 @@ import {
   DASHBOARD_SHORTCUTS,
   GLOBAL_ALWAYS_ON_SHORTCUTS,
   GLOBAL_BASE_SHORTCUTS,
+  nextTab,
+  previousTab,
   toBindings,
 } from './shortcuts'
 import { tabFromKey, useSession } from './stores/session'
@@ -40,6 +42,7 @@ export function App({ options }: AppProps) {
   const [helpMenuOpen, setHelpMenuOpen] = useState(false)
   const screen = useSession((s) => s.screen)
   const setTab = useSession((s) => s.setTab)
+  const activeTab = useSession((s) => s.activeTab)
 
   const modeRef = useRef(mode)
   const selectedRef = useRef(selected)
@@ -47,6 +50,7 @@ export function App({ options }: AppProps) {
   const setModeRef = useRef(setMode)
   const setRef = useRef(set)
   const setTabRef = useRef(setTab)
+  const activeTabRef = useRef(activeTab)
   const setPaletteOpenRef = useRef(setPaletteOpen)
   const setHelpMenuOpenRef = useRef(setHelpMenuOpen)
 
@@ -56,8 +60,16 @@ export function App({ options }: AppProps) {
   setModeRef.current = setMode
   setRef.current = set
   setTabRef.current = setTab
+  activeTabRef.current = activeTab
   setPaletteOpenRef.current = setPaletteOpen
   setHelpMenuOpenRef.current = setHelpMenuOpen
+
+  function blurFocusedInput() {
+    const focused = renderer.currentFocusedRenderable
+    if (focused != null && typeof focused.blur === 'function') {
+      focused.blur()
+    }
+  }
 
   useBindings(function createAlwaysOnAppLayer() {
     return {
@@ -118,21 +130,40 @@ export function App({ options }: AppProps) {
     function createDashboardTabLayer() {
       return {
         appMode: 'base' satisfies AppKeymapMode,
+        // Win over focused inputs / form layers so 1–6 and Tab always switch tabs on the dashboard.
+        priority: 200,
         enabled: screen === 'dashboard',
         commands: [
           {
             name: 'app.select-tab',
             run({ event }: { event: { name: string } }) {
               const tab = tabFromKey(event.name)
-              if (!tab) return false
+              if (!tab) {
+                return false
+              }
+              blurFocusedInput()
               setTabRef.current(tab)
+            },
+          },
+          {
+            name: 'app.cycle-tab-next',
+            run() {
+              blurFocusedInput()
+              setTabRef.current(nextTab(activeTabRef.current))
+            },
+          },
+          {
+            name: 'app.cycle-tab-prev',
+            run() {
+              blurFocusedInput()
+              setTabRef.current(previousTab(activeTabRef.current))
             },
           },
         ],
         bindings: toBindings(DASHBOARD_SHORTCUTS),
       }
     },
-    [screen],
+    [renderer, screen],
   )
 
   const body = match(screen)

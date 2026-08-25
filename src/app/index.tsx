@@ -8,6 +8,7 @@ import { ThemeProvider } from './components/theme-provider'
 import { loadAppConfig } from './config/app-config'
 import { DEFAULT_THEME_NAME } from './config/types'
 import { type AppKeymapMode } from './lib/keymap-mode'
+import { overlayMode } from './lib/overlay-mode'
 import './lib/opentui-text-table'
 import { enableThemeConfigPersistence, useTheme } from './stores/theme'
 import { refreshThemeCatalog, resolveConfiguredThemeName } from './theme/catalog'
@@ -48,6 +49,8 @@ export async function start(options: AppOptions) {
     },
   })
   keymap.setData('app.mode', 'base' satisfies AppKeymapMode)
+  // Clear any leaked overlay holds from a previous HMR cycle so base keys (1–6 tabs) work.
+  overlayMode.clear(keymap)
 
   createRoot(renderer).render(
     <KeymapProvider keymap={keymap}>

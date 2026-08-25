@@ -285,9 +285,15 @@ export function ConnectionsDialog() {
       ? formatConnectionError(removeConnection.error)
       : null
 
+  // Unmount Dialog entirely when closed so it cannot leave a palette-mode overlay or
+  // full-screen hit target that blocks dashboard tab switching.
+  if (!dialogOpen) {
+    return null
+  }
+
   return (
     <Dialog
-      open={dialogOpen}
+      open
       onClose={function closeConnectionsDialog() {
         handleCloseRef.current()
       }}
@@ -309,7 +315,8 @@ export function ConnectionsDialog() {
         ) : dialogView === 'add' ? (
           <AddConnectionForm
             appMode="palette"
-            enabled={dialogOpen && dialogView === 'add'}
+            enabled
+            autoFocus
             onSuccess={function onAddSuccess(profile) {
               setActiveConnectionId(profile.id)
               close()
