@@ -36,7 +36,6 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const parseProgress = useSession((s) => s.parseProgress)
   const parseError = useSession((s) => s.parseError)
   const startParse = useSession((s) => s.startParse)
-  const goToConnections = useSession((s) => s.goToConnections)
   const parsing = parseProgress !== null
 
   const [mongoLogs, setMongoLogs] = useState<string[]>([])
@@ -86,7 +85,6 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const dirLogsRef = useRef(dirLogs)
   const logDirRef = useRef(logDir)
   const startParseRef = useRef(startParse)
-  const goToConnectionsRef = useRef(goToConnections)
 
   activeSectionRef.current = activeSection
   selectedIndexesRef.current = selectedIndexes
@@ -94,7 +92,6 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   dirLogsRef.current = dirLogs
   logDirRef.current = logDir
   startParseRef.current = startParse
-  goToConnectionsRef.current = goToConnections
 
   useBindings(
     function createWelcomeScreenLayer() {
@@ -164,12 +161,6 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
             name: 'welcome.move-down',
             run() {
               navigateSelection(1)
-            },
-          },
-          {
-            name: 'welcome.open-connections',
-            run() {
-              goToConnectionsRef.current()
             },
           },
         ],

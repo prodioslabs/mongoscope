@@ -1,30 +1,43 @@
 import { InputRenderable, TextAttributes } from '@opentui/core'
-import { useBindings, useKeymap } from '@opentui/keymap/react'
+import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
-import { displayText } from '../../../../lib/display-text'
+import { type ConnectionProfile } from '../../../../connections'
 import { formatConnectionError } from '../../../../connections/format-connection-error'
+import { displayText } from '../../../../lib/display-text'
 import { DEFAULT_LOCAL_MONGODB_URI } from '../../../../lib/mongodb-uri'
-import { useAddConnection } from '../../../queries/connection'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
-import { overlayMode } from '../../../lib/overlay-mode'
+import { useAddConnection } from '../../../queries/connection'
 import { type FooterKeybinding } from '../../../stores/footer'
-import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { useFooterKeybindings } from '../../footer-keybindings'
 
-const ADD_CONNECTION_KEYBINDINGS: FooterKeybinding[] = [
+export const ADD_CONNECTION_FORM_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'tab', label: 'field' },
   { keys: '→', label: 'local URI' },
   { keys: 'enter', label: 'save' },
   { keys: 'esc', label: 'cancel' },
 ]
 
+const EMPTY_FOOTER_KEYBINDINGS: FooterKeybinding[] = []
+
 type FocusField = 'name' | 'uri'
 
-export function AddConnectionScreen() {
+type AddConnectionFormProps = {
+  appMode: AppKeymapMode
+  enabled?: boolean
+  showFooterKeybindings?: boolean
+  onSuccess: (profile: ConnectionProfile) => void
+  onCancel: () => void
+}
+
+export function AddConnectionForm({
+  appMode,
+  enabled = true,
+  showFooterKeybindings = false,
+  onSuccess,
+  onCancel,
+}: AddConnectionFormProps) {
   const theme = useTheme((s) => s.theme)
-  const keymap = useKeymap()
-  const goToConnections = useSession((s) => s.goToConnections)
   const addConnection = useAddConnection()
 
   const [name, setName] = useState('')
@@ -37,25 +50,24 @@ export function AddConnectionScreen() {
   const nameRef = useRef(name)
   const uriRef = useRef(uri)
   const focusFieldRef = useRef(focusField)
+  const onSuccessRef = useRef(onSuccess)
+  const onCancelRef = useRef(onCancel)
 
   nameRef.current = name
   uriRef.current = uri
   focusFieldRef.current = focusField
+  onSuccessRef.current = onSuccess
+  onCancelRef.current = onCancel
 
-  useFooterKeybindings(ADD_CONNECTION_KEYBINDINGS)
-
-  useEffect(
-    function syncConnectionAddOverlayMode() {
-      overlayMode.acquire('connection-add', keymap)
-      return function restoreConnectionAddOverlayMode() {
-        overlayMode.release('connection-add', keymap)
-      }
-    },
-    [keymap],
+  useFooterKeybindings(
+    showFooterKeybindings ? ADD_CONNECTION_FORM_KEYBINDINGS : EMPTY_FOOTER_KEYBINDINGS,
   )
 
   useEffect(
     function focusActiveFieldInput() {
+      if (!enabled) {
+        return
+      }
       const timer = setTimeout(function focusInput() {
         const input = focusField === 'name' ? nameInputRef.current : uriInputRef.current
         if (!input || input.isDestroyed) {
@@ -67,7 +79,7 @@ export function AddConnectionScreen() {
         clearTimeout(timer)
       }
     },
-    [focusField],
+    [enabled, focusField],
   )
 
   function saveConnection() {
@@ -87,8 +99,8 @@ export function AddConnectionScreen() {
     addConnection.mutate(
       { name: nextName, uri: nextUri },
       {
-        onSuccess() {
-          goToConnections()
+        onSuccess(profile) {
+          onSuccessRef.current(profile)
         },
       },
     )
@@ -104,14 +116,13 @@ export function AddConnectionScreen() {
   const error = validationError ?? mutationError
 
   useBindings(
-    function createAddConnectionLayer() {
+    function createAddConnectionFormLayer() {
       const canAcceptDefaultUri = focusField === 'uri' && uri === ''
 
       return {
-        appMode: 'palette' satisfies AppKeymapMode,
-        // Empty URI field: win right-arrow over other palette-mode layers.
+        appMode,
         ...(canAcceptDefaultUri ? { priority: 100 } : {}),
-        enabled: !addConnection.isPending,
+        enabled: enabled && !addConnection.isPending,
         commands: [
           {
             name: 'connection-add.accept-uri-default',
@@ -141,7 +152,7 @@ export function AddConnectionScreen() {
           {
             name: 'connection-add.cancel',
             run() {
-              goToConnections()
+              onCancelRef.current()
             },
           },
         ],
@@ -156,18 +167,11 @@ export function AddConnectionScreen() {
         ],
       }
     },
-    [addConnection.isPending, focusField, goToConnections, uri],
+    [addConnection.isPending, appMode, enabled, focusField, uri],
   )
 
   return (
-    <box
-      flexGrow={1}
-      flexDirection="column"
-      paddingLeft={2}
-      paddingRight={2}
-      paddingTop={1}
-      gap={1}
-    >
+    <box flexDirection="column" gap={1}>
       <text content="Add connection" fg={theme.text} attributes={TextAttributes.BOLD} />
       <text
         content="Stores connection details (including URI) in the OS keychain."

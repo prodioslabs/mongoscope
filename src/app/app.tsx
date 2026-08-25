@@ -2,9 +2,8 @@ import { useBindings } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
 import { useRef, useState } from 'react'
 import { match } from 'ts-pattern'
-import { AddConnectionScreen } from './components/connections/add-connection-screen'
-import { ConnectionsScreen } from './components/connections/connections-screen'
 import { CommandPalette } from './components/command-palette'
+import { ConnectionsDialog } from './components/connections/connections-dialog'
 import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
 import { HelpMenu } from './components/help-menu'
@@ -139,8 +138,6 @@ export function App({ options }: AppProps) {
   const body = match(screen)
     .with('welcome', () => <WelcomeScreen logDir={options.logDir ?? '.'} />)
     .with('dashboard', () => <Dashboard />)
-    .with('connections', () => <ConnectionsScreen />)
-    .with('connection-add', () => <AddConnectionScreen />)
     .exhaustive()
 
   return (
@@ -155,6 +152,7 @@ export function App({ options }: AppProps) {
           setHelpMenuOpen(true)
         }}
       />
+      <ConnectionsDialog />
       <HelpMenu open={helpMenuOpen} onOpenChange={setHelpMenuOpen} />
     </box>
   )

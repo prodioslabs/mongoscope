@@ -3,6 +3,8 @@ import { DASHBOARD_SHORTCUTS, toFooter } from '../../shortcuts'
 import { FooterKeybindingScope } from '../footer-keybindings'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
+import { IndexesTab } from '../indexes/indexes-tab'
+import { LiveOpsTab } from '../live-ops/live-ops-tab'
 import { SlowQueriesTab } from '../slow-queries/slow-queries-tab'
 import { TabBar } from '../tab-bar'
 
@@ -20,10 +22,10 @@ export function Dashboard() {
 
   const content = match(activeTab)
     .with('slow-queries', () => <SlowQueriesTab />)
-    .with('live-ops', () => <TabPlaceholder name="Live Ops" />)
+    .with('live-ops', () => <LiveOpsTab />)
     .with('timeline', () => <TabPlaceholder name="Timeline" />)
     .with('replication', () => <TabPlaceholder name="Replication" />)
-    .with('indexes', () => <TabPlaceholder name="Indexes" />)
+    .with('indexes', () => <IndexesTab />)
     .with('logs', () => <TabPlaceholder name="Logs" />)
     .exhaustive()
 

@@ -5,7 +5,7 @@ import { matchSorter } from 'match-sorter'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { useFooter, type FooterKeybinding } from '../../stores/footer'
-import { useSession } from '../../stores/session'
+import { useConnectionsUi } from '../../stores/connections-ui'
 import { useTheme } from '../../stores/theme'
 import { selectedForeground } from '../../theme'
 import { Dialog } from '../ui/dialog'
@@ -111,8 +111,8 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
   const set = useTheme((s) => s.set)
   const pushOverlayKeybindings = useFooter((s) => s.pushOverlayKeybindings)
   const popOverlayKeybindings = useFooter((s) => s.popOverlayKeybindings)
-  const goToConnections = useSession((s) => s.goToConnections)
-  const goToConnectionAdd = useSession((s) => s.goToConnectionAdd)
+  const openManage = useConnectionsUi((s) => s.openManage)
+  const openAdd = useConnectionsUi((s) => s.openAdd)
 
   const [view, setView] = useState<PaletteView>('commands')
   const [filter, setFilter] = useState('')
@@ -145,7 +145,6 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
         title: 'Manage connections',
         value: 'manage-connections',
         category: 'Connections',
-        footer: 'c',
       },
       {
         title: 'Add connection',
@@ -319,12 +318,12 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
     }
 
     if (value === 'manage-connections') {
-      goToConnections()
+      openManage()
       return
     }
 
     if (value === 'add-connection') {
-      goToConnectionAdd()
+      openAdd()
       return
     }
 

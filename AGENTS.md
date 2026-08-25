@@ -38,9 +38,9 @@ src/app/components/<component-name>/
 Feature screens follow the same pattern under a feature prefix:
 
 ```text
-src/app/components/connections/add-connection-screen/
+src/app/components/connections/connections-dialog/
 ├── index.ts
-└── add-connection-screen.tsx
+└── connections-dialog.tsx
 ```
 
 `src/app/components/ui/` stays flat — import primitives by file (`ui/dialog`), not folder barrels.
