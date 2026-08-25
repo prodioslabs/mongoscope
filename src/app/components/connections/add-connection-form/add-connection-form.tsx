@@ -1,30 +1,46 @@
 import { InputRenderable, TextAttributes } from '@opentui/core'
-import { useBindings, useKeymap } from '@opentui/keymap/react'
+import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
-import { displayText } from '../../../../lib/display-text'
+import { type ConnectionProfile } from '../../../../connections'
 import { formatConnectionError } from '../../../../connections/format-connection-error'
+import { displayText } from '../../../../lib/display-text'
 import { DEFAULT_LOCAL_MONGODB_URI } from '../../../../lib/mongodb-uri'
-import { useAddConnection } from '../../../queries/connection'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
-import { overlayMode } from '../../../lib/overlay-mode'
+import { useAddConnection } from '../../../queries/connection'
 import { type FooterKeybinding } from '../../../stores/footer'
-import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { useFooterKeybindings } from '../../footer-keybindings'
 
-const ADD_CONNECTION_KEYBINDINGS: FooterKeybinding[] = [
+export const ADD_CONNECTION_FORM_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'tab', label: 'field' },
   { keys: '→', label: 'local URI' },
   { keys: 'enter', label: 'save' },
   { keys: 'esc', label: 'cancel' },
 ]
 
+const EMPTY_FOOTER_KEYBINDINGS: FooterKeybinding[] = []
+
 type FocusField = 'name' | 'uri'
 
-export function AddConnectionScreen() {
+type AddConnectionFormProps = {
+  appMode: AppKeymapMode
+  enabled?: boolean
+  /** When false, do not steal focus on mount (keeps dashboard 1–6 usable). */
+  autoFocus?: boolean
+  showFooterKeybindings?: boolean
+  onSuccess: (profile: ConnectionProfile) => void
+  onCancel: () => void
+}
+
+export function AddConnectionForm({
+  appMode,
+  enabled = true,
+  autoFocus = true,
+  showFooterKeybindings = false,
+  onSuccess,
+  onCancel,
+}: AddConnectionFormProps) {
   const theme = useTheme((s) => s.theme)
-  const keymap = useKeymap()
-  const goToConnections = useSession((s) => s.goToConnections)
   const addConnection = useAddConnection()
 
   const [name, setName] = useState('')
@@ -37,37 +53,40 @@ export function AddConnectionScreen() {
   const nameRef = useRef(name)
   const uriRef = useRef(uri)
   const focusFieldRef = useRef(focusField)
+  const onSuccessRef = useRef(onSuccess)
+  const onCancelRef = useRef(onCancel)
 
   nameRef.current = name
   uriRef.current = uri
   focusFieldRef.current = focusField
+  onSuccessRef.current = onSuccess
+  onCancelRef.current = onCancel
 
-  useFooterKeybindings(ADD_CONNECTION_KEYBINDINGS)
-
-  useEffect(
-    function syncConnectionAddOverlayMode() {
-      overlayMode.acquire('connection-add', keymap)
-      return function restoreConnectionAddOverlayMode() {
-        overlayMode.release('connection-add', keymap)
-      }
-    },
-    [keymap],
+  useFooterKeybindings(
+    showFooterKeybindings ? ADD_CONNECTION_FORM_KEYBINDINGS : EMPTY_FOOTER_KEYBINDINGS,
   )
+
+  function focusFieldInput(field: FocusField) {
+    const input = field === 'name' ? nameInputRef.current : uriInputRef.current
+    if (input == null || input.isDestroyed) {
+      return
+    }
+    input.focus()
+  }
 
   useEffect(
     function focusActiveFieldInput() {
+      if (!enabled || !autoFocus) {
+        return
+      }
       const timer = setTimeout(function focusInput() {
-        const input = focusField === 'name' ? nameInputRef.current : uriInputRef.current
-        if (!input || input.isDestroyed) {
-          return
-        }
-        input.focus()
+        focusFieldInput(focusField)
       }, 1)
       return function clearFocusTimer() {
         clearTimeout(timer)
       }
     },
-    [focusField],
+    [autoFocus, enabled, focusField],
   )
 
   function saveConnection() {
@@ -87,8 +106,8 @@ export function AddConnectionScreen() {
     addConnection.mutate(
       { name: nextName, uri: nextUri },
       {
-        onSuccess() {
-          goToConnections()
+        onSuccess(profile) {
+          onSuccessRef.current(profile)
         },
       },
     )
@@ -104,14 +123,15 @@ export function AddConnectionScreen() {
   const error = validationError ?? mutationError
 
   useBindings(
-    function createAddConnectionLayer() {
+    function createAddConnectionFormLayer() {
       const canAcceptDefaultUri = focusField === 'uri' && uri === ''
 
       return {
-        appMode: 'palette' satisfies AppKeymapMode,
-        // Empty URI field: win right-arrow over other palette-mode layers.
-        ...(canAcceptDefaultUri ? { priority: 100 } : {}),
-        enabled: !addConnection.isPending,
+        appMode,
+        // Above dashboard Tab-cycle (200) so Name↔URI wins; 1–6 still hit the dashboard layer
+        // because this layer does not bind digit keys.
+        priority: 250,
+        enabled: enabled && !addConnection.isPending,
         commands: [
           {
             name: 'connection-add.accept-uri-default',
@@ -127,6 +147,7 @@ export function AddConnectionScreen() {
             run() {
               if (focusFieldRef.current === 'name') {
                 setFocusField('uri')
+                focusFieldInput('uri')
               } else {
                 saveConnectionRef.current()
               }
@@ -135,13 +156,15 @@ export function AddConnectionScreen() {
           {
             name: 'connection-add.toggle-field',
             run() {
-              setFocusField((field) => (field === 'name' ? 'uri' : 'name'))
+              const nextField = focusFieldRef.current === 'name' ? 'uri' : 'name'
+              setFocusField(nextField)
+              focusFieldInput(nextField)
             },
           },
           {
             name: 'connection-add.cancel',
             run() {
-              goToConnections()
+              onCancelRef.current()
             },
           },
         ],
@@ -152,22 +175,16 @@ export function AddConnectionScreen() {
           { key: 'return', cmd: 'connection-add.submit' },
           { key: 'enter', cmd: 'connection-add.submit' },
           { key: 'tab', cmd: 'connection-add.toggle-field' },
+          { key: 'shift+tab', cmd: 'connection-add.toggle-field' },
           { key: 'escape', cmd: 'connection-add.cancel' },
         ],
       }
     },
-    [addConnection.isPending, focusField, goToConnections, uri],
+    [addConnection.isPending, appMode, enabled, focusField, uri],
   )
 
   return (
-    <box
-      flexGrow={1}
-      flexDirection="column"
-      paddingLeft={2}
-      paddingRight={2}
-      paddingTop={1}
-      gap={1}
-    >
+    <box flexDirection="column" gap={1}>
       <text content="Add connection" fg={theme.text} attributes={TextAttributes.BOLD} />
       <text
         content="Stores connection details (including URI) in the OS keychain."
@@ -180,7 +197,10 @@ export function AddConnectionScreen() {
           ref={nameInputRef}
           value={name}
           onInput={setName}
-          onSubmit={() => setFocusField('uri')}
+          onSubmit={() => {
+            setFocusField('uri')
+            focusFieldInput('uri')
+          }}
           focusedBackgroundColor={theme.backgroundElement}
           backgroundColor={theme.backgroundElement}
           cursorColor={theme.primary}

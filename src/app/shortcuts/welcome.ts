@@ -28,12 +28,6 @@ export const WELCOME_SHORTCUTS: readonly Shortcut[] = [
       { key: 'enter', cmd: 'welcome.analyze' },
     ],
   },
-  {
-    keys: 'c',
-    helpLabel: 'Open connections',
-    footerLabel: 'connections',
-    bindings: [{ key: 'c', cmd: 'welcome.open-connections' }],
-  },
 ]
 
 export const WELCOME_PARSING_FOOTER: FooterChip[] = [{ keys: '…', label: 'parsing' }]

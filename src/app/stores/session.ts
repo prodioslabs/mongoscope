@@ -4,7 +4,7 @@ import { create } from 'zustand'
 import { LogStore, parseLogFile } from '../../parser'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
 
-export type AppScreen = 'welcome' | 'dashboard' | 'connections' | 'connection-add'
+export type AppScreen = 'welcome' | 'dashboard'
 
 export type AppTab = 'slow-queries' | 'live-ops' | 'timeline' | 'replication' | 'indexes' | 'logs'
 
@@ -37,6 +37,8 @@ export function tabFromKey(key: string): AppTab | null {
 type SessionState = {
   screen: AppScreen
   activeTab: AppTab
+  /** Selected connection for Live Ops / Indexes (session-only; not persisted). */
+  activeConnectionId: string | null
   logPath: string | null
   logStore: LogStore | null
   queryPatterns: QueryPatternStore | null
@@ -47,8 +49,7 @@ type SessionState = {
   parseError: string | null
   setTab: (tab: AppTab) => void
   setScreen: (screen: AppScreen) => void
-  goToConnections: () => void
-  goToConnectionAdd: () => void
+  setActiveConnectionId: (id: string | null) => void
   goToWelcome: () => void
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
@@ -64,6 +65,7 @@ function progressPercent(bytesRead: number, fileSize: number): number {
 export const useSession = create<SessionState>((set, get) => ({
   screen: 'welcome',
   activeTab: 'slow-queries',
+  activeConnectionId: null,
   logPath: null,
   logStore: null,
   queryPatterns: null,
@@ -79,12 +81,8 @@ export const useSession = create<SessionState>((set, get) => ({
     set({ screen })
   },
 
-  goToConnections() {
-    set({ screen: 'connections' })
-  },
-
-  goToConnectionAdd() {
-    set({ screen: 'connection-add' })
+  setActiveConnectionId(id) {
+    set({ activeConnectionId: id })
   },
 
   goToWelcome() {
@@ -146,6 +144,7 @@ export const useSession = create<SessionState>((set, get) => ({
     set({
       screen: 'welcome',
       activeTab: 'slow-queries',
+      activeConnectionId: null,
       logPath: null,
       logStore: null,
       queryPatterns: null,

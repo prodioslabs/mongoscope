@@ -1,11 +1,14 @@
 import { DASHBOARD_SHORTCUTS } from './dashboard'
+import { CONNECTIONS_TAB_SHORTCUTS } from './connections-tab'
 import { GLOBAL_SHORTCUTS } from './global'
 import { QUERY_DETAIL_SHORTCUTS } from './query-detail'
 import { SLOW_QUERIES_SHORTCUTS } from './slow-queries'
 import { toHelpSection, type HelpSection } from './types'
 import { WELCOME_SHORTCUTS } from './welcome'
 
+export { CONNECTIONS_TAB_FOOTER, CONNECTIONS_TAB_SHORTCUTS } from './connections-tab'
 export { DASHBOARD_SHORTCUTS } from './dashboard'
+export { nextTab, previousTab } from './dashboard'
 export {
   GLOBAL_ALWAYS_ON_SHORTCUTS,
   GLOBAL_BASE_SHORTCUTS,
@@ -23,4 +26,5 @@ export const HELP_SECTIONS: HelpSection[] = [
   toHelpSection('Dashboard', DASHBOARD_SHORTCUTS),
   toHelpSection('Slow Queries', SLOW_QUERIES_SHORTCUTS),
   toHelpSection('Query Detail', QUERY_DETAIL_SHORTCUTS),
+  toHelpSection('Connections', CONNECTIONS_TAB_SHORTCUTS),
 ]

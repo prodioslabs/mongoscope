@@ -33,6 +33,11 @@ export function createOverlayMode() {
       }
       sync(keymap)
     },
+    /** Drop every hold and force base mode (e.g. after HMR removed an overlay owner). */
+    clear(keymap: OverlayModeKeymap) {
+      holds.clear()
+      sync(keymap)
+    },
   }
 }
 

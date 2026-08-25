@@ -2,18 +2,20 @@ import { useBindings } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
 import { useRef, useState } from 'react'
 import { match } from 'ts-pattern'
-import { AddConnectionScreen } from './components/connections/add-connection-screen'
-import { ConnectionsScreen } from './components/connections/connections-screen'
 import { CommandPalette } from './components/command-palette'
+import { ConnectionsDialog } from './components/connections/connections-dialog'
 import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
 import { HelpMenu } from './components/help-menu'
 import { WelcomeScreen } from './components/welcome-screen'
 import { type AppKeymapMode } from './lib/keymap-mode'
+import { whenNotEditing } from './lib/when-not-editing'
 import {
   DASHBOARD_SHORTCUTS,
   GLOBAL_ALWAYS_ON_SHORTCUTS,
   GLOBAL_BASE_SHORTCUTS,
+  nextTab,
+  previousTab,
   toBindings,
 } from './shortcuts'
 import { tabFromKey, useSession } from './stores/session'
@@ -41,6 +43,8 @@ export function App({ options }: AppProps) {
   const [helpMenuOpen, setHelpMenuOpen] = useState(false)
   const screen = useSession((s) => s.screen)
   const setTab = useSession((s) => s.setTab)
+  const activeTab = useSession((s) => s.activeTab)
+  const notEditing = whenNotEditing(renderer)
 
   const modeRef = useRef(mode)
   const selectedRef = useRef(selected)
@@ -48,6 +52,8 @@ export function App({ options }: AppProps) {
   const setModeRef = useRef(setMode)
   const setRef = useRef(set)
   const setTabRef = useRef(setTab)
+  const activeTabRef = useRef(activeTab)
+  const screenRef = useRef(screen)
   const setPaletteOpenRef = useRef(setPaletteOpen)
   const setHelpMenuOpenRef = useRef(setHelpMenuOpen)
 
@@ -57,8 +63,17 @@ export function App({ options }: AppProps) {
   setModeRef.current = setMode
   setRef.current = set
   setTabRef.current = setTab
+  activeTabRef.current = activeTab
+  screenRef.current = screen
   setPaletteOpenRef.current = setPaletteOpen
   setHelpMenuOpenRef.current = setHelpMenuOpen
+
+  function blurFocusedInput() {
+    const focused = renderer.currentFocusedRenderable
+    if (focused != null && typeof focused.blur === 'function') {
+      focused.blur()
+    }
+  }
 
   useBindings(function createAlwaysOnAppLayer() {
     return {
@@ -72,6 +87,8 @@ export function App({ options }: AppProps) {
         },
         {
           name: 'app.toggle-help',
+          // Avoid stealing `?` while typing in an input.
+          enabled: notEditing,
           run() {
             setPaletteOpenRef.current(false)
             setHelpMenuOpenRef.current((open) => !open)
@@ -80,12 +97,14 @@ export function App({ options }: AppProps) {
       ],
       bindings: toBindings(GLOBAL_ALWAYS_ON_SHORTCUTS),
     }
-  }, [])
+  }, [notEditing])
 
   useBindings(
     function createBaseAppLayer() {
       return {
         appMode: 'base' satisfies AppKeymapMode,
+        // q / m / t must not fire while an <input> is focused (e.g. typing "staging").
+        enabled: notEditing,
         commands: [
           {
             name: 'app.quit',
@@ -112,35 +131,54 @@ export function App({ options }: AppProps) {
         bindings: toBindings(GLOBAL_BASE_SHORTCUTS),
       }
     },
-    [renderer],
+    [notEditing, renderer],
   )
 
   useBindings(
     function createDashboardTabLayer() {
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: screen === 'dashboard',
+        // Digits / Tab must type into URI fields; only switch tabs when not editing.
+        priority: 200,
+        enabled: function dashboardTabsEnabled() {
+          return screenRef.current === 'dashboard' && notEditing()
+        },
         commands: [
           {
             name: 'app.select-tab',
             run({ event }: { event: { name: string } }) {
               const tab = tabFromKey(event.name)
-              if (!tab) return false
+              if (!tab) {
+                return false
+              }
+              blurFocusedInput()
               setTabRef.current(tab)
+            },
+          },
+          {
+            name: 'app.cycle-tab-next',
+            run() {
+              blurFocusedInput()
+              setTabRef.current(nextTab(activeTabRef.current))
+            },
+          },
+          {
+            name: 'app.cycle-tab-prev',
+            run() {
+              blurFocusedInput()
+              setTabRef.current(previousTab(activeTabRef.current))
             },
           },
         ],
         bindings: toBindings(DASHBOARD_SHORTCUTS),
       }
     },
-    [screen],
+    [notEditing, renderer],
   )
 
   const body = match(screen)
     .with('welcome', () => <WelcomeScreen logDir={options.logDir ?? '.'} />)
     .with('dashboard', () => <Dashboard />)
-    .with('connections', () => <ConnectionsScreen />)
-    .with('connection-add', () => <AddConnectionScreen />)
     .exhaustive()
 
   return (
@@ -155,6 +193,7 @@ export function App({ options }: AppProps) {
           setHelpMenuOpen(true)
         }}
       />
+      <ConnectionsDialog />
       <HelpMenu open={helpMenuOpen} onOpenChange={setHelpMenuOpen} />
     </box>
   )
