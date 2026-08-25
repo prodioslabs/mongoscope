@@ -1,9 +1,11 @@
 import { TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
+import { useRenderer } from '@opentui/react'
 import { type ConnectionProfile } from '../../../connections'
 import { formatConnectionError } from '../../../connections/format-connection-error'
 import { displayText } from '../../../lib/display-text'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
+import { whenNotEditing } from '../../lib/when-not-editing'
 import { useConnectionsList } from '../../queries/connection'
 import { CONNECTIONS_TAB_FOOTER, CONNECTIONS_TAB_SHORTCUTS, toBindings } from '../../shortcuts'
 import { useConnectionsUi } from '../../stores/connections-ui'
@@ -16,11 +18,13 @@ import { AddConnectionForm } from '../connections/add-connection-form'
 const EMPTY_FOOTER_KEYBINDINGS: FooterKeybinding[] = []
 
 export function DbSelector() {
+  const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const activeConnectionId = useSession((s) => s.activeConnectionId)
   const setActiveConnectionId = useSession((s) => s.setActiveConnectionId)
   const openManage = useConnectionsUi((s) => s.openManage)
   const dialogOpen = useConnectionsUi((s) => s.dialogOpen)
+  const notEditing = whenNotEditing(renderer)
 
   const { data, isPending, isError, error } = useConnectionsList()
   const profiles: ConnectionProfile[] = data ?? []
@@ -39,7 +43,9 @@ export function DbSelector() {
     function createDbSelectorManageLayer() {
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: hasSavedConnections && !dialogOpen,
+        enabled: function connectionsManageEnabled() {
+          return hasSavedConnections && !dialogOpen && notEditing()
+        },
         commands: [
           {
             name: 'connections.open-manage',
@@ -51,7 +57,7 @@ export function DbSelector() {
         bindings: toBindings(CONNECTIONS_TAB_SHORTCUTS),
       }
     },
-    [dialogOpen, hasSavedConnections, openManage],
+    [dialogOpen, hasSavedConnections, notEditing, openManage],
   )
 
   if (isPending) {

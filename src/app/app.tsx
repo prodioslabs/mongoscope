@@ -9,6 +9,7 @@ import { Footer } from './components/footer'
 import { HelpMenu } from './components/help-menu'
 import { WelcomeScreen } from './components/welcome-screen'
 import { type AppKeymapMode } from './lib/keymap-mode'
+import { whenNotEditing } from './lib/when-not-editing'
 import {
   DASHBOARD_SHORTCUTS,
   GLOBAL_ALWAYS_ON_SHORTCUTS,
@@ -43,6 +44,7 @@ export function App({ options }: AppProps) {
   const screen = useSession((s) => s.screen)
   const setTab = useSession((s) => s.setTab)
   const activeTab = useSession((s) => s.activeTab)
+  const notEditing = whenNotEditing(renderer)
 
   const modeRef = useRef(mode)
   const selectedRef = useRef(selected)
@@ -51,6 +53,7 @@ export function App({ options }: AppProps) {
   const setRef = useRef(set)
   const setTabRef = useRef(setTab)
   const activeTabRef = useRef(activeTab)
+  const screenRef = useRef(screen)
   const setPaletteOpenRef = useRef(setPaletteOpen)
   const setHelpMenuOpenRef = useRef(setHelpMenuOpen)
 
@@ -61,6 +64,7 @@ export function App({ options }: AppProps) {
   setRef.current = set
   setTabRef.current = setTab
   activeTabRef.current = activeTab
+  screenRef.current = screen
   setPaletteOpenRef.current = setPaletteOpen
   setHelpMenuOpenRef.current = setHelpMenuOpen
 
@@ -83,6 +87,8 @@ export function App({ options }: AppProps) {
         },
         {
           name: 'app.toggle-help',
+          // Avoid stealing `?` while typing in an input.
+          enabled: notEditing,
           run() {
             setPaletteOpenRef.current(false)
             setHelpMenuOpenRef.current((open) => !open)
@@ -91,12 +97,14 @@ export function App({ options }: AppProps) {
       ],
       bindings: toBindings(GLOBAL_ALWAYS_ON_SHORTCUTS),
     }
-  }, [])
+  }, [notEditing])
 
   useBindings(
     function createBaseAppLayer() {
       return {
         appMode: 'base' satisfies AppKeymapMode,
+        // q / m / t must not fire while an <input> is focused (e.g. typing "staging").
+        enabled: notEditing,
         commands: [
           {
             name: 'app.quit',
@@ -123,16 +131,18 @@ export function App({ options }: AppProps) {
         bindings: toBindings(GLOBAL_BASE_SHORTCUTS),
       }
     },
-    [renderer],
+    [notEditing, renderer],
   )
 
   useBindings(
     function createDashboardTabLayer() {
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        // Win over focused inputs / form layers so 1–6 and Tab always switch tabs on the dashboard.
+        // Digits / Tab must type into URI fields; only switch tabs when not editing.
         priority: 200,
-        enabled: screen === 'dashboard',
+        enabled: function dashboardTabsEnabled() {
+          return screenRef.current === 'dashboard' && notEditing()
+        },
         commands: [
           {
             name: 'app.select-tab',
@@ -163,7 +173,7 @@ export function App({ options }: AppProps) {
         bindings: toBindings(DASHBOARD_SHORTCUTS),
       }
     },
-    [renderer, screen],
+    [notEditing, renderer],
   )
 
   const body = match(screen)
