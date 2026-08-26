@@ -3,6 +3,7 @@ import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QueryPattern } from '../../../../query-patterns'
+import { displayText } from '../../../../lib/display-text'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useSession } from '../../../stores/session'
@@ -27,11 +28,20 @@ import { QueryDetailDialog } from '../query-detail-dialog'
 type SortBy = 'count' | 'avgMs' | 'plan'
 type SortDirection = 'asc' | 'desc'
 
+type SlowQueryStats = {
+  patternCount: string
+  queryCount: string
+  slowest: string
+  slowestSeverity: Severity
+  collscanShare: string
+  collscanSeverity: Severity
+}
+
 /**
- * Non-data lines: tab bar, footer, header content line, and outer/header border
- * overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
+ * Non-data lines: tab bar, footer, stats strip, header content line, and
+ * outer/header border overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
  */
-const CHROME_ROWS = 5
+const CHROME_ROWS = 6
 
 /** Approximate height of one data row (content line + inner border). */
 const ROW_STRIDE = 2
@@ -58,6 +68,7 @@ export function SlowQueriesTab() {
   const sortByRef = useRef(sortBy)
   const sortDirectionRef = useRef(sortDirection)
 
+  const stats = useMemo(() => computeSlowQueryStats(patterns), [patterns])
   const sortedPatterns = useMemo(
     () => sortPatterns(patterns, sortBy, sortDirection),
     [patterns, sortBy, sortDirection],
@@ -247,6 +258,30 @@ export function SlowQueriesTab() {
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column">
+      <box flexDirection="row" flexShrink={0} gap={2} paddingLeft={1} paddingBottom={0}>
+        <box flexDirection="row" gap={1}>
+          <text content={displayText('PATTERNS', '—')} fg={theme.textMuted} />
+          <text content={displayText(stats.patternCount, '—')} fg={theme.text} />
+        </box>
+        <box flexDirection="row" gap={1}>
+          <text content={displayText('QUERIES', '—')} fg={theme.textMuted} />
+          <text content={displayText(stats.queryCount, '—')} fg={theme.text} />
+        </box>
+        <box flexDirection="row" gap={1}>
+          <text content={displayText('SLOWEST', '—')} fg={theme.textMuted} />
+          <text
+            content={displayText(stats.slowest, '—')}
+            fg={severityColor(theme, stats.slowestSeverity)}
+          />
+        </box>
+        <box flexDirection="row" gap={1}>
+          <text content={displayText('COLLSCAN', '—')} fg={theme.textMuted} />
+          <text
+            content={displayText(stats.collscanShare, '—')}
+            fg={severityColor(theme, stats.collscanSeverity)}
+          />
+        </box>
+      </box>
       {content == null ? (
         <box flexGrow={1} flexShrink={1}>
           <text content="no slow queries" fg={theme.textMuted} />
@@ -275,6 +310,46 @@ export function SlowQueriesTab() {
       />
     </box>
   )
+}
+
+function computeSlowQueryStats(patterns: QueryPattern[]): SlowQueryStats {
+  if (patterns.length === 0) {
+    return {
+      patternCount: '0',
+      queryCount: '0',
+      slowest: '—',
+      slowestSeverity: 'muted',
+      collscanShare: '—',
+      collscanSeverity: 'muted',
+    }
+  }
+
+  let queryCount = 0
+  let collscanCount = 0
+  let slowest = patterns[0]!
+  for (const pattern of patterns) {
+    queryCount += pattern.count
+    if (pattern.plan === 'COLLSCAN') {
+      collscanCount += 1
+    }
+    if (
+      pattern.avgMs > slowest.avgMs ||
+      (pattern.avgMs === slowest.avgMs && pattern.count > slowest.count)
+    ) {
+      slowest = pattern
+    }
+  }
+
+  const collscanPct = Math.round((100 * collscanCount) / patterns.length)
+
+  return {
+    patternCount: formatCount(patterns.length),
+    queryCount: formatCount(queryCount),
+    slowest: `${formatCount(slowest.avgMs)}ms ${truncateCell(slowest.namespace)}`,
+    slowestSeverity: avgMsSeverity(slowest.avgMs),
+    collscanShare: `${formatCount(collscanCount)} (${collscanPct}%)`,
+    collscanSeverity: collscanCount > 0 ? 'error' : 'muted',
+  }
 }
 
 function sortPatterns(
