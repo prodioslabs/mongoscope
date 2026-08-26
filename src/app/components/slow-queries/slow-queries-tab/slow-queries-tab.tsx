@@ -1,4 +1,4 @@
-import { bg, bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
+import { bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -395,32 +395,13 @@ function buildTableContent(
   sortBy: SortBy,
   sortDirection: SortDirection,
 ): TextTableContent {
-  const countBg = sortBy === 'count' ? theme.backgroundElement : undefined
-  const avgBg = sortBy === 'avgMs' ? theme.backgroundElement : undefined
-  const planBg = sortBy === 'plan' ? theme.backgroundElement : undefined
-
   const header: TextChunk[][] = [
     headerCell('NAMESPACE', theme),
     headerCell('OP', theme),
-    headerCell(
-      headerLabel('COUNT', 'count', sortBy, sortDirection),
-      theme,
-      countBg,
-      sortBy === 'count',
-    ),
-    headerCell(
-      headerLabel('AVG MS', 'avgMs', sortBy, sortDirection),
-      theme,
-      avgBg,
-      sortBy === 'avgMs',
-    ),
+    headerCell(headerLabel('COUNT', 'count', sortBy, sortDirection), theme, sortBy === 'count'),
+    headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme, sortBy === 'avgMs'),
     headerCell('EXAMINED/RET', theme),
-    headerCell(
-      headerLabel('PLAN', 'plan', sortBy, sortDirection),
-      theme,
-      planBg,
-      sortBy === 'plan',
-    ),
+    headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme, sortBy === 'plan'),
     headerCell('TREND', theme),
   ]
 
@@ -436,7 +417,7 @@ function buildTableContent(
   for (let i = 0; i < patterns.length; i++) {
     const pattern = patterns[i]!
     const selected = i === selectedIndex
-    rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme, countBg, avgBg, planBg))
+    rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme))
   }
 
   while (rows.length - 1 < rowCapacity) {
@@ -455,9 +436,6 @@ function buildPatternRow(
   selected: boolean,
   namespaceWidth: number,
   theme: Theme,
-  countBg: RGBA | undefined,
-  avgBg: RGBA | undefined,
-  planBg: RGBA | undefined,
 ): TextChunk[][] {
   const msSeverity = avgMsSeverity(pattern.avgMs)
   const examSeverity = examinedSeverity(pattern.avgDocsExamined, pattern.avgDocsReturned)
@@ -466,36 +444,23 @@ function buildPatternRow(
   return [
     selected ? cell(`${pattern.namespace} ●`, theme.primary) : cell(pattern.namespace, theme.info),
     cell(truncateCell(pattern.op), theme.textMuted),
-    cell(formatCount(pattern.count), theme.textMuted, countBg),
-    cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity), avgBg),
+    cell(formatCount(pattern.count), theme.textMuted),
+    cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),
     cell(
       formatExaminedRet(pattern.avgDocsExamined, pattern.avgDocsReturned),
       severityColor(theme, examSeverity),
     ),
-    cell(pattern.plan, severityColor(theme, pSeverity), planBg),
+    cell(pattern.plan, severityColor(theme, pSeverity)),
     cell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
   ]
 }
 
-function headerCell(
-  label: string,
-  theme: Theme,
-  background?: RGBA,
-  active = false,
-): TextChunk[] {
-  const colored = bold(fg(active ? theme.text : theme.textMuted)(label))
-  if (background) {
-    return [bg(background)(colored)]
-  }
-  return [colored]
+function headerCell(label: string, theme: Theme, active = false): TextChunk[] {
+  return [bold(fg(active ? theme.primary : theme.textMuted)(label))]
 }
 
-function cell(text: string, color: RGBA, background?: RGBA): TextChunk[] {
-  const colored = fg(color)(text)
-  if (background) {
-    return [bg(background)(colored)]
-  }
-  return [colored]
+function cell(text: string, color: RGBA): TextChunk[] {
+  return [fg(color)(text)]
 }
 
 function severityColor(theme: Theme, severity: Severity): RGBA {
