@@ -3,7 +3,6 @@ import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QueryPattern } from '../../../../query-patterns'
-import { displayText } from '../../../../lib/display-text'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useSession } from '../../../stores/session'
@@ -24,6 +23,7 @@ import {
   type Severity,
 } from '../format'
 import { QueryDetailDialog } from '../query-detail-dialog'
+import { StatsCard } from '../stats-card'
 
 type SortBy = 'count' | 'avgMs' | 'plan'
 type SortDirection = 'asc' | 'desc'
@@ -38,10 +38,10 @@ type SlowQueryStats = {
 }
 
 /**
- * Non-data lines: tab bar, footer, stats strip, header content line, and
+ * Non-data lines: tab bar, footer, stats cards, header content line, and
  * outer/header border overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
  */
-const CHROME_ROWS = 6
+const CHROME_ROWS = 8
 
 /** Approximate height of one data row (content line + inner border). */
 const ROW_STRIDE = 2
@@ -258,29 +258,19 @@ export function SlowQueriesTab() {
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column">
-      <box flexDirection="row" flexShrink={0} gap={2} paddingLeft={1} paddingBottom={0}>
-        <box flexDirection="row" gap={1}>
-          <text content={displayText('PATTERNS', '—')} fg={theme.textMuted} />
-          <text content={displayText(stats.patternCount, '—')} fg={theme.text} />
-        </box>
-        <box flexDirection="row" gap={1}>
-          <text content={displayText('QUERIES', '—')} fg={theme.textMuted} />
-          <text content={displayText(stats.queryCount, '—')} fg={theme.text} />
-        </box>
-        <box flexDirection="row" gap={1}>
-          <text content={displayText('SLOWEST', '—')} fg={theme.textMuted} />
-          <text
-            content={displayText(stats.slowest, '—')}
-            fg={severityColor(theme, stats.slowestSeverity)}
-          />
-        </box>
-        <box flexDirection="row" gap={1}>
-          <text content={displayText('COLLSCAN', '—')} fg={theme.textMuted} />
-          <text
-            content={displayText(stats.collscanShare, '—')}
-            fg={severityColor(theme, stats.collscanSeverity)}
-          />
-        </box>
+      <box flexDirection="row" flexShrink={0} gap={1} paddingLeft={1} paddingBottom={0}>
+        <StatsCard label="PATTERNS" value={stats.patternCount} />
+        <StatsCard label="QUERIES" value={stats.queryCount} />
+        <StatsCard
+          label="SLOWEST"
+          value={stats.slowest}
+          valueColor={severityColor(theme, stats.slowestSeverity)}
+        />
+        <StatsCard
+          label="COLLSCAN"
+          value={stats.collscanShare}
+          valueColor={severityColor(theme, stats.collscanSeverity)}
+        />
       </box>
       {content == null ? (
         <box flexGrow={1} flexShrink={1}>
@@ -405,13 +395,32 @@ function buildTableContent(
   sortBy: SortBy,
   sortDirection: SortDirection,
 ): TextTableContent {
+  const countBg = sortBy === 'count' ? theme.backgroundElement : undefined
+  const avgBg = sortBy === 'avgMs' ? theme.backgroundElement : undefined
+  const planBg = sortBy === 'plan' ? theme.backgroundElement : undefined
+
   const header: TextChunk[][] = [
     headerCell('NAMESPACE', theme),
     headerCell('OP', theme),
-    headerCell(headerLabel('COUNT', 'count', sortBy, sortDirection), theme),
-    headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme),
+    headerCell(
+      headerLabel('COUNT', 'count', sortBy, sortDirection),
+      theme,
+      countBg,
+      sortBy === 'count',
+    ),
+    headerCell(
+      headerLabel('AVG MS', 'avgMs', sortBy, sortDirection),
+      theme,
+      avgBg,
+      sortBy === 'avgMs',
+    ),
     headerCell('EXAMINED/RET', theme),
-    headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme),
+    headerCell(
+      headerLabel('PLAN', 'plan', sortBy, sortDirection),
+      theme,
+      planBg,
+      sortBy === 'plan',
+    ),
     headerCell('TREND', theme),
   ]
 
@@ -427,7 +436,7 @@ function buildTableContent(
   for (let i = 0; i < patterns.length; i++) {
     const pattern = patterns[i]!
     const selected = i === selectedIndex
-    rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme))
+    rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme, countBg, avgBg, planBg))
   }
 
   while (rows.length - 1 < rowCapacity) {
@@ -446,6 +455,9 @@ function buildPatternRow(
   selected: boolean,
   namespaceWidth: number,
   theme: Theme,
+  countBg: RGBA | undefined,
+  avgBg: RGBA | undefined,
+  planBg: RGBA | undefined,
 ): TextChunk[][] {
   const msSeverity = avgMsSeverity(pattern.avgMs)
   const examSeverity = examinedSeverity(pattern.avgDocsExamined, pattern.avgDocsReturned)
@@ -454,19 +466,28 @@ function buildPatternRow(
   return [
     selected ? cell(`${pattern.namespace} ●`, theme.primary) : cell(pattern.namespace, theme.info),
     cell(truncateCell(pattern.op), theme.textMuted),
-    cell(formatCount(pattern.count), theme.textMuted),
-    cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),
+    cell(formatCount(pattern.count), theme.textMuted, countBg),
+    cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity), avgBg),
     cell(
       formatExaminedRet(pattern.avgDocsExamined, pattern.avgDocsReturned),
       severityColor(theme, examSeverity),
     ),
-    cell(pattern.plan, severityColor(theme, pSeverity)),
+    cell(pattern.plan, severityColor(theme, pSeverity), planBg),
     cell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
   ]
 }
 
-function headerCell(label: string, theme: Theme): TextChunk[] {
-  return [bold(fg(theme.textMuted)(label))]
+function headerCell(
+  label: string,
+  theme: Theme,
+  background?: RGBA,
+  active = false,
+): TextChunk[] {
+  const colored = bold(fg(active ? theme.text : theme.textMuted)(label))
+  if (background) {
+    return [bg(background)(colored)]
+  }
+  return [colored]
 }
 
 function cell(text: string, color: RGBA, background?: RGBA): TextChunk[] {
