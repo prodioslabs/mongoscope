@@ -8,6 +8,7 @@ import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { useConnectionsList, useRemoveConnection } from '../../../queries/connection'
 import { useConnectionsUi } from '../../../stores/connections-ui'
 import { useFooter, type FooterKeybinding } from '../../../stores/footer'
+import { useLiveConnection } from '../../../stores/live-connection'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { selectedForeground } from '../../../theme'
@@ -42,6 +43,7 @@ export function ConnectionsDialog() {
   const setDialogView = useConnectionsUi((s) => s.setDialogView)
   const setActiveConnectionId = useSession((s) => s.setActiveConnectionId)
   const activeConnectionId = useSession((s) => s.activeConnectionId)
+  const retryLiveConnection = useLiveConnection((s) => s.retry)
   const pushOverlayKeybindings = useFooter((s) => s.pushOverlayKeybindings)
   const popOverlayKeybindings = useFooter((s) => s.popOverlayKeybindings)
 
@@ -171,7 +173,11 @@ export function ConnectionsDialog() {
               if (!profile) {
                 return
               }
-              setActiveConnectionId(profile.id)
+              if (activeConnectionIdRef.current === profile.id) {
+                void retryLiveConnection()
+              } else {
+                setActiveConnectionId(profile.id)
+              }
               close()
             },
           },
@@ -219,6 +225,7 @@ export function ConnectionsDialog() {
       dialogView,
       pendingDelete,
       removeConnection,
+      retryLiveConnection,
       setActiveConnectionId,
       setDialogView,
     ],
@@ -329,7 +336,7 @@ export function ConnectionsDialog() {
           <>
             <text content="Connections" fg={theme.text} attributes={TextAttributes.BOLD} />
             <text
-              content={displayText(`${listStatus} · stored in OS keychain · no live connect yet`)}
+              content={displayText(`${listStatus} · stored in OS keychain · enter connects`)}
               fg={theme.textMuted}
             />
 
