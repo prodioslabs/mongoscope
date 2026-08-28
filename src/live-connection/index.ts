@@ -2,8 +2,10 @@ export {
   buildConnectOptions,
   DEFAULT_CONNECT_TIMEOUT_MS,
   defaultCreateMongoClient,
+  type AggregateCursorLike,
   type CreateMongoClient,
   type MongoClientLike,
+  type MongoDbLike,
 } from './client-factory'
 export {
   LiveConnectionError,

@@ -36,6 +36,13 @@ function createFakeClient(overrides?: {
             command: async () => client.pingImpl(),
           }
         },
+        aggregate() {
+          return {
+            async toArray() {
+              return []
+            },
+          }
+        },
       }
     },
     on(_event, listener) {

@@ -7,14 +7,21 @@ export const DEFAULT_CONNECT_TIMEOUT_MS = 8000
  * mongodb@7 pulls a bson build that hits Bun's unimplemented
  * `v8.isBuildingSnapshot` at import time (Bun 1.3.x).
  */
+export type AggregateCursorLike = {
+  toArray(): Promise<unknown[]>
+}
+
+export type MongoDbLike = {
+  admin(): {
+    command(command: Record<string, unknown>): Promise<unknown>
+  }
+  aggregate(pipeline: Record<string, unknown>[]): AggregateCursorLike
+}
+
 export type MongoClientLike = {
   connect(): Promise<unknown>
   close(force?: boolean): Promise<void>
-  db(dbName?: string): {
-    admin(): {
-      command(command: Record<string, unknown>): Promise<unknown>
-    }
-  }
+  db(dbName?: string): MongoDbLike
   on?(event: 'close', listener: () => void): unknown
   off?(event: 'close', listener: () => void): unknown
   removeListener?(event: 'close', listener: () => void): unknown
