@@ -14,6 +14,18 @@ describe('parseKillOpid', () => {
   })
 })
 
+describe('killCurrentOp', () => {
+  it('returns not connected when client is null', async () => {
+    const { killCurrentOp } = await import('./kill-op')
+    const result = await killCurrentOp(null, 123)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.reason).toBe('not_connected')
+      expect(result.message).toBe('not connected')
+    }
+  })
+})
+
 describe('mapKillOpError', () => {
   it('maps unauthorized errors', () => {
     const result = mapKillOpError(Object.assign(new Error('not authorized'), { code: 13 }))

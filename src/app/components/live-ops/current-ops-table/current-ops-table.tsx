@@ -232,7 +232,7 @@ export function CurrentOpsTable({
         }
 
         const patterns = queryPatterns?.patterns ?? []
-        if (queryPatterns == null || patterns.length === 0) {
+        if (queryPatterns == null) {
           showTransientStatus('no slow query log loaded')
           return
         }
