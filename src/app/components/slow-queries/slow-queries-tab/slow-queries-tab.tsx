@@ -1,14 +1,21 @@
-import { bg, bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
+import { type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QueryPattern } from '../../../../query-patterns'
+import {
+  computeTableCapacity,
+  headerCell,
+  padTableRows,
+  severityColor,
+  tableCell,
+} from '../../../lib/text-table-content'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
-import '../../../lib/opentui-text-table'
+import { DataTextTable } from '../../data-text-table'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 import {
   avgMsSeverity,
@@ -20,7 +27,6 @@ import {
   planSortRank,
   sparkline,
   truncateCell,
-  type Severity,
 } from '../format'
 import { QueryDetailDialog } from '../query-detail-dialog'
 
@@ -32,11 +38,6 @@ type SortDirection = 'asc' | 'desc'
  * overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
  */
 const CHROME_ROWS = 5
-
-/** Approximate height of one data row (content line + inner border). */
-const ROW_STRIDE = 2
-
-const COLUMN_COUNT = 7
 
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
@@ -67,7 +68,7 @@ export function SlowQueriesTab() {
       ? null
       : (sortedPatterns.find((pattern) => pattern.id === detailPatternId) ?? null)
 
-  const capacity = Math.max(1, Math.floor((terminalHeight - CHROME_ROWS) / ROW_STRIDE))
+  const capacity = computeTableCapacity(CHROME_ROWS, terminalHeight)
 
   const windowLabel =
     queryPatterns != null
@@ -252,19 +253,7 @@ export function SlowQueriesTab() {
           <text content="no slow queries" fg={theme.textMuted} />
         </box>
       ) : (
-        <textTable
-          content={content}
-          flexGrow={1}
-          border
-          outerBorder
-          borderStyle="single"
-          borderColor={theme.border}
-          wrapMode="none"
-          cellPaddingX={0}
-          selectable={false}
-          height="100%"
-          width="100%"
-        />
+        <DataTextTable content={content} theme={theme} />
       )}
       <QueryDetailDialog
         open={detailPatternId != null}
@@ -355,16 +344,9 @@ function buildTableContent(
     rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme))
   }
 
-  while (rows.length - 1 < rowCapacity) {
-    rows.push(emptyRow())
-  }
-
-  return rows
+  return padTableRows(rows, rowCapacity)
 }
 
-function emptyRow(): TextChunk[][] {
-  return Array.from({ length: COLUMN_COUNT }, () => [])
-}
 
 function buildPatternRow(
   pattern: QueryPattern,
@@ -377,40 +359,17 @@ function buildPatternRow(
   const pSeverity = planSeverity(pattern.plan)
 
   return [
-    selected ? cell(`${pattern.namespace} ●`, theme.primary) : cell(pattern.namespace, theme.info),
-    cell(truncateCell(pattern.op), theme.textMuted),
-    cell(formatCount(pattern.count), theme.textMuted),
-    cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),
-    cell(
+    selected
+      ? tableCell(`${pattern.namespace} ●`, theme.primary)
+      : tableCell(pattern.namespace, theme.info),
+    tableCell(truncateCell(pattern.op), theme.textMuted),
+    tableCell(formatCount(pattern.count), theme.textMuted),
+    tableCell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),
+    tableCell(
       formatExaminedRet(pattern.avgDocsExamined, pattern.avgDocsReturned),
       severityColor(theme, examSeverity),
     ),
-    cell(pattern.plan, severityColor(theme, pSeverity)),
-    cell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
+    tableCell(pattern.plan, severityColor(theme, pSeverity)),
+    tableCell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
   ]
-}
-
-function headerCell(label: string, theme: Theme): TextChunk[] {
-  return [bold(fg(theme.textMuted)(label))]
-}
-
-function cell(text: string, color: RGBA, background?: RGBA): TextChunk[] {
-  const colored = fg(color)(text)
-  if (background) {
-    return [bg(background)(colored)]
-  }
-  return [colored]
-}
-
-function severityColor(theme: Theme, severity: Severity): RGBA {
-  switch (severity) {
-    case 'error':
-      return theme.error
-    case 'warning':
-      return theme.warning
-    case 'success':
-      return theme.success
-    case 'muted':
-      return theme.textMuted
-  }
 }
