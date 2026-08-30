@@ -9,6 +9,8 @@ export type CurrentOpRow = {
   opid: string
   namespace: string
   op: string
+  /** Normalized plan label — `COLLSCAN`, `IXSCAN`, `IXSCAN+SORT`, or `n/a`. */
+  plan: string
   runningMs: number
   lock: string
   waitingFor: string
@@ -71,4 +73,6 @@ export type RawCurrentOpDoc = {
   client_s?: unknown
   appName?: unknown
   type?: unknown
+  planSummary?: unknown
+  cursor?: { planSummary?: unknown }
 }

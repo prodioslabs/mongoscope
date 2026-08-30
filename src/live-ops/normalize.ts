@@ -1,3 +1,4 @@
+import { normalizePlanSummary } from '../lib/plan-summary'
 import type {
   ConnectionStats,
   CurrentOpRow,
@@ -50,6 +51,7 @@ export function toCurrentOpRow(doc: RawCurrentOpDoc): CurrentOpRow {
     opid: formatOpid(doc.opid),
     namespace: stringOrEmpty(doc.ns) || EMPTY_CELL,
     op: stringOrEmpty(doc.op) || EMPTY_CELL,
+    plan: planFromDoc(doc),
     runningMs: runningMsFromDoc(doc),
     lock: waitingForLock ? EMPTY_CELL : formatLocks(doc.locks),
     waitingFor: waitingForLock ? formatLocks(doc.locks) : EMPTY_CELL,
@@ -157,6 +159,17 @@ export function parseServerStatus(result: unknown): {
   queuedOps.writers = optionalNumber(record.globalLock?.currentQueue?.writers)
 
   return { connections, queuedOps }
+}
+
+function planFromDoc(doc: RawCurrentOpDoc): string {
+  let raw: unknown = doc.planSummary
+  if (typeof raw !== 'string' || raw.length === 0) {
+    const cursor = doc.cursor
+    if (cursor != null && typeof cursor === 'object') {
+      raw = cursor.planSummary
+    }
+  }
+  return normalizePlanSummary(raw)
 }
 
 function formatOpid(value: unknown): string {

@@ -87,6 +87,44 @@ describe('normalizeCurrentOpDocs', () => {
       { namespace: 'b.y', count: 1 },
     ])
   })
+
+  it('normalizes planSummary from currentOp docs', () => {
+    const { ops } = normalizeCurrentOpDocs([
+      {
+        active: true,
+        opid: 1,
+        ns: 'app.users',
+        op: 'query',
+        planSummary: 'COLLSCAN',
+        microsecs_running: 1000,
+      },
+      {
+        active: true,
+        opid: 2,
+        ns: 'app.orders',
+        op: 'query',
+        planSummary: 'IXSCAN { status: 1 }',
+        microsecs_running: 500,
+      },
+      {
+        active: true,
+        opid: 3,
+        ns: 'app.admin',
+        op: 'insert',
+        microsecs_running: 100,
+      },
+      {
+        active: true,
+        opid: 4,
+        ns: 'app.items',
+        op: 'getmore',
+        microsecs_running: 200,
+        cursor: { planSummary: 'IXSCAN { _id: 1 }' },
+      },
+    ])
+
+    expect(ops.map((op) => op.plan)).toEqual(['COLLSCAN', 'IXSCAN', 'IXSCAN', 'n/a'])
+  })
 })
 
 describe('buildLockNote', () => {
@@ -96,6 +134,7 @@ describe('buildLockNote', () => {
         opid: '10',
         namespace: 'app.orders',
         op: 'update',
+        plan: 'n/a',
         runningMs: 100,
         lock: '—',
         waitingFor: 'Collection:W',
@@ -106,6 +145,7 @@ describe('buildLockNote', () => {
         opid: '20',
         namespace: 'app.orders',
         op: 'update',
+        plan: 'n/a',
         runningMs: 5000,
         lock: 'Collection:W',
         waitingFor: '—',
@@ -125,6 +165,7 @@ describe('buildLockNote', () => {
         opid: '1',
         namespace: 'app.orders',
         op: 'update',
+        plan: 'n/a',
         runningMs: 100,
         lock: '—',
         waitingFor: 'Collection:W',
@@ -135,6 +176,7 @@ describe('buildLockNote', () => {
         opid: '2',
         namespace: 'app.orders',
         op: 'insert',
+        plan: 'n/a',
         runningMs: 50,
         lock: '—',
         waitingFor: 'Collection:W',
@@ -153,6 +195,7 @@ describe('buildLockNote', () => {
           opid: '1',
           namespace: 'app.orders',
           op: 'query',
+          plan: 'n/a',
           runningMs: 10,
           lock: '—',
           waitingFor: '—',

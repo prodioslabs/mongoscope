@@ -18,6 +18,7 @@ import {
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 import { DataTextTable } from '../../data-text-table'
+import { planSeverity } from '../../slow-queries/format'
 
 type CurrentOpsTableProps = {
   ops: CurrentOpRow[]
@@ -86,6 +87,7 @@ function buildCurrentOpTableContent(
     headerCell('OPID', theme),
     headerCell('NAMESPACE', theme),
     headerCell('OP', theme),
+    headerCell('PLAN', theme),
     headerCell('RUNNING (MS)', theme),
     headerCell('LOCK', theme),
     headerCell('WAITINGFOR', theme),
@@ -110,11 +112,19 @@ function buildCurrentOpRow(op: CurrentOpRow, theme: Theme): TextChunk[][] {
 
   return [
     tableCell(truncateLiveOpsCell(op.opid, 10), theme.text),
-    tableCell(truncateLiveOpsCell(op.namespace, 24), theme.text),
-    tableCell(truncateLiveOpsCell(op.op, 10), theme.text),
+    tableCell(truncateLiveOpsCell(op.namespace, 20), theme.text),
+    tableCell(truncateLiveOpsCell(op.op, 8), theme.text),
+    tableCell(displayPlan(op.plan), severityColor(theme, planSeverity(op.plan))),
     tableCell(formatRunningMs(op.runningMs), runningColor),
-    tableCell(truncateLiveOpsCell(op.lock, 16), theme.textMuted),
-    tableCell(truncateLiveOpsCell(op.waitingFor, 16), theme.textMuted),
-    tableCell(truncateLiveOpsCell(op.client, 20), theme.textMuted),
+    tableCell(truncateLiveOpsCell(op.lock, 14), theme.textMuted),
+    tableCell(truncateLiveOpsCell(op.waitingFor, 14), theme.textMuted),
+    tableCell(truncateLiveOpsCell(op.client, 18), theme.textMuted),
   ]
+}
+
+function displayPlan(plan: string): string {
+  if (plan === 'n/a') {
+    return '—'
+  }
+  return plan
 }
