@@ -30,11 +30,99 @@ export function truncateLiveOpsCell(value: string, maxLen: number): string {
   return `${value.slice(0, maxLen - 1)}…`
 }
 
-const BAR_CHARS = '█'
+const FULL_BLOCK = '█'
+const EMPTY_BLOCK = '█'
+
+/** Partial block glyphs from empty (index 0) through nearly-full (index 8). */
+const PARTIAL_BLOCKS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'] as const
 
 /**
- * Build a fixed-width mongotop-style bar string (read portion then write portion).
- * Returns the full bar and the split index (read width) for coloring in the UI.
+ * Build a fixed-width bar string for a single fill percentage (0–100).
+ * Uses partial-block Unicode for sub-column resolution within each character cell.
+ */
+export function partialBarString(
+  percent: number,
+  trackWidth: number,
+  emptyChar: string = EMPTY_BLOCK,
+): string {
+  const safeWidth = Math.max(0, Math.floor(trackWidth))
+  if (safeWidth === 0) {
+    return ''
+  }
+
+  const clampedPercent = Math.max(0, Math.min(100, percent))
+  const filled = (clampedPercent / 100) * safeWidth
+  const fullBlocks = Math.floor(filled)
+  const remainder = filled - fullBlocks
+  const partialIndex = Math.round(remainder * 8)
+  const partialChar = PARTIAL_BLOCKS[Math.min(8, Math.max(0, partialIndex))] ?? ''
+  const emptyCount = safeWidth - fullBlocks - (partialChar === '' ? 0 : 1)
+
+  return FULL_BLOCK.repeat(fullBlocks) + partialChar + emptyChar.repeat(Math.max(0, emptyCount))
+}
+
+/** Character fill level for one cell in a proportional segment [0, fillEnd). */
+function barCharAt(index: number, fillEnd: number, emptyChar: string): string {
+  if (index < 0 || fillEnd <= 0) {
+    return emptyChar
+  }
+  const cellStart = index
+  const cellEnd = index + 1
+  if (fillEnd <= cellStart) {
+    return emptyChar
+  }
+  if (fillEnd >= cellEnd) {
+    return FULL_BLOCK
+  }
+  const remainder = fillEnd - cellStart
+  const partialIndex = Math.round(remainder * 8)
+  const partialChar = PARTIAL_BLOCKS[Math.min(8, Math.max(0, partialIndex))] ?? ''
+  return partialChar === '' ? emptyChar : partialChar
+}
+
+/**
+ * Build mongotop-style read / write / empty bar strings for collection top.
+ * Each segment uses partial blocks at proportional boundaries.
+ */
+export function collectionTopBarSegments(
+  readMs: number,
+  writeMs: number,
+  trackWidth: number,
+  emptyChar: string = EMPTY_BLOCK,
+): { read: string; write: string; empty: string } {
+  const safeWidth = Math.max(0, Math.floor(trackWidth))
+  if (safeWidth === 0) {
+    return { read: '', write: '', empty: '' }
+  }
+
+  const total = Math.max(0, readMs) + Math.max(0, writeMs)
+  if (total <= 0) {
+    return { read: '', write: '', empty: emptyChar.repeat(safeWidth) }
+  }
+
+  const readEnd = (Math.max(0, readMs) / total) * safeWidth
+  const writeEnd = readEnd + (Math.max(0, writeMs) / total) * safeWidth
+
+  let read = ''
+  let write = ''
+  let empty = ''
+
+  for (let i = 0; i < safeWidth; i++) {
+    if (i >= writeEnd) {
+      empty += emptyChar
+    } else if (i >= readEnd) {
+      write += barCharAt(i - readEnd, writeEnd - readEnd, emptyChar)
+    } else {
+      read += barCharAt(i, readEnd, emptyChar)
+    }
+  }
+
+  return { read, write, empty }
+}
+
+/**
+ * @deprecated Prefer {@link collectionTopBarSegments} for partial-block rendering.
+ * Integer character widths (whole blocks only).
  */
 export function collectionTopBarWidths(
   readMs: number,
@@ -59,11 +147,12 @@ export function collectionTopBarWidths(
   }
 }
 
+/** @deprecated Prefer {@link collectionTopBarSegments} or {@link partialBarString}. */
 export function repeatBar(width: number): string {
   if (width <= 0) {
     return ''
   }
-  return BAR_CHARS.repeat(width)
+  return FULL_BLOCK.repeat(width)
 }
 
 export function formatTopTimeLabel(readMs: number, writeMs: number): string {

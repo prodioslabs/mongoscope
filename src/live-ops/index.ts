@@ -2,9 +2,11 @@ export { fetchLiveOpsSnapshot, type FetchLiveOpsSnapshotResult, type LiveOpsAdmi
 export {
   LIVE_OP_ERROR_MS,
   LIVE_OP_WARNING_MS,
+  collectionTopBarSegments,
   collectionTopBarWidths,
   formatRunningMs,
   formatTopTimeLabel,
+  partialBarString,
   repeatBar,
   runningMsSeverity,
   truncateLiveOpsCell,

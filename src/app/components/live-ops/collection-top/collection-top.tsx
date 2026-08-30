@@ -1,8 +1,7 @@
 import { TextAttributes } from '@opentui/core'
 import {
-  collectionTopBarWidths,
+  collectionTopBarSegments,
   formatTopTimeLabel,
-  repeatBar,
   truncateLiveOpsCell,
   type CollectionTopDelta,
   type LiveOpsPanelError,
@@ -38,19 +37,15 @@ export function CollectionTop({
         <text content="waiting for first sample…" fg={theme.textMuted} />
       ) : (
         rows.slice(0, maxRows).map(function renderTopRow(row) {
-          const widths = collectionTopBarWidths(row.readMs, row.writeMs, barWidth)
+          const bars = collectionTopBarSegments(row.readMs, row.writeMs, barWidth)
           const label = truncateLiveOpsCell(row.namespace, 20)
           const time = formatTopTimeLabel(row.readMs, row.writeMs)
           return (
             <box key={row.namespace} flexDirection="row" gap={1}>
               <text content={displayText(label.padEnd(20, ' '))} fg={theme.text} flexShrink={0} />
-              <text content={displayText(repeatBar(widths.readWidth))} fg={theme.success} flexShrink={0} />
-              <text content={displayText(repeatBar(widths.writeWidth))} fg={theme.error} flexShrink={0} />
-              <text
-                content={displayText(repeatBar(widths.emptyWidth))}
-                fg={theme.borderSubtle}
-                flexShrink={0}
-              />
+              <text content={displayText(bars.read)} fg={theme.success} flexShrink={0} />
+              <text content={displayText(bars.write)} fg={theme.error} flexShrink={0} />
+              <text content={displayText(bars.empty)} fg={theme.borderSubtle} flexShrink={0} />
               <text content={displayText(time)} fg={theme.textMuted} flexShrink={0} />
             </box>
           )
