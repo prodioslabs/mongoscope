@@ -22,11 +22,15 @@ export {
   isUnauthorizedError,
   panelErrorFromUnknown,
 } from './permissions'
+export { killCurrentOp, mapKillOpError, parseKillOpid } from './kill-op'
 export { computeTopDeltas, parseTopCommandResult } from './top-delta'
 export type {
   CollectionTopDelta,
   ConnectionStats,
   CurrentOpRow,
+  KillOpFailureReason,
+  KillOpResult,
+  KillOpTarget,
   LiveOpsPanelError,
   LiveOpsPanelErrorKind,
   LiveOpsSnapshot,

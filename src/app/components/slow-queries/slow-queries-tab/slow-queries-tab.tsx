@@ -12,7 +12,7 @@ import {
 } from '../../../lib/text-table-content'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../../shortcuts'
-import { useSession } from '../../../stores/session'
+import { useSession, type SlowQueriesPendingNavigation } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 import { DataTextTable } from '../../data-text-table'
@@ -38,11 +38,13 @@ type SortDirection = 'asc' | 'desc'
  * overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
  */
 const CHROME_ROWS = 5
+const CROSS_TAB_STATUS_MS = 3000
 
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
   const queryPatterns = useSession((s) => s.queryPatterns)
   const logStore = useSession((s) => s.logStore)
+  const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
   const { height: terminalHeight } = useTerminalDimensions()
 
   const patterns = queryPatterns?.patterns ?? []
@@ -51,6 +53,7 @@ export function SlowQueriesTab() {
   const [sortBy, setSortBy] = useState<SortBy>('count')
   const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [crossTabStatus, setCrossTabStatus] = useState<string | null>(null)
   const selectedIndexRef = useRef(0)
   const scrollOffsetRef = useRef(0)
   const capacityRef = useRef(1)
@@ -58,6 +61,8 @@ export function SlowQueriesTab() {
   const sortedPatternsRef = useRef<QueryPattern[]>([])
   const sortByRef = useRef(sortBy)
   const sortDirectionRef = useRef(sortDirection)
+  const pendingNavRef = useRef<SlowQueriesPendingNavigation | null>(null)
+  const pendingNavConsumedRef = useRef(false)
 
   const sortedPatterns = useMemo(
     () => sortPatterns(patterns, sortBy, sortDirection),
@@ -75,8 +80,70 @@ export function SlowQueriesTab() {
       ? formatWindowLabel(queryPatterns.windowStartMs, queryPatterns.windowEndMs)
       : 'full log'
 
+  const footerStatus = crossTabStatus ?? windowLabel
+
   useFooterKeybindings(SLOW_QUERIES_FOOTER)
-  useFooterStatus(windowLabel)
+  useFooterStatus(footerStatus)
+
+  useEffect(
+    function consumePendingSlowQueriesNavigation() {
+      if (pendingNavConsumedRef.current) {
+        return
+      }
+      pendingNavConsumedRef.current = true
+      pendingNavRef.current = consumePendingSlowQueriesNav()
+    },
+    [consumePendingSlowQueriesNav],
+  )
+
+  useEffect(
+    function applyPendingSlowQueriesNavigation() {
+      const pending = pendingNavRef.current
+      if (pending == null) {
+        return undefined
+      }
+
+      let statusTimer: ReturnType<typeof setTimeout> | null = null
+
+      if (pending.statusMessage != null && pending.statusMessage.trim() !== '') {
+        setCrossTabStatus(pending.statusMessage)
+        statusTimer = setTimeout(function clearCrossTabStatus() {
+          setCrossTabStatus(null)
+        }, CROSS_TAB_STATUS_MS)
+      }
+
+      if (pending.patternId != null && sortedPatterns.length > 0) {
+        const index = sortedPatterns.findIndex((pattern) => pattern.id === pending.patternId)
+        if (index >= 0) {
+          setSelectedIndex(index)
+          setScrollOffset((offset) => {
+            if (index < offset) {
+              return index
+            }
+            if (index >= offset + capacity) {
+              return index - capacity + 1
+            }
+            return offset
+          })
+          if (pending.openDetail === true) {
+            setDetailPatternId(pending.patternId)
+          }
+        }
+      }
+
+      if (pending.patternId == null || sortedPatterns.length > 0) {
+        pendingNavRef.current = null
+      }
+
+      if (statusTimer != null) {
+        return function disposeCrossTabStatusTimer() {
+          clearTimeout(statusTimer!)
+        }
+      }
+      return undefined
+    },
+    [capacity, sortedPatterns],
+  )
 
   useEffect(
     function clampSlowQueriesSelection() {

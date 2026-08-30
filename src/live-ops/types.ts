@@ -60,6 +60,27 @@ export type LiveOpsSnapshot = {
   }
 }
 
+export type KillOpFailureReason =
+  | 'permission'
+  | 'not_found'
+  | 'not_connected'
+  | 'sharded_write'
+  | 'unknown'
+
+export type KillOpResult =
+  | { ok: true }
+  | { ok: false; reason: KillOpFailureReason; message: string }
+
+/** Frozen snapshot of a row at kill-confirm open time. */
+export type KillOpTarget = {
+  opid: string
+  namespace: string
+  op: string
+  plan: string
+  client: string
+  runningMs: number
+}
+
 export type RawCurrentOpDoc = {
   opid?: unknown
   ns?: unknown
