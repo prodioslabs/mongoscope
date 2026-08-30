@@ -39,7 +39,7 @@ export function LiveOpsDashboard({ snapshot, isPending }: LiveOpsDashboardProps)
       error={errors.currentOp}
       ownOpsOnly={ownOpsOnly}
       lockNote={lockNote}
-      maxRows={narrow ? 6 : 10}
+      stackedLayout={narrow}
     />
   )
 

@@ -1,4 +1,5 @@
-import { TextAttributes } from '@opentui/core'
+import { type TextChunk, type TextTableContent } from '@opentui/core'
+import { useTerminalDimensions } from '@opentui/react'
 import {
   formatRunningMs,
   runningMsSeverity,
@@ -7,35 +8,42 @@ import {
   type LiveOpsPanelError,
 } from '../../../../live-ops'
 import { displayText } from '../../../../lib/display-text'
-import { type Theme } from '../../../theme'
+import {
+  computeTableCapacity,
+  headerCell,
+  padTableRows,
+  severityColor,
+  tableCell,
+} from '../../../lib/text-table-content'
 import { useTheme } from '../../../stores/theme'
+import { type Theme } from '../../../theme'
+import { DataTextTable } from '../../data-text-table'
 
 type CurrentOpsTableProps = {
   ops: CurrentOpRow[]
   error: LiveOpsPanelError | null
   ownOpsOnly: boolean
   lockNote: string
-  maxRows?: number
+  /** When true, sidebar stacks below the table — reserve extra vertical chrome. */
+  stackedLayout?: boolean
 }
 
-const COL = {
-  opid: 8,
-  ns: 18,
-  op: 8,
-  running: 12,
-  lock: 14,
-  waiting: 14,
-  client: 16,
-} as const
+/**
+ * Non-data lines above/below the currentOp table within Live Ops:
+ * tab bar, footer, DbSelector, dashboard header, collection top, borders/padding.
+ */
+const LIVE_OPS_CHROME_ROWS = 18
+const LIVE_OPS_STACKED_CHROME_ROWS = 26
 
 export function CurrentOpsTable({
   ops,
   error,
   ownOpsOnly,
   lockNote,
-  maxRows = 8,
+  stackedLayout = false,
 }: CurrentOpsTableProps) {
   const theme = useTheme((s) => s.theme)
+  const { height: terminalHeight } = useTerminalDimensions()
 
   if (error != null) {
     return (
@@ -45,46 +53,23 @@ export function CurrentOpsTable({
     )
   }
 
-  const header = formatRow({
-    opid: 'OPID',
-    namespace: 'NAMESPACE',
-    op: 'OP',
-    running: 'RUNNING(MS)',
-    lock: 'LOCK',
-    waiting: 'WAITINGFOR',
-    client: 'CLIENT',
-  })
-
-  const visible = ops.slice(0, maxRows)
+  const chromeRows = stackedLayout ? LIVE_OPS_STACKED_CHROME_ROWS : LIVE_OPS_CHROME_ROWS
+  const capacity = computeTableCapacity(chromeRows, terminalHeight)
+  const visible = ops.slice(0, capacity)
+  const content = buildCurrentOpTableContent(visible, theme, capacity)
+  const isEmpty = ops.length === 0
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column" gap={0}>
       {ownOpsOnly ? (
         <text content="showing own operations only" fg={theme.warning} />
       ) : null}
-      <text content={displayText(header)} fg={theme.textMuted} attributes={TextAttributes.BOLD} />
-      {visible.length === 0 ? (
-        <text content="no active operations" fg={theme.textMuted} />
-      ) : (
-        visible.map(function renderOpRow(op) {
-          const line = formatRow({
-            opid: op.opid,
-            namespace: truncateLiveOpsCell(op.namespace, COL.ns),
-            op: truncateLiveOpsCell(op.op, COL.op),
-            running: formatRunningMs(op.runningMs),
-            lock: truncateLiveOpsCell(op.lock, COL.lock),
-            waiting: truncateLiveOpsCell(op.waitingFor, COL.waiting),
-            client: truncateLiveOpsCell(op.client, COL.client),
-          })
-          return (
-            <text
-              key={`${op.opid}-${op.namespace}-${op.op}`}
-              content={displayText(line)}
-              fg={runningColor(theme, op.runningMs)}
-            />
-          )
-        })
-      )}
+      <DataTextTable content={content} theme={theme} />
+      {isEmpty ? (
+        <box flexShrink={0} paddingTop={0}>
+          <text content="no active operations" fg={theme.textMuted} />
+        </box>
+      ) : null}
       {lockNote.trim() !== '' ? (
         <text content={displayText(lockNote)} fg={theme.warning} />
       ) : null}
@@ -92,40 +77,44 @@ export function CurrentOpsTable({
   )
 }
 
-function formatRow(parts: {
-  opid: string
-  namespace: string
-  op: string
-  running: string
-  lock: string
-  waiting: string
-  client: string
-}): string {
+function buildCurrentOpTableContent(
+  ops: CurrentOpRow[],
+  theme: Theme,
+  rowCapacity: number,
+): TextTableContent {
+  const header: TextChunk[][] = [
+    headerCell('OPID', theme),
+    headerCell('NAMESPACE', theme),
+    headerCell('OP', theme),
+    headerCell('RUNNING (MS)', theme),
+    headerCell('LOCK', theme),
+    headerCell('WAITINGFOR', theme),
+    headerCell('CLIENT', theme),
+  ]
+
+  const rows: TextTableContent = [header]
+
+  for (const op of ops) {
+    rows.push(buildCurrentOpRow(op, theme))
+  }
+
+  return padTableRows(rows, rowCapacity)
+}
+
+function buildCurrentOpRow(op: CurrentOpRow, theme: Theme): TextChunk[][] {
+  const runningSeverity = runningMsSeverity(op.runningMs)
+  const runningColor =
+    runningSeverity === 'normal'
+      ? theme.text
+      : severityColor(theme, runningSeverity)
+
   return [
-    pad(parts.opid, COL.opid),
-    pad(parts.namespace, COL.ns),
-    pad(parts.op, COL.op),
-    pad(parts.running, COL.running),
-    pad(parts.lock, COL.lock),
-    pad(parts.waiting, COL.waiting),
-    pad(parts.client, COL.client),
-  ].join(' ')
-}
-
-function pad(value: string, width: number): string {
-  if (value.length >= width) {
-    return value.slice(0, width)
-  }
-  return value.padEnd(width, ' ')
-}
-
-function runningColor(theme: Theme, runningMs: number) {
-  const severity = runningMsSeverity(runningMs)
-  if (severity === 'error') {
-    return theme.error
-  }
-  if (severity === 'warning') {
-    return theme.warning
-  }
-  return theme.text
+    tableCell(truncateLiveOpsCell(op.opid, 10), theme.text),
+    tableCell(truncateLiveOpsCell(op.namespace, 24), theme.text),
+    tableCell(truncateLiveOpsCell(op.op, 10), theme.text),
+    tableCell(formatRunningMs(op.runningMs), runningColor),
+    tableCell(truncateLiveOpsCell(op.lock, 16), theme.textMuted),
+    tableCell(truncateLiveOpsCell(op.waitingFor, 16), theme.textMuted),
+    tableCell(truncateLiveOpsCell(op.client, 20), theme.textMuted),
+  ]
 }
