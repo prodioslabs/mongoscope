@@ -31,7 +31,8 @@ export function truncateLiveOpsCell(value: string, maxLen: number): string {
 }
 
 const FULL_BLOCK = '█'
-const EMPTY_BLOCK = '█'
+/** Unfilled track cells — space keeps column width without a solid block "box" artifact. */
+const TRACK_EMPTY = ' '
 
 /** Partial block glyphs from empty (index 0) through nearly-full (index 8). */
 const PARTIAL_BLOCKS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'] as const
@@ -43,7 +44,7 @@ const PARTIAL_BLOCKS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'] as 
 export function partialBarString(
   percent: number,
   trackWidth: number,
-  emptyChar: string = EMPTY_BLOCK,
+  emptyChar: string = TRACK_EMPTY,
 ): string {
   const safeWidth = Math.max(0, Math.floor(trackWidth))
   if (safeWidth === 0) {
@@ -90,7 +91,7 @@ export function collectionTopBarSegments(
   writeMs: number,
   trackWidth: number,
   maxTotalMs: number,
-  emptyChar: string = EMPTY_BLOCK,
+  emptyChar: string = TRACK_EMPTY,
 ): { read: string; write: string; empty: string } {
   const safeWidth = Math.max(0, Math.floor(trackWidth))
   if (safeWidth === 0) {
@@ -120,6 +121,49 @@ export function collectionTopBarSegments(
   }
 
   return { read, write, empty }
+}
+
+export type CollectionTopRowScale = {
+  rowTotalMs: number
+  /** Filled portion of track (read + write) relative to busiest row. */
+  fillPercent: number
+  /** Read portion of full track width. */
+  readPercent: number
+  /** Write portion of full track width (within filled portion). */
+  writePercent: number
+}
+
+/** Scale metrics for one collection-top row (all values in milliseconds). */
+export function collectionTopRowScale(
+  readMs: number,
+  writeMs: number,
+  maxTotalMs: number,
+  trackWidth: number,
+): CollectionTopRowScale {
+  const safeWidth = Math.max(0, Math.floor(trackWidth))
+  const rowTotalMs = Math.max(0, readMs) + Math.max(0, writeMs)
+  if (rowTotalMs <= 0 || maxTotalMs <= 0 || safeWidth === 0) {
+    return { rowTotalMs, fillPercent: 0, readPercent: 0, writePercent: 0 }
+  }
+  const readEnd = (Math.max(0, readMs) / maxTotalMs) * safeWidth
+  const writeEnd = (rowTotalMs / maxTotalMs) * safeWidth
+  return {
+    rowTotalMs,
+    fillPercent: (rowTotalMs / maxTotalMs) * 100,
+    readPercent: (readEnd / safeWidth) * 100,
+    writePercent: ((writeEnd - readEnd) / safeWidth) * 100,
+  }
+}
+
+/** Combined bar string (read + write + empty); always exactly {@link trackWidth} chars. */
+export function collectionTopBarString(
+  readMs: number,
+  writeMs: number,
+  trackWidth: number,
+  maxTotalMs: number,
+): string {
+  const segments = collectionTopBarSegments(readMs, writeMs, trackWidth, maxTotalMs)
+  return segments.read + segments.write + segments.empty
 }
 
 /** Max read+write ms among collection-top rows (used as bar scale denominator). */

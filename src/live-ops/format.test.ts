@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   collectionTopBarSegments,
+  collectionTopBarString,
   collectionTopBarWidths,
+  collectionTopRowScale,
   formatRunningMs,
   formatTopTimeLabel,
+  maxCollectionTopTotalMs,
   partialBarString,
   runningMsSeverity,
   truncateLiveOpsCell,
@@ -12,7 +15,7 @@ import { isUnauthorizedError, panelErrorFromUnknown } from './permissions'
 
 describe('partialBarString', () => {
   it('renders empty and full tracks', () => {
-    expect(partialBarString(0, 20)).toBe('█'.repeat(20))
+    expect(partialBarString(0, 20)).toBe(' '.repeat(20))
     expect(partialBarString(100, 20)).toBe('█'.repeat(20))
   })
 
@@ -20,15 +23,15 @@ describe('partialBarString', () => {
     const bar81 = partialBarString(81, 20)
     const bar84 = partialBarString(84, 20)
     expect(bar81).not.toBe(bar84)
-    expect(bar81).toBe(`${'█'.repeat(16)}▎${'█'.repeat(3)}`)
-    expect(bar84).toBe(`${'█'.repeat(16)}▊${'█'.repeat(3)}`)
+    expect(bar81).toBe(`${'█'.repeat(16)}▎${' '.repeat(3)}`)
+    expect(bar84).toBe(`${'█'.repeat(16)}▊${' '.repeat(3)}`)
     expect(bar81.length).toBe(20)
     expect(bar84.length).toBe(20)
   })
 
   it('uses partial blocks at sub-character resolution', () => {
-    expect(partialBarString(50, 10)).toBe(`${'█'.repeat(5)}${'█'.repeat(5)}`)
-    expect(partialBarString(55, 10)).toBe(`${'█'.repeat(5)}▌${'█'.repeat(4)}`)
+    expect(partialBarString(50, 10)).toBe(`${'█'.repeat(5)}${' '.repeat(5)}`)
+    expect(partialBarString(55, 10)).toBe(`${'█'.repeat(5)}▌${' '.repeat(4)}`)
   })
 })
 
@@ -48,7 +51,7 @@ describe('collectionTopBarSegments', () => {
     expect(bars.read + bars.write + bars.empty).toHaveLength(24)
     expect(bars.read).toBe('▏')
     expect(bars.write).toBe('')
-    expect(bars.empty).toBe('█'.repeat(23))
+    expect(bars.empty).toBe(' '.repeat(23))
   })
 
   it('fills the track for the busiest row', () => {
@@ -56,6 +59,36 @@ describe('collectionTopBarSegments', () => {
     expect(bars.read).toBe('█'.repeat(24))
     expect(bars.write).toBe('')
     expect(bars.empty).toBe('')
+  })
+})
+
+describe('collectionTopRowScale (screenshot dataset)', () => {
+  const screenshotRows = [
+    { namespace: 'ucc-production.Form', readMs: 13_864_300, writeMs: 0 },
+    { namespace: 'ucc-production.User', readMs: 296, writeMs: 0 },
+    { namespace: 'ucc-production.Service', readMs: 29, writeMs: 0 },
+    { namespace: 'local.oplog.rs', readMs: 15, writeMs: 0 },
+    { namespace: 'ucc-production.Session', readMs: 14, writeMs: 0 },
+    { namespace: 'config.system.sessions', readMs: 6, writeMs: 0 },
+  ]
+  const trackWidth = 24
+  const maxTotalMs = maxCollectionTopTotalMs(screenshotRows)
+
+  it('uses Form as max and computes expected percents', () => {
+    expect(maxTotalMs).toBe(13_864_300)
+    const form = collectionTopRowScale(13_864_300, 0, maxTotalMs, trackWidth)
+    expect(form.fillPercent).toBe(100)
+    expect(form.readPercent).toBe(100)
+    expect(collectionTopBarString(13_864_300, 0, trackWidth, maxTotalMs)).toBe('█'.repeat(24))
+  })
+
+  it('gives small rows short bars on the same scale', () => {
+    const user = collectionTopRowScale(296, 0, maxTotalMs, trackWidth)
+    expect(user.fillPercent).toBeCloseTo((296 / 13_864_300) * 100, 5)
+    expect(user.readPercent).toBeCloseTo((296 / 13_864_300) * 100, 5)
+    const userBar = collectionTopBarString(296, 0, trackWidth, maxTotalMs)
+    expect(userBar.length).toBe(24)
+    expect(userBar.replace(/ /g, '')).toBe('')
   })
 })
 

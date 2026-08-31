@@ -3,7 +3,9 @@ export {
   LIVE_OP_ERROR_MS,
   LIVE_OP_WARNING_MS,
   collectionTopBarSegments,
+  collectionTopBarString,
   collectionTopBarWidths,
+  collectionTopRowScale,
   formatRunningMs,
   formatTopTimeLabel,
   maxCollectionTopTotalMs,
@@ -11,6 +13,7 @@ export {
   repeatBar,
   runningMsSeverity,
   truncateLiveOpsCell,
+  type CollectionTopRowScale,
   type LiveOpSeverity,
 } from './format'
 export {
