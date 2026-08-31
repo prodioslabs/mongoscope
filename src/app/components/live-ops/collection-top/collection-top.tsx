@@ -11,7 +11,9 @@ import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 
 const NAMESPACE_WIDTH = 22
-const TIME_WIDTH = 7
+/** Fits labels up to "99999.9s" without wrapping a row. */
+const TIME_WIDTH = 10
+const DEFAULT_MAX_ROWS = 5
 
 type CollectionTopProps = {
   rows: CollectionTopRow[]
@@ -26,7 +28,7 @@ export function CollectionTop({
   baselinePending,
   error,
   barWidth = 24,
-  maxRows = 6,
+  maxRows = DEFAULT_MAX_ROWS,
 }: CollectionTopProps) {
   const theme = useTheme((s) => s.theme)
   const visibleRows = rows.slice(0, maxRows)
@@ -67,11 +69,11 @@ export function CollectionTop({
       ) : rows.length === 0 ? (
         <text content="no activity in last interval" fg={theme.textMuted} wrapMode="none" />
       ) : (
-        <box flexDirection="column" gap={0} flexShrink={0}>
+        <box flexDirection="column" gap={0} flexShrink={0} height={maxRows}>
           {visibleRows.map(function renderTopRow(row) {
             const bars = collectionTopBarSegments(row.readMs, row.writeMs, barWidth, scaleMaxMs)
             const label = truncateLiveOpsCell(row.namespace, NAMESPACE_WIDTH)
-            const time = formatTopTimeLabel(row.totalMs)
+            const time = truncateLiveOpsCell(formatTopTimeLabel(row.totalMs), TIME_WIDTH)
             return (
               <box key={row.namespace} flexDirection="row" gap={1} height={1} flexShrink={0}>
                 <text
@@ -137,7 +139,6 @@ type LegendDotProps = {
 }
 
 function LegendDot({ color }: LegendDotProps) {
-  // return <box width={2} height={1} flexShrink={0} backgroundColor={color} />
   return <text content="■" fg={color} wrapMode="none" flexShrink={0} />
 }
 

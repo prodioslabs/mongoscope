@@ -47,8 +47,8 @@ const EMPTY_OPID = '—'
  * Non-data lines above/below the currentOp table within Live Ops:
  * tab bar, footer, DbSelector, dashboard header, collection top, borders/padding.
  */
-const LIVE_OPS_CHROME_ROWS = 18
-const LIVE_OPS_STACKED_CHROME_ROWS = 26
+const LIVE_OPS_CHROME_ROWS = 21
+const LIVE_OPS_STACKED_CHROME_ROWS = 29
 
 export function CurrentOpsTable({
   ops,

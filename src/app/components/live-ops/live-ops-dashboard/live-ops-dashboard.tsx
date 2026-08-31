@@ -88,7 +88,7 @@ export function LiveOpsDashboard({ snapshot, isPending }: LiveOpsDashboardProps)
         rows={collectionTop}
         baselinePending={collectionTopBaselinePending}
         error={errors.top}
-        maxRows={narrow ? 4 : 6}
+        maxRows={narrow ? 4 : 5}
       />
     </box>
   )
