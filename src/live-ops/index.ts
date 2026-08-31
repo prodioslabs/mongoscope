@@ -6,6 +6,7 @@ export {
   collectionTopBarWidths,
   formatRunningMs,
   formatTopTimeLabel,
+  maxCollectionTopTotalMs,
   partialBarString,
   repeatBar,
   runningMsSeverity,

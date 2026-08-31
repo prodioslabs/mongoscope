@@ -33,13 +33,29 @@ describe('partialBarString', () => {
 })
 
 describe('collectionTopBarSegments', () => {
-  it('splits read and write with partial boundaries', () => {
-    const bars = collectionTopBarSegments(810, 190, 20)
+  it('splits read and write with partial boundaries when row is the max', () => {
+    const maxTotalMs = 810 + 190
+    const bars = collectionTopBarSegments(810, 190, 20, maxTotalMs)
     expect(bars.read.length + bars.write.length + bars.empty.length).toBe(20)
     expect(bars.read.endsWith('▎')).toBe(true)
-    const bars2 = collectionTopBarSegments(840, 160, 20)
+    const bars2 = collectionTopBarSegments(840, 160, 20, 840 + 160)
     expect(bars2.read.endsWith('▊')).toBe(true)
     expect(bars.read).not.toBe(bars2.read)
+  })
+
+  it('scales bar length to max total across rows (mongotop-style)', () => {
+    const bars = collectionTopBarSegments(3, 0, 24, 500)
+    expect(bars.read + bars.write + bars.empty).toHaveLength(24)
+    expect(bars.read).toBe('▏')
+    expect(bars.write).toBe('')
+    expect(bars.empty).toBe('█'.repeat(23))
+  })
+
+  it('fills the track for the busiest row', () => {
+    const bars = collectionTopBarSegments(500, 0, 24, 500)
+    expect(bars.read).toBe('█'.repeat(24))
+    expect(bars.write).toBe('')
+    expect(bars.empty).toBe('')
   })
 })
 

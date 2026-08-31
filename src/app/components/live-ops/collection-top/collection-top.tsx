@@ -2,6 +2,7 @@ import { TextAttributes } from '@opentui/core'
 import {
   collectionTopBarSegments,
   formatTopTimeLabel,
+  maxCollectionTopTotalMs,
   truncateLiveOpsCell,
   type CollectionTopDelta,
   type LiveOpsPanelError,
@@ -23,6 +24,8 @@ export function CollectionTop({
   maxRows = 6,
 }: CollectionTopProps) {
   const theme = useTheme((s) => s.theme)
+  const visibleRows = rows.slice(0, maxRows)
+  const scaleMaxMs = maxCollectionTopTotalMs(visibleRows)
 
   return (
     <box flexShrink={0} flexDirection="column" gap={0} paddingTop={1}>
@@ -36,8 +39,8 @@ export function CollectionTop({
       ) : rows.length === 0 ? (
         <text content="waiting for first sample…" fg={theme.textMuted} />
       ) : (
-        rows.slice(0, maxRows).map(function renderTopRow(row) {
-          const bars = collectionTopBarSegments(row.readMs, row.writeMs, barWidth)
+        visibleRows.map(function renderTopRow(row) {
+          const bars = collectionTopBarSegments(row.readMs, row.writeMs, barWidth, scaleMaxMs)
           const label = truncateLiveOpsCell(row.namespace, 20)
           const time = formatTopTimeLabel(row.readMs, row.writeMs)
           return (

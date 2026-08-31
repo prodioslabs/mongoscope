@@ -82,12 +82,14 @@ function barCharAt(index: number, fillEnd: number, emptyChar: string): string {
 
 /**
  * Build mongotop-style read / write / empty bar strings for collection top.
- * Each segment uses partial blocks at proportional boundaries.
+ * Bar length scales to {@link maxTotalMs} (busiest row in the table); read vs write
+ * split is proportional within that filled portion.
  */
 export function collectionTopBarSegments(
   readMs: number,
   writeMs: number,
   trackWidth: number,
+  maxTotalMs: number,
   emptyChar: string = EMPTY_BLOCK,
 ): { read: string; write: string; empty: string } {
   const safeWidth = Math.max(0, Math.floor(trackWidth))
@@ -95,13 +97,13 @@ export function collectionTopBarSegments(
     return { read: '', write: '', empty: '' }
   }
 
-  const total = Math.max(0, readMs) + Math.max(0, writeMs)
-  if (total <= 0) {
+  const rowTotal = Math.max(0, readMs) + Math.max(0, writeMs)
+  if (rowTotal <= 0 || maxTotalMs <= 0) {
     return { read: '', write: '', empty: emptyChar.repeat(safeWidth) }
   }
 
-  const readEnd = (Math.max(0, readMs) / total) * safeWidth
-  const writeEnd = readEnd + (Math.max(0, writeMs) / total) * safeWidth
+  const readEnd = (Math.max(0, readMs) / maxTotalMs) * safeWidth
+  const writeEnd = (rowTotal / maxTotalMs) * safeWidth
 
   let read = ''
   let write = ''
@@ -118,6 +120,20 @@ export function collectionTopBarSegments(
   }
 
   return { read, write, empty }
+}
+
+/** Max read+write ms among collection-top rows (used as bar scale denominator). */
+export function maxCollectionTopTotalMs(
+  rows: readonly { readMs: number; writeMs: number }[],
+): number {
+  let max = 0
+  for (const row of rows) {
+    const total = Math.max(0, row.readMs) + Math.max(0, row.writeMs)
+    if (total > max) {
+      max = total
+    }
+  }
+  return max
 }
 
 /**
