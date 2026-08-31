@@ -1,5 +1,15 @@
 export { fetchLiveOpsSnapshot, type FetchLiveOpsSnapshotResult, type LiveOpsAdminClient } from './fetch-snapshot'
 export {
+  buildCollectionTopRows,
+  computeCollectionTopScale,
+  formatTopTimeLabel,
+  microsToMs,
+  MICROSECONDS_PER_MILLISECOND,
+  parseTopCommandResult,
+  type BuildCollectionTopResult,
+  type CollectionTopScale,
+} from './collection-top'
+export {
   LIVE_OP_ERROR_MS,
   LIVE_OP_WARNING_MS,
   collectionTopBarSegments,
@@ -7,7 +17,6 @@ export {
   collectionTopBarWidths,
   collectionTopRowScale,
   formatRunningMs,
-  formatTopTimeLabel,
   maxCollectionTopTotalMs,
   partialBarString,
   repeatBar,
@@ -29,9 +38,8 @@ export {
   panelErrorFromUnknown,
 } from './permissions'
 export { killCurrentOp, mapKillOpError, parseKillOpid } from './kill-op'
-export { computeTopDeltas, parseTopCommandResult } from './top-delta'
 export type {
-  CollectionTopDelta,
+  CollectionTopRow,
   ConnectionStats,
   CurrentOpRow,
   KillOpFailureReason,

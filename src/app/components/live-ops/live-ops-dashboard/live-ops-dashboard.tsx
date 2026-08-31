@@ -27,6 +27,7 @@ export function LiveOpsDashboard({ snapshot, isPending }: LiveOpsDashboardProps)
   const connections = snapshot?.connections ?? null
   const queuedOps = snapshot?.queuedOps ?? null
   const collectionTop = snapshot?.collectionTop ?? []
+  const collectionTopBaselinePending = snapshot?.collectionTopBaselinePending ?? true
   const errors = snapshot?.errors ?? {
     currentOp: null,
     serverStatus: null,
@@ -83,7 +84,12 @@ export function LiveOpsDashboard({ snapshot, isPending }: LiveOpsDashboardProps)
         </box>
       )}
 
-      <CollectionTop rows={collectionTop} error={errors.top} maxRows={narrow ? 4 : 6} />
+      <CollectionTop
+        rows={collectionTop}
+        baselinePending={collectionTopBaselinePending}
+        error={errors.top}
+        maxRows={narrow ? 4 : 6}
+      />
     </box>
   )
 }

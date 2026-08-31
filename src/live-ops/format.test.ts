@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { computeCollectionTopScale, formatTopTimeLabel } from './collection-top'
 import {
   collectionTopBarSegments,
   collectionTopBarString,
   collectionTopBarWidths,
   collectionTopRowScale,
   formatRunningMs,
-  formatTopTimeLabel,
   maxCollectionTopTotalMs,
   partialBarString,
   runningMsSeverity,
@@ -62,33 +62,59 @@ describe('collectionTopBarSegments', () => {
   })
 })
 
-describe('collectionTopRowScale (screenshot dataset)', () => {
+describe('collectionTopRowScale (normalized screenshot dataset)', () => {
   const screenshotRows = [
-    { namespace: 'ucc-production.Form', readMs: 13_864_300, writeMs: 0 },
-    { namespace: 'ucc-production.User', readMs: 296, writeMs: 0 },
-    { namespace: 'ucc-production.Service', readMs: 29, writeMs: 0 },
-    { namespace: 'local.oplog.rs', readMs: 15, writeMs: 0 },
-    { namespace: 'ucc-production.Session', readMs: 14, writeMs: 0 },
-    { namespace: 'config.system.sessions', readMs: 6, writeMs: 0 },
+    { namespace: 'ucc-production.Form', readMs: 13_864.3, writeMs: 0, totalMs: 13_864.3 },
+    { namespace: 'ucc-production.User', readMs: 296, writeMs: 0, totalMs: 296 },
+    { namespace: 'ucc-production.Service', readMs: 29, writeMs: 0, totalMs: 29 },
+    { namespace: 'local.oplog.rs', readMs: 15, writeMs: 0, totalMs: 15 },
+    { namespace: 'ucc-production.Session', readMs: 14, writeMs: 0, totalMs: 14 },
+    { namespace: 'config.system.sessions', readMs: 6, writeMs: 0, totalMs: 6 },
   ]
   const trackWidth = 24
   const maxTotalMs = maxCollectionTopTotalMs(screenshotRows)
 
   it('uses Form as max and computes expected percents', () => {
-    expect(maxTotalMs).toBe(13_864_300)
-    const form = collectionTopRowScale(13_864_300, 0, maxTotalMs, trackWidth)
+    expect(maxTotalMs).toBe(13_864.3)
+    const form = collectionTopRowScale(13_864.3, 0, maxTotalMs, trackWidth)
     expect(form.fillPercent).toBe(100)
     expect(form.readPercent).toBe(100)
-    expect(collectionTopBarString(13_864_300, 0, trackWidth, maxTotalMs)).toBe('█'.repeat(24))
+    expect(collectionTopBarString(13_864.3, 0, trackWidth, maxTotalMs)).toBe('█'.repeat(24))
   })
 
-  it('gives small rows short bars on the same scale', () => {
+  it('gives small rows a visible partial block on the same scale', () => {
     const user = collectionTopRowScale(296, 0, maxTotalMs, trackWidth)
-    expect(user.fillPercent).toBeCloseTo((296 / 13_864_300) * 100, 5)
-    expect(user.readPercent).toBeCloseTo((296 / 13_864_300) * 100, 5)
+    expect(user.fillPercent).toBeCloseTo((296 / 13_864.3) * 100, 5)
+    expect(user.readPercent).toBeCloseTo((296 / 13_864.3) * 100, 5)
     const userBar = collectionTopBarString(296, 0, trackWidth, maxTotalMs)
     expect(userBar.length).toBe(24)
-    expect(userBar.replace(/ /g, '')).toBe('')
+    expect(userBar.trim()).toBe('▌')
+  })
+})
+
+describe('collectionTopBarSegments integration with scale output', () => {
+  const trackWidth = 24
+  const rows = [
+    { namespace: 'ucc-production.Form', readMs: 13_864.3, writeMs: 0, totalMs: 13_864.3 },
+    { namespace: 'ucc-production.User', readMs: 296, writeMs: 0, totalMs: 296 },
+  ]
+
+  it('renders max row fully filled with bar string length equal to trackWidth', () => {
+    const scale = computeCollectionTopScale(rows)
+    const maxRow = scale.rows[0]
+    expect(maxRow?.fillPercent).toBe(100)
+    const bar = collectionTopBarString(maxRow!.readMs, maxRow!.writeMs, trackWidth, scale.maxTotalMs)
+    expect(bar.length).toBe(trackWidth)
+    expect(bar).toBe('█'.repeat(trackWidth))
+  })
+
+  it('distinguishes close fill levels via partial blocks on a shared scale', () => {
+    const sharedMax = 10_000
+    const bar2960 = collectionTopBarString(2960, 0, trackWidth, sharedMax)
+    const bar3000 = collectionTopBarString(3000, 0, trackWidth, sharedMax)
+    expect(bar2960.length).toBe(trackWidth)
+    expect(bar3000.length).toBe(trackWidth)
+    expect(bar2960).not.toBe(bar3000)
   })
 })
 
@@ -112,8 +138,8 @@ describe('format helpers', () => {
       writeWidth: 2,
       emptyWidth: 0,
     })
-    expect(formatTopTimeLabel(100, 50)).toBe('150ms')
-    expect(formatTopTimeLabel(800, 400)).toBe('1.2s')
+    expect(formatTopTimeLabel(150)).toBe('150ms')
+    expect(formatTopTimeLabel(1200)).toBe('1.2s')
   })
 })
 

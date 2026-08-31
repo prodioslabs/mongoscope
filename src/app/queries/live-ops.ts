@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  computeTopDeltas,
+  buildCollectionTopRows,
   fetchLiveOpsSnapshot,
   type LiveOpsSnapshot,
   type TopSample,
@@ -56,6 +56,7 @@ export function useLiveOpsSnapshot(enabled: boolean) {
           connections: null,
           queuedOps: null,
           collectionTop: [],
+          collectionTopBaselinePending: true,
           errors: {
             currentOp: null,
             serverStatus: null,
@@ -65,10 +66,13 @@ export function useLiveOpsSnapshot(enabled: boolean) {
       }
 
       let collectionTop = snapshot.collectionTop
+      let collectionTopBaselinePending = true
       if (topSample != null && snapshot.errors.top == null) {
         const previous = previousTopByGeneration.get(generationAtStart) ?? null
-        collectionTop = computeTopDeltas(previous, topSample)
-        previousTopByGeneration.set(generationAtStart, topSample)
+        const topResult = buildCollectionTopRows(previous, topSample)
+        collectionTop = topResult.rows
+        collectionTopBaselinePending = topResult.isBaseline
+        previousTopByGeneration.set(generationAtStart, topResult.sample)
         // Drop other generations to avoid unbounded growth across reconnects.
         for (const key of previousTopByGeneration.keys()) {
           if (key !== generationAtStart) {
@@ -80,6 +84,7 @@ export function useLiveOpsSnapshot(enabled: boolean) {
       return {
         ...snapshot,
         collectionTop,
+        collectionTopBaselinePending,
       }
     },
   })

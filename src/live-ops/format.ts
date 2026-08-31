@@ -215,13 +215,3 @@ export function repeatBar(width: number): string {
   return FULL_BLOCK.repeat(width)
 }
 
-export function formatTopTimeLabel(readMs: number, writeMs: number): string {
-  const total = Math.max(0, readMs) + Math.max(0, writeMs)
-  if (total < 1) {
-    return '0ms'
-  }
-  if (total < 1000) {
-    return `${Math.round(total)}ms`
-  }
-  return `${(total / 1000).toFixed(1)}s`
-}

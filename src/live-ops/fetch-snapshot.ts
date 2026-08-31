@@ -1,7 +1,7 @@
 import type { MongoClientLike } from '../live-connection'
 import { normalizeCurrentOpDocs, parseServerStatus } from './normalize'
 import { panelErrorFromUnknown } from './permissions'
-import { parseTopCommandResult } from './top-delta'
+import { parseTopCommandResult } from './collection-top'
 import type { LiveOpsPanelError, LiveOpsSnapshot, TopSample } from './types'
 
 export type LiveOpsAdminClient = Pick<MongoClientLike, 'db'>
@@ -71,6 +71,7 @@ export async function fetchLiveOpsSnapshot(
       connections,
       queuedOps,
       collectionTop: [],
+      collectionTopBaselinePending: true,
       errors,
     },
     topSample,

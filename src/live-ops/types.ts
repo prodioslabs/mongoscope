@@ -34,10 +34,12 @@ export type QueuedOpsStats = {
   writers: number | null
 }
 
-export type CollectionTopDelta = {
+/** Interval activity for one namespace — milliseconds only. */
+export type CollectionTopRow = {
   namespace: string
   readMs: number
   writeMs: number
+  totalMs: number
 }
 
 /** Cumulative per-collection lock times from `top` (microseconds). */
@@ -52,7 +54,9 @@ export type LiveOpsSnapshot = {
   lockWaits: LockWaitCount[]
   connections: ConnectionStats | null
   queuedOps: QueuedOpsStats | null
-  collectionTop: CollectionTopDelta[]
+  collectionTop: CollectionTopRow[]
+  /** True until the second successful top sample establishes a delta baseline. */
+  collectionTopBaselinePending: boolean
   errors: {
     currentOp: LiveOpsPanelError | null
     serverStatus: LiveOpsPanelError | null
