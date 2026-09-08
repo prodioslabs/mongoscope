@@ -1,21 +1,14 @@
-import { type TextChunk, type TextTableContent } from '@opentui/core'
+import { bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { QueryPattern } from '../../../../query-patterns'
-import {
-  computeTableCapacity,
-  headerCell,
-  padTableRows,
-  severityColor,
-  tableCell,
-} from '../../../lib/text-table-content'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../../shortcuts'
-import { useSession, type SlowQueriesPendingNavigation } from '../../../stores/session'
+import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
-import { DataTextTable } from '../../data-text-table'
+import '../../../lib/opentui-text-table'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 import {
   avgMsSeverity,
@@ -27,24 +20,38 @@ import {
   planSortRank,
   sparkline,
   truncateCell,
+  type Severity,
 } from '../format'
 import { QueryDetailDialog } from '../query-detail-dialog'
+import { StatsCard } from '../stats-card'
 
 type SortBy = 'count' | 'avgMs' | 'plan'
 type SortDirection = 'asc' | 'desc'
 
+type SlowQueryStats = {
+  patternCount: string
+  queryCount: string
+  slowest: string
+  slowestSeverity: Severity
+  collscanShare: string
+  collscanSeverity: Severity
+}
+
 /**
- * Non-data lines: tab bar, footer, header content line, and outer/header border
- * overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
+ * Non-data lines: tab bar, footer, stats cards, header content line, and
+ * outer/header border overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
  */
-const CHROME_ROWS = 5
-const CROSS_TAB_STATUS_MS = 3000
+const CHROME_ROWS = 8
+
+/** Approximate height of one data row (content line + inner border). */
+const ROW_STRIDE = 2
+
+const COLUMN_COUNT = 7
 
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
   const queryPatterns = useSession((s) => s.queryPatterns)
   const logStore = useSession((s) => s.logStore)
-  const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
   const { height: terminalHeight } = useTerminalDimensions()
 
   const patterns = queryPatterns?.patterns ?? []
@@ -53,7 +60,6 @@ export function SlowQueriesTab() {
   const [sortBy, setSortBy] = useState<SortBy>('count')
   const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
-  const [crossTabStatus, setCrossTabStatus] = useState<string | null>(null)
   const selectedIndexRef = useRef(0)
   const scrollOffsetRef = useRef(0)
   const capacityRef = useRef(1)
@@ -61,9 +67,8 @@ export function SlowQueriesTab() {
   const sortedPatternsRef = useRef<QueryPattern[]>([])
   const sortByRef = useRef(sortBy)
   const sortDirectionRef = useRef(sortDirection)
-  const pendingNavRef = useRef<SlowQueriesPendingNavigation | null>(null)
-  const pendingNavConsumedRef = useRef(false)
 
+  const stats = useMemo(() => computeSlowQueryStats(patterns), [patterns])
   const sortedPatterns = useMemo(
     () => sortPatterns(patterns, sortBy, sortDirection),
     [patterns, sortBy, sortDirection],
@@ -73,77 +78,15 @@ export function SlowQueriesTab() {
       ? null
       : (sortedPatterns.find((pattern) => pattern.id === detailPatternId) ?? null)
 
-  const capacity = computeTableCapacity(CHROME_ROWS, terminalHeight)
+  const capacity = Math.max(1, Math.floor((terminalHeight - CHROME_ROWS) / ROW_STRIDE))
 
   const windowLabel =
     queryPatterns != null
       ? formatWindowLabel(queryPatterns.windowStartMs, queryPatterns.windowEndMs)
       : 'full log'
 
-  const footerStatus = crossTabStatus ?? windowLabel
-
   useFooterKeybindings(SLOW_QUERIES_FOOTER)
-  useFooterStatus(footerStatus)
-
-  useEffect(
-    function consumePendingSlowQueriesNavigation() {
-      if (pendingNavConsumedRef.current) {
-        return
-      }
-      pendingNavConsumedRef.current = true
-      pendingNavRef.current = consumePendingSlowQueriesNav()
-    },
-    [consumePendingSlowQueriesNav],
-  )
-
-  useEffect(
-    function applyPendingSlowQueriesNavigation() {
-      const pending = pendingNavRef.current
-      if (pending == null) {
-        return undefined
-      }
-
-      let statusTimer: ReturnType<typeof setTimeout> | null = null
-
-      if (pending.statusMessage != null && pending.statusMessage.trim() !== '') {
-        setCrossTabStatus(pending.statusMessage)
-        statusTimer = setTimeout(function clearCrossTabStatus() {
-          setCrossTabStatus(null)
-        }, CROSS_TAB_STATUS_MS)
-      }
-
-      if (pending.patternId != null && sortedPatterns.length > 0) {
-        const index = sortedPatterns.findIndex((pattern) => pattern.id === pending.patternId)
-        if (index >= 0) {
-          setSelectedIndex(index)
-          setScrollOffset((offset) => {
-            if (index < offset) {
-              return index
-            }
-            if (index >= offset + capacity) {
-              return index - capacity + 1
-            }
-            return offset
-          })
-          if (pending.openDetail === true) {
-            setDetailPatternId(pending.patternId)
-          }
-        }
-      }
-
-      if (pending.patternId == null || sortedPatterns.length > 0) {
-        pendingNavRef.current = null
-      }
-
-      if (statusTimer != null) {
-        return function disposeCrossTabStatusTimer() {
-          clearTimeout(statusTimer!)
-        }
-      }
-      return undefined
-    },
-    [capacity, sortedPatterns],
-  )
+  useFooterStatus(windowLabel)
 
   useEffect(
     function clampSlowQueriesSelection() {
@@ -315,12 +258,38 @@ export function SlowQueriesTab() {
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column">
+      <box flexDirection="row" flexShrink={0} gap={1} paddingLeft={1} paddingBottom={0}>
+        <StatsCard label="PATTERNS" value={stats.patternCount} />
+        <StatsCard label="QUERIES" value={stats.queryCount} />
+        <StatsCard
+          label="SLOWEST"
+          value={stats.slowest}
+          valueColor={severityColor(theme, stats.slowestSeverity)}
+        />
+        <StatsCard
+          label="COLLSCAN"
+          value={stats.collscanShare}
+          valueColor={severityColor(theme, stats.collscanSeverity)}
+        />
+      </box>
       {content == null ? (
         <box flexGrow={1} flexShrink={1}>
           <text content="no slow queries" fg={theme.textMuted} />
         </box>
       ) : (
-        <DataTextTable content={content} theme={theme} />
+        <textTable
+          content={content}
+          flexGrow={1}
+          border
+          outerBorder
+          borderStyle="single"
+          borderColor={theme.border}
+          wrapMode="none"
+          cellPaddingX={0}
+          selectable={false}
+          height="100%"
+          width="100%"
+        />
       )}
       <QueryDetailDialog
         open={detailPatternId != null}
@@ -331,6 +300,46 @@ export function SlowQueriesTab() {
       />
     </box>
   )
+}
+
+function computeSlowQueryStats(patterns: QueryPattern[]): SlowQueryStats {
+  if (patterns.length === 0) {
+    return {
+      patternCount: '0',
+      queryCount: '0',
+      slowest: '—',
+      slowestSeverity: 'muted',
+      collscanShare: '—',
+      collscanSeverity: 'muted',
+    }
+  }
+
+  let queryCount = 0
+  let collscanCount = 0
+  let slowest = patterns[0]!
+  for (const pattern of patterns) {
+    queryCount += pattern.count
+    if (pattern.plan === 'COLLSCAN') {
+      collscanCount += 1
+    }
+    if (
+      pattern.avgMs > slowest.avgMs ||
+      (pattern.avgMs === slowest.avgMs && pattern.count > slowest.count)
+    ) {
+      slowest = pattern
+    }
+  }
+
+  const collscanPct = Math.round((100 * collscanCount) / patterns.length)
+
+  return {
+    patternCount: formatCount(patterns.length),
+    queryCount: formatCount(queryCount),
+    slowest: `${formatCount(slowest.avgMs)}ms ${truncateCell(slowest.namespace)}`,
+    slowestSeverity: avgMsSeverity(slowest.avgMs),
+    collscanShare: `${formatCount(collscanCount)} (${collscanPct}%)`,
+    collscanSeverity: collscanCount > 0 ? 'error' : 'muted',
+  }
 }
 
 function sortPatterns(
@@ -389,10 +398,10 @@ function buildTableContent(
   const header: TextChunk[][] = [
     headerCell('NAMESPACE', theme),
     headerCell('OP', theme),
-    headerCell(headerLabel('COUNT', 'count', sortBy, sortDirection), theme),
-    headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme),
+    headerCell(headerLabel('COUNT', 'count', sortBy, sortDirection), theme, sortBy === 'count'),
+    headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme, sortBy === 'avgMs'),
     headerCell('EXAMINED/RET', theme),
-    headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme),
+    headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme, sortBy === 'plan'),
     headerCell('TREND', theme),
   ]
 
@@ -411,9 +420,16 @@ function buildTableContent(
     rows.push(buildPatternRow(pattern, selected, namespaceWidth, theme))
   }
 
-  return padTableRows(rows, rowCapacity)
+  while (rows.length - 1 < rowCapacity) {
+    rows.push(emptyRow())
+  }
+
+  return rows
 }
 
+function emptyRow(): TextChunk[][] {
+  return Array.from({ length: COLUMN_COUNT }, () => [])
+}
 
 function buildPatternRow(
   pattern: QueryPattern,
@@ -426,17 +442,36 @@ function buildPatternRow(
   const pSeverity = planSeverity(pattern.plan)
 
   return [
-    selected
-      ? tableCell(`${pattern.namespace} ●`, theme.primary)
-      : tableCell(pattern.namespace, theme.info),
-    tableCell(truncateCell(pattern.op), theme.textMuted),
-    tableCell(formatCount(pattern.count), theme.textMuted),
-    tableCell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),
-    tableCell(
+    selected ? cell(`${pattern.namespace} ●`, theme.primary) : cell(pattern.namespace, theme.info),
+    cell(truncateCell(pattern.op), theme.textMuted),
+    cell(formatCount(pattern.count), theme.textMuted),
+    cell(formatCount(pattern.avgMs), severityColor(theme, msSeverity)),
+    cell(
       formatExaminedRet(pattern.avgDocsExamined, pattern.avgDocsReturned),
       severityColor(theme, examSeverity),
     ),
-    tableCell(pattern.plan, severityColor(theme, pSeverity)),
-    tableCell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
+    cell(pattern.plan, severityColor(theme, pSeverity)),
+    cell(sparkline(pattern.trend), severityColor(theme, msSeverity)),
   ]
+}
+
+function headerCell(label: string, theme: Theme, active = false): TextChunk[] {
+  return [bold(fg(active ? theme.primary : theme.textMuted)(label))]
+}
+
+function cell(text: string, color: RGBA): TextChunk[] {
+  return [fg(color)(text)]
+}
+
+function severityColor(theme: Theme, severity: Severity): RGBA {
+  switch (severity) {
+    case 'error':
+      return theme.error
+    case 'warning':
+      return theme.warning
+    case 'success':
+      return theme.success
+    case 'muted':
+      return theme.textMuted
+  }
 }
