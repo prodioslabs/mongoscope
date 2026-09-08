@@ -1,4 +1,6 @@
-export type Severity = 'error' | 'warning' | 'success' | 'muted'
+import type { Severity } from '../../../lib/text-table-content'
+
+export type { Severity } from '../../../lib/text-table-content'
 
 const SPARK_CHARS = '▁▂▃▄▅▆▇█'
 

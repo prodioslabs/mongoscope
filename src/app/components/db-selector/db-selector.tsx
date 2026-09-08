@@ -4,18 +4,22 @@ import { useRenderer } from '@opentui/react'
 import { type ConnectionProfile } from '../../../connections'
 import { formatConnectionError } from '../../../connections/format-connection-error'
 import { displayText } from '../../../lib/display-text'
+import { type LiveConnectionStatus } from '../../../live-connection'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { whenNotEditing } from '../../lib/when-not-editing'
 import { useConnectionsList } from '../../queries/connection'
 import { CONNECTIONS_TAB_FOOTER, CONNECTIONS_TAB_SHORTCUTS, toBindings } from '../../shortcuts'
 import { useConnectionsUi } from '../../stores/connections-ui'
 import { type FooterKeybinding } from '../../stores/footer'
+import { useLiveConnection } from '../../stores/live-connection'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
-import { useFooterKeybindings } from '../footer-keybindings'
+import { type Theme } from '../../theme'
 import { AddConnectionForm } from '../connections/add-connection-form'
+import { useFooterKeybindings } from '../footer-keybindings'
 
 const EMPTY_FOOTER_KEYBINDINGS: FooterKeybinding[] = []
+const STATUS_LABEL_MAX_LENGTH = 48
 
 export function DbSelector() {
   const renderer = useRenderer()
@@ -24,6 +28,8 @@ export function DbSelector() {
   const setActiveConnectionId = useSession((s) => s.setActiveConnectionId)
   const openManage = useConnectionsUi((s) => s.openManage)
   const dialogOpen = useConnectionsUi((s) => s.dialogOpen)
+  const liveStatus = useLiveConnection((s) => s.status)
+  const liveErrorMessage = useLiveConnection((s) => s.errorMessage)
   const notEditing = whenNotEditing(renderer)
 
   const { data, isPending, isError, error } = useConnectionsList()
@@ -100,6 +106,9 @@ export function DbSelector() {
       ? `${activeProfile.name} · ${activeProfile.hostLabel}`
       : 'no connection selected'
 
+  const statusLabel = liveStatusLabel(liveStatus, liveErrorMessage, activeProfile != null)
+  const statusFg = liveStatusColor(liveStatus, theme)
+
   return (
     <box
       flexShrink={0}
@@ -115,7 +124,53 @@ export function DbSelector() {
     >
       <text content="DB" fg={theme.textMuted} attributes={TextAttributes.BOLD} flexShrink={0} />
       <text content={displayText(label)} fg={activeProfile != null ? theme.text : theme.textMuted} />
+      {statusLabel != null ? (
+        <text content={displayText(statusLabel)} fg={statusFg} flexShrink={0} />
+      ) : null}
       <text content="[c]" fg={theme.textMuted} flexShrink={0} />
     </box>
   )
+}
+
+function liveStatusLabel(
+  status: LiveConnectionStatus,
+  errorMessage: string,
+  hasSelection: boolean,
+): string | null {
+  if (!hasSelection) {
+    return null
+  }
+  if (status === 'connected') {
+    return 'connected'
+  }
+  if (status === 'connecting') {
+    return 'connecting…'
+  }
+  if (status === 'disconnected') {
+    return 'disconnected'
+  }
+  if (status === 'error') {
+    const detail = errorMessage.trim()
+    if (detail === '') {
+      return 'error'
+    }
+    if (detail.length <= STATUS_LABEL_MAX_LENGTH) {
+      return detail
+    }
+    return `${detail.slice(0, STATUS_LABEL_MAX_LENGTH - 1)}…`
+  }
+  return null
+}
+
+function liveStatusColor(status: LiveConnectionStatus, theme: Theme): Theme['success'] {
+  if (status === 'connected') {
+    return theme.success
+  }
+  if (status === 'error') {
+    return theme.error
+  }
+  if (status === 'disconnected') {
+    return theme.warning
+  }
+  return theme.textMuted
 }

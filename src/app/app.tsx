@@ -8,6 +8,7 @@ import { Dashboard } from './components/dashboard'
 import { Footer } from './components/footer'
 import { HelpMenu } from './components/help-menu'
 import { WelcomeScreen } from './components/welcome-screen'
+import { useSyncLiveConnection } from './hooks/use-sync-live-connection'
 import { type AppKeymapMode } from './lib/keymap-mode'
 import { whenNotEditing } from './lib/when-not-editing'
 import {
@@ -45,6 +46,8 @@ export function App({ options }: AppProps) {
   const setTab = useSession((s) => s.setTab)
   const activeTab = useSession((s) => s.activeTab)
   const notEditing = whenNotEditing(renderer)
+
+  useSyncLiveConnection()
 
   const modeRef = useRef(mode)
   const selectedRef = useRef(selected)

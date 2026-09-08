@@ -8,6 +8,16 @@ export type AppScreen = 'welcome' | 'dashboard'
 
 export type AppTab = 'slow-queries' | 'live-ops' | 'timeline' | 'replication' | 'indexes' | 'logs'
 
+export type SlowQueriesPendingNavigation = {
+  patternId?: number
+  openDetail?: boolean
+  statusMessage?: string
+}
+
+export type TabNavigationContext = {
+  slowQueries?: SlowQueriesPendingNavigation
+}
+
 export type TabDefinition = {
   id: AppTab
   key: string
@@ -39,6 +49,8 @@ type SessionState = {
   activeTab: AppTab
   /** Selected connection for Live Ops / Indexes (session-only; not persisted). */
   activeConnectionId: string | null
+  /** Consumed once when Slow Queries tab mounts after cross-tab navigation. */
+  pendingSlowQueriesNav: SlowQueriesPendingNavigation | null
   logPath: string | null
   logStore: LogStore | null
   queryPatterns: QueryPatternStore | null
@@ -48,6 +60,8 @@ type SessionState = {
   parseDurationMs: number | null
   parseError: string | null
   setTab: (tab: AppTab) => void
+  navigateToTab: (tab: AppTab, context?: TabNavigationContext) => void
+  consumePendingSlowQueriesNav: () => SlowQueriesPendingNavigation | null
   setScreen: (screen: AppScreen) => void
   setActiveConnectionId: (id: string | null) => void
   goToWelcome: () => void
@@ -66,6 +80,7 @@ export const useSession = create<SessionState>((set, get) => ({
   screen: 'welcome',
   activeTab: 'slow-queries',
   activeConnectionId: null,
+  pendingSlowQueriesNav: null,
   logPath: null,
   logStore: null,
   queryPatterns: null,
@@ -75,6 +90,22 @@ export const useSession = create<SessionState>((set, get) => ({
 
   setTab(tab) {
     set({ activeTab: tab })
+  },
+
+  navigateToTab(tab, context) {
+    set({
+      activeTab: tab,
+      pendingSlowQueriesNav: context?.slowQueries ?? null,
+    })
+  },
+
+  consumePendingSlowQueriesNav() {
+    const pending = get().pendingSlowQueriesNav
+    if (pending == null) {
+      return null
+    }
+    set({ pendingSlowQueriesNav: null })
+    return pending
   },
 
   setScreen(screen) {
@@ -145,6 +176,7 @@ export const useSession = create<SessionState>((set, get) => ({
       screen: 'welcome',
       activeTab: 'slow-queries',
       activeConnectionId: null,
+      pendingSlowQueriesNav: null,
       logPath: null,
       logStore: null,
       queryPatterns: null,
