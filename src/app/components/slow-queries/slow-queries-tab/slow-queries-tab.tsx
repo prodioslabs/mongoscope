@@ -1,4 +1,4 @@
-import { bg, bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
+import { bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -23,15 +23,25 @@ import {
   type Severity,
 } from '../format'
 import { QueryDetailDialog } from '../query-detail-dialog'
+import { StatsCard } from '../stats-card'
 
 type SortBy = 'count' | 'avgMs' | 'plan'
 type SortDirection = 'asc' | 'desc'
 
+type SlowQueryStats = {
+  patternCount: string
+  queryCount: string
+  slowest: string
+  slowestSeverity: Severity
+  collscanShare: string
+  collscanSeverity: Severity
+}
+
 /**
- * Non-data lines: tab bar, footer, header content line, and outer/header border
- * overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
+ * Non-data lines: tab bar, footer, stats cards, header content line, and
+ * outer/header border overhead so that `2 * capacity + 3 <= terminalHeight - 2`.
  */
-const CHROME_ROWS = 5
+const CHROME_ROWS = 8
 
 /** Approximate height of one data row (content line + inner border). */
 const ROW_STRIDE = 2
@@ -58,6 +68,7 @@ export function SlowQueriesTab() {
   const sortByRef = useRef(sortBy)
   const sortDirectionRef = useRef(sortDirection)
 
+  const stats = useMemo(() => computeSlowQueryStats(patterns), [patterns])
   const sortedPatterns = useMemo(
     () => sortPatterns(patterns, sortBy, sortDirection),
     [patterns, sortBy, sortDirection],
@@ -247,6 +258,20 @@ export function SlowQueriesTab() {
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column">
+      <box flexDirection="row" flexShrink={0} gap={1} paddingLeft={1} paddingBottom={0}>
+        <StatsCard label="PATTERNS" value={stats.patternCount} />
+        <StatsCard label="QUERIES" value={stats.queryCount} />
+        <StatsCard
+          label="SLOWEST"
+          value={stats.slowest}
+          valueColor={severityColor(theme, stats.slowestSeverity)}
+        />
+        <StatsCard
+          label="COLLSCAN"
+          value={stats.collscanShare}
+          valueColor={severityColor(theme, stats.collscanSeverity)}
+        />
+      </box>
       {content == null ? (
         <box flexGrow={1} flexShrink={1}>
           <text content="no slow queries" fg={theme.textMuted} />
@@ -275,6 +300,46 @@ export function SlowQueriesTab() {
       />
     </box>
   )
+}
+
+function computeSlowQueryStats(patterns: QueryPattern[]): SlowQueryStats {
+  if (patterns.length === 0) {
+    return {
+      patternCount: '0',
+      queryCount: '0',
+      slowest: '—',
+      slowestSeverity: 'muted',
+      collscanShare: '—',
+      collscanSeverity: 'muted',
+    }
+  }
+
+  let queryCount = 0
+  let collscanCount = 0
+  let slowest = patterns[0]!
+  for (const pattern of patterns) {
+    queryCount += pattern.count
+    if (pattern.plan === 'COLLSCAN') {
+      collscanCount += 1
+    }
+    if (
+      pattern.avgMs > slowest.avgMs ||
+      (pattern.avgMs === slowest.avgMs && pattern.count > slowest.count)
+    ) {
+      slowest = pattern
+    }
+  }
+
+  const collscanPct = Math.round((100 * collscanCount) / patterns.length)
+
+  return {
+    patternCount: formatCount(patterns.length),
+    queryCount: formatCount(queryCount),
+    slowest: `${formatCount(slowest.avgMs)}ms ${truncateCell(slowest.namespace)}`,
+    slowestSeverity: avgMsSeverity(slowest.avgMs),
+    collscanShare: `${formatCount(collscanCount)} (${collscanPct}%)`,
+    collscanSeverity: collscanCount > 0 ? 'error' : 'muted',
+  }
 }
 
 function sortPatterns(
@@ -333,10 +398,10 @@ function buildTableContent(
   const header: TextChunk[][] = [
     headerCell('NAMESPACE', theme),
     headerCell('OP', theme),
-    headerCell(headerLabel('COUNT', 'count', sortBy, sortDirection), theme),
-    headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme),
+    headerCell(headerLabel('COUNT', 'count', sortBy, sortDirection), theme, sortBy === 'count'),
+    headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme, sortBy === 'avgMs'),
     headerCell('EXAMINED/RET', theme),
-    headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme),
+    headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme, sortBy === 'plan'),
     headerCell('TREND', theme),
   ]
 
@@ -390,16 +455,12 @@ function buildPatternRow(
   ]
 }
 
-function headerCell(label: string, theme: Theme): TextChunk[] {
-  return [bold(fg(theme.textMuted)(label))]
+function headerCell(label: string, theme: Theme, active = false): TextChunk[] {
+  return [bold(fg(active ? theme.primary : theme.textMuted)(label))]
 }
 
-function cell(text: string, color: RGBA, background?: RGBA): TextChunk[] {
-  const colored = fg(color)(text)
-  if (background) {
-    return [bg(background)(colored)]
-  }
-  return [colored]
+function cell(text: string, color: RGBA): TextChunk[] {
+  return [fg(color)(text)]
 }
 
 function severityColor(theme: Theme, severity: Severity): RGBA {
