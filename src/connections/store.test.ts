@@ -205,4 +205,51 @@ describe('createConnectionStore', () => {
     expect(backend.values.size).toBe(0)
     expect(backend.deleteCalls).toBe(1)
   })
+
+  it('updates name and URI while preserving id and createdAt', async () => {
+    const backend = createMemoryBackend()
+    const store = createConnectionStore({
+      secrets: createSecretStore(backend),
+      createId: () => 'edit-me',
+      now: () => new Date('2026-08-11T12:00:00.000Z'),
+    })
+
+    await store.add({ name: 'local', uri: 'mongodb://localhost:27017' })
+    const updated = await store.update('edit-me', {
+      name: 'staging',
+      uri: 'mongodb://user:secret@db.example.com:27017',
+    })
+
+    expect(updated).toEqual({
+      id: 'edit-me',
+      name: 'staging',
+      hostLabel: 'db.example.com:27017',
+      tags: [],
+      createdAt: '2026-08-11T12:00:00.000Z',
+    })
+    await expect(store.getUri('edit-me')).resolves.toBe(
+      'mongodb://user:secret@db.example.com:27017',
+    )
+    expect(JSON.stringify(await store.list())).not.toContain('secret')
+  })
+
+  it('allows keeping the same name on update but rejects collisions with others', async () => {
+    const backend = createMemoryBackend()
+    let nextId = 0
+    const store = createConnectionStore({
+      secrets: createSecretStore(backend),
+      createId: () => `id-${nextId++}`,
+    })
+
+    await store.add({ name: 'local', uri: 'mongodb://localhost:27017' })
+    await store.add({ name: 'other', uri: 'mongodb://localhost:27018' })
+
+    await expect(
+      store.update('id-0', { name: 'local', uri: 'mongodb://127.0.0.1:27017' }),
+    ).resolves.toMatchObject({ name: 'local', hostLabel: '127.0.0.1:27017' })
+
+    await expect(
+      store.update('id-0', { name: 'other', uri: 'mongodb://127.0.0.1:27017' }),
+    ).rejects.toThrow(/already exists/)
+  })
 })

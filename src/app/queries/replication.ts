@@ -27,9 +27,15 @@ export type ReplicationQueryData = {
 const EMPTY_SNAPSHOT: ReplicationSnapshot = {
   topology: null,
   oplog: null,
+  heartbeats: null,
+  recentEvents: [],
+  writeConcern: null,
   errors: {
     topology: null,
     oplog: null,
+    heartbeats: null,
+    recentEvents: null,
+    writeConcern: null,
   },
 }
 

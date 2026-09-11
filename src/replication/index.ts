@@ -6,14 +6,18 @@ export {
 export {
   formatBytes,
   formatGrowthRate,
+  formatHeartbeatEdge,
   formatLagSeconds,
   formatMemberLabel,
   formatMemberMeta,
+  formatPingMs,
   formatPriorityVotes,
+  formatShortHost,
   formatWindowHours,
   horizontalBarString,
   verticalBarChartLines,
 } from './format'
+export { normalizeHeartbeats } from './heartbeats'
 export {
   appendLagSample,
   buildLagTrendView,
@@ -35,12 +39,21 @@ export {
   type RawReplSetStatus,
 } from './normalize'
 export { buildOplogWindow, oplogTimestampSeconds, type OplogEdgeDoc, type OplogStatsInput } from './oplog'
+export {
+  normalizeRecentReplicationEvents,
+  RECENT_EVENTS_LIMIT,
+} from './recent-events'
+export { formatDefaultWriteConcern, normalizeWriteConcern } from './write-concern'
 export type {
+  HeartbeatEdge,
+  HeartbeatsView,
   MemberSeverity,
   OplogWindow,
+  RecentReplicationEvent,
   ReplicationPanelError,
   ReplicationPanelErrorKind,
   ReplicationSnapshot,
   ReplicationTopology,
   TopologyMember,
+  WriteConcernView,
 } from './types'

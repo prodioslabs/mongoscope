@@ -13,12 +13,17 @@ export const REPLICATION_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: '5s',
-    helpLabel: 'Topology, oplog, and lag trend auto-refresh while this tab is open',
+    helpLabel: 'Topology, oplog, heartbeats, and lag trend auto-refresh while this tab is open',
     bindings: [],
   },
   {
     keys: '10m',
     helpLabel: 'Lag trend covers samples since this connection opened (no backfill)',
+    bindings: [],
+  },
+  {
+    keys: 'log',
+    helpLabel: 'Recent elections/state changes come from getLog RAM buffer (not a fixed 7d window)',
     bindings: [],
   },
 ]

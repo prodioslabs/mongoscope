@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   formatBytes,
   formatGrowthRate,
+  formatHeartbeatEdge,
   formatLagSeconds,
   formatMemberLabel,
   formatMemberMeta,
+  formatPingMs,
   formatPriorityVotes,
+  formatShortHost,
   formatWindowHours,
   horizontalBarString,
   verticalBarChartLines,
@@ -60,12 +63,20 @@ describe('formatMemberLabel', () => {
   })
 })
 
-describe('formatPriorityVotes / formatMemberMeta', () => {
+describe('formatPriorityVotes / formatMemberMeta / formatHeartbeatEdge', () => {
   it('renders priority and votes or dashes', () => {
     expect(formatPriorityVotes(1, 1)).toBe('1 / 1')
     expect(formatPriorityVotes(null, 1)).toBe('— / 1')
     expect(formatMemberMeta(2, 1)).toBe('priority 2 • votes 1')
     expect(formatMemberMeta(null, 0)).toBe('priority — • votes 0')
+  })
+
+  it('formats short heartbeat edge labels', () => {
+    expect(formatHeartbeatEdge('rs0-a.prod.internal:27017', 'rs0-b.prod.internal:27017')).toBe(
+      'rs0-a → rs0-b',
+    )
+    expect(formatPingMs(4)).toBe('4ms')
+    expect(formatShortHost('rs0-c.prod.internal:27017')).toBe('rs0-c')
   })
 })
 

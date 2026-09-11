@@ -1,8 +1,9 @@
 import { TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useEffect, useRef, useState } from 'react'
-import { type ConnectionProfile } from '../../../../connections'
+import { connectionStore, type ConnectionProfile } from '../../../../connections'
 import { formatConnectionError } from '../../../../connections/format-connection-error'
+import { LiveConnectionError, liveConnectionManager } from '../../../../live-connection'
 import { displayText } from '../../../../lib/display-text'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { useConnectionsList, useRemoveConnection } from '../../../queries/connection'
@@ -19,6 +20,7 @@ const LIST_KEYBINDINGS: FooterKeybinding[] = [
   { keys: '↑↓/jk', label: 'navigate' },
   { keys: 'enter', label: 'select' },
   { keys: 'a', label: 'add' },
+  { keys: 'e', label: 'edit' },
   { keys: 'd', label: 'delete' },
   { keys: 'esc', label: 'close' },
 ]
@@ -28,12 +30,19 @@ const DELETE_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'esc', label: 'cancel' },
 ]
 
-const ADD_DIALOG_KEYBINDINGS: FooterKeybinding[] = [
+const FORM_DIALOG_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'tab', label: 'field' },
   { keys: '→', label: 'local URI' },
   { keys: 'enter', label: 'save' },
   { keys: 'esc', label: 'back' },
 ]
+
+type EditTarget = {
+  profile: ConnectionProfile
+  uri: string | null
+  loading: boolean
+  loadError: string | null
+}
 
 export function ConnectionsDialog() {
   const theme = useTheme((s) => s.theme)
@@ -53,6 +62,7 @@ export function ConnectionsDialog() {
   const profiles: ConnectionProfile[] = data ?? []
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [pendingDelete, setPendingDelete] = useState<ConnectionProfile | null>(null)
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
 
   const profilesRef = useRef(profiles)
   const selectedIndexRef = useRef(selectedIndex)
@@ -85,6 +95,7 @@ export function ConnectionsDialog() {
         return
       }
       setPendingDelete(null)
+      setEditTarget(null)
       setSelectedIndex(0)
     },
     [dialogOpen],
@@ -98,8 +109,8 @@ export function ConnectionsDialog() {
       const bindings =
         pendingDelete != null
           ? DELETE_KEYBINDINGS
-          : dialogView === 'add'
-            ? ADD_DIALOG_KEYBINDINGS
+          : dialogView === 'add' || dialogView === 'edit'
+            ? FORM_DIALOG_KEYBINDINGS
             : LIST_KEYBINDINGS
       pushOverlayKeybindings('connections-dialog', bindings)
       return function clearConnectionsDialogFooter() {
@@ -120,7 +131,8 @@ export function ConnectionsDialog() {
       setPendingDelete(null)
       return
     }
-    if (dialogViewRef.current === 'add') {
+    if (dialogViewRef.current === 'add' || dialogViewRef.current === 'edit') {
+      setEditTarget(null)
       if (profilesRef.current.length > 0) {
         setDialogView('list')
         return
@@ -133,6 +145,49 @@ export function ConnectionsDialog() {
 
   const handleCloseRef = useRef(handleClose)
   handleCloseRef.current = handleClose
+
+  async function beginEdit(profile: ConnectionProfile) {
+    setEditTarget({
+      profile,
+      uri: null,
+      loading: true,
+      loadError: null,
+    })
+    setDialogView('edit')
+
+    try {
+      const uri = await connectionStore.getUri(profile.id)
+      setEditTarget((current) => {
+        if (current == null || current.profile.id !== profile.id) {
+          return current
+        }
+        if (uri == null || uri.trim() === '') {
+          return {
+            ...current,
+            loading: false,
+            loadError: 'Connection profile not found or has no URI.',
+          }
+        }
+        return {
+          ...current,
+          uri,
+          loading: false,
+          loadError: null,
+        }
+      })
+    } catch (loadError) {
+      setEditTarget((current) => {
+        if (current == null || current.profile.id !== profile.id) {
+          return current
+        }
+        return {
+          ...current,
+          loading: false,
+          loadError: formatConnectionError(loadError),
+        }
+      })
+    }
+  }
 
   useBindings(
     function createConnectionsListLayer() {
@@ -184,7 +239,18 @@ export function ConnectionsDialog() {
           {
             name: 'connections.add',
             run() {
+              setEditTarget(null)
               setDialogView('add')
+            },
+          },
+          {
+            name: 'connections.edit',
+            run() {
+              const profile = profilesRef.current[selectedIndexRef.current]
+              if (!profile) {
+                return
+              }
+              void beginEdit(profile)
             },
           },
           {
@@ -214,6 +280,7 @@ export function ConnectionsDialog() {
           { key: 'enter', cmd: 'connections.select' },
           { key: 'a', cmd: 'connections.add' },
           { key: 'n', cmd: 'connections.add' },
+          { key: 'e', cmd: 'connections.edit' },
           { key: 'd', cmd: 'connections.delete' },
           { key: 'escape', cmd: 'connections.close' },
         ],
@@ -275,6 +342,30 @@ export function ConnectionsDialog() {
     [dialogOpen, pendingDelete, removeConnection, setActiveConnectionId],
   )
 
+  useBindings(
+    function createEditLoadingLayer() {
+      const editBusy =
+        dialogView === 'edit' &&
+        (editTarget == null || editTarget.loading || editTarget.loadError != null)
+
+      return {
+        appMode: 'palette' satisfies AppKeymapMode,
+        enabled: dialogOpen && editBusy,
+        priority: 50,
+        commands: [
+          {
+            name: 'connections.edit-cancel',
+            run() {
+              handleCloseRef.current()
+            },
+          },
+        ],
+        bindings: [{ key: 'escape', cmd: 'connections.edit-cancel' }],
+      }
+    },
+    [dialogOpen, dialogView, editTarget],
+  )
+
   const highlightFg = selectedForeground(theme)
 
   let listStatus: string
@@ -332,11 +423,67 @@ export function ConnectionsDialog() {
               handleCloseRef.current()
             }}
           />
+        ) : dialogView === 'edit' ? (
+          editTarget == null || editTarget.loading ? (
+            <>
+              <text content="Edit connection" fg={theme.text} attributes={TextAttributes.BOLD} />
+              <text content="Loading URI from keychain…" fg={theme.textMuted} />
+              <text content="esc back" fg={theme.textMuted} />
+            </>
+          ) : editTarget.loadError != null ? (
+            <>
+              <text content="Edit connection" fg={theme.text} attributes={TextAttributes.BOLD} />
+              <text content={displayText(editTarget.loadError)} fg={theme.error} />
+              <text content="esc back" fg={theme.textMuted} />
+            </>
+          ) : (
+            <AddConnectionForm
+              appMode="palette"
+              enabled
+              autoFocus
+              mode="edit"
+              editConnectionId={editTarget.profile.id}
+              initialName={editTarget.profile.name}
+              initialUri={editTarget.uri ?? ''}
+              onSuccess={function onEditSuccess(profile) {
+                const editedId = profile.id
+                const wasActive = activeConnectionIdRef.current === editedId
+                setEditTarget(null)
+                setDialogView('list')
+                if (!wasActive) {
+                  return
+                }
+                void (async function reconnectEditedActiveConnection() {
+                  try {
+                    const uri = await connectionStore.getUri(editedId)
+                    if (uri == null || uri.trim() === '') {
+                      await liveConnectionManager.fail(
+                        editedId,
+                        new LiveConnectionError(
+                          'missing_uri',
+                          'Connection profile not found or has no URI.',
+                        ),
+                      )
+                      return
+                    }
+                    await liveConnectionManager.connect(editedId, uri)
+                  } catch {
+                    void retryLiveConnection()
+                  }
+                })()
+              }}
+              onCancel={function onEditCancel() {
+                handleCloseRef.current()
+              }}
+            />
+          )
         ) : (
           <>
             <text content="Connections" fg={theme.text} attributes={TextAttributes.BOLD} />
             <text
-              content={displayText(`${listStatus} · stored in OS keychain · enter connects`)}
+              content={displayText(
+                `${listStatus} · stored in OS keychain · enter connects · e edits`,
+              )}
               fg={theme.textMuted}
             />
 

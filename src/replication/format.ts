@@ -88,6 +88,27 @@ export function formatMemberMeta(priority: number | null, votes: number | null):
   return `priority ${p} • votes ${v}`
 }
 
+/** Short label for lag/heartbeat titles — first DNS label or host. */
+export function formatShortHost(hostPort: string): string {
+  const host = hostPort.includes(':') ? hostPort.slice(0, hostPort.lastIndexOf(':')) : hostPort
+  const firstLabel = host.split('.')[0]
+  return firstLabel != null && firstLabel !== '' ? firstLabel : host
+}
+
+export function formatPingMs(pingMs: number): string {
+  if (!Number.isFinite(pingMs) || pingMs < 0) {
+    return '—'
+  }
+  if (pingMs < 10) {
+    return `${Math.round(pingMs * 10) / 10}ms`
+  }
+  return `${Math.round(pingMs)}ms`
+}
+
+export function formatHeartbeatEdge(fromName: string, toName: string): string {
+  return `${formatShortHost(fromName)} → ${formatShortHost(toName)}`
+}
+
 const FULL_BLOCK = '█'
 const TRACK_EMPTY = ' '
 const PARTIAL_BLOCKS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'] as const
