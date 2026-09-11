@@ -34,6 +34,7 @@ type IndexesDashboardProps = {
 }
 
 type CollectionSortBy = 'name' | 'indexes'
+type IndexSortBy = 'size' | 'ops'
 type SortDirection = 'asc' | 'desc'
 
 const COLLECTION_LIST_WIDTH = 36
@@ -58,6 +59,8 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
 
   const [collectionSortBy, setCollectionSortBy] = useState<CollectionSortBy>('name')
   const [collectionSortDirection, setCollectionSortDirection] = useState<SortDirection>('asc')
+  const [indexSortBy, setIndexSortBy] = useState<IndexSortBy>('size')
+  const [indexSortDirection, setIndexSortDirection] = useState<SortDirection>('desc')
   const [selectedCollectionName, setSelectedCollectionName] = useState<string | null>(null)
   const [collectionScrollOffset, setCollectionScrollOffset] = useState(0)
   const [selectedIndexName, setSelectedIndexName] = useState<string | null>(null)
@@ -74,7 +77,11 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
     selectedCollectionIndex >= 0
       ? (sortedCollections[selectedCollectionIndex] ?? null)
       : (sortedCollections[0] ?? null)
-  const indexRows = focusedCollection?.indexes ?? []
+  const indexRows = sortIndexRows(
+    focusedCollection?.indexes ?? [],
+    indexSortBy,
+    indexSortDirection,
+  )
 
   const databasesRef = useRef(databases)
   const sortedCollectionsRef = useRef(sortedCollections)
@@ -87,6 +94,8 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const capacityRef = useRef(capacity)
   const collectionSortByRef = useRef(collectionSortBy)
   const collectionSortDirectionRef = useRef(collectionSortDirection)
+  const indexSortByRef = useRef(indexSortBy)
+  const indexSortDirectionRef = useRef(indexSortDirection)
 
   databasesRef.current = databases
   sortedCollectionsRef.current = sortedCollections
@@ -99,6 +108,8 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   capacityRef.current = capacity
   collectionSortByRef.current = collectionSortBy
   collectionSortDirectionRef.current = collectionSortDirection
+  indexSortByRef.current = indexSortBy
+  indexSortDirectionRef.current = indexSortDirection
 
   useEffect(
     function autoSelectDatabaseWhenNeeded() {
@@ -280,6 +291,19 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         setCollectionScrollOffset(0)
       }
 
+      function applyIndexSort(next: IndexSortBy) {
+        if (indexRowsRef.current.length === 0) {
+          return
+        }
+        if (indexSortByRef.current === next) {
+          setIndexSortDirection((direction) => (direction === 'desc' ? 'asc' : 'desc'))
+        } else {
+          setIndexSortBy(next)
+          setIndexSortDirection('desc')
+        }
+        setIndexScrollOffset(0)
+      }
+
       return {
         appMode: 'base' satisfies AppKeymapMode,
         enabled: function indexesNavigationEnabled() {
@@ -334,6 +358,18 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
               applyCollectionSort('indexes')
             },
           },
+          {
+            name: 'indexes.sort-size',
+            run() {
+              applyIndexSort('size')
+            },
+          },
+          {
+            name: 'indexes.sort-ops',
+            run() {
+              applyIndexSort('ops')
+            },
+          },
         ],
         bindings: toBindings(INDEXES_SHORTCUTS),
       }
@@ -374,6 +410,8 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
     relativeSelectedIndex,
     theme,
     capacity,
+    indexSortBy,
+    indexSortDirection,
   )
 
   return (
@@ -513,24 +551,46 @@ function sortCollections(
   return copy
 }
 
+function sortIndexRows(
+  rows: IndexRow[],
+  sortBy: IndexSortBy,
+  sortDirection: SortDirection,
+): IndexRow[] {
+  const copy = rows.slice()
+  const ascending = sortDirection === 'asc'
+  copy.sort(function compareIndexRows(a, b) {
+    const left = sortBy === 'size' ? (a.sizeBytes ?? -1) : (a.ops ?? -1)
+    const right = sortBy === 'size' ? (b.sizeBytes ?? -1) : (b.ops ?? -1)
+    const delta = left - right
+    if (delta !== 0) {
+      return ascending ? delta : -delta
+    }
+    return a.name.localeCompare(b.name)
+  })
+  return copy
+}
+
 function sortArrow(sortDirection: SortDirection): string {
   return sortDirection === 'desc' ? '▼' : '▲'
 }
 
-function collectionHeaderLabel(
+/**
+ * Active sort headers keep the label muted and paint only the arrow in the
+ * selection/primary color so the sort indicator reads clearly.
+ */
+function sortableHeaderCell(
   base: string,
-  column: CollectionSortBy,
-  sortBy: CollectionSortBy,
+  theme: Theme,
+  active: boolean,
   sortDirection: SortDirection,
-): string {
-  if (column !== sortBy) {
-    return base
+): TextChunk[] {
+  if (!active) {
+    return [bold(fg(theme.textMuted)(base))]
   }
-  return `${base} ${sortArrow(sortDirection)}`
-}
-
-function sortableHeaderCell(label: string, theme: Theme, active: boolean): TextChunk[] {
-  return [bold(fg(active ? theme.primary : theme.textMuted)(label))]
+  return [
+    bold(fg(theme.textMuted)(base)),
+    bold(fg(theme.primary)(` ${sortArrow(sortDirection)}`)),
+  ]
 }
 
 function buildCollectionsTableContent(
@@ -542,16 +602,8 @@ function buildCollectionsTableContent(
   sortDirection: SortDirection,
 ): TextTableContent {
   const header: TextChunk[][] = [
-    sortableHeaderCell(
-      collectionHeaderLabel('COLLECTION', 'name', sortBy, sortDirection),
-      theme,
-      sortBy === 'name',
-    ),
-    sortableHeaderCell(
-      collectionHeaderLabel('IDX', 'indexes', sortBy, sortDirection),
-      theme,
-      sortBy === 'indexes',
-    ),
+    sortableHeaderCell('COLLECTION', theme, sortBy === 'name', sortDirection),
+    sortableHeaderCell('IDX', theme, sortBy === 'indexes', sortDirection),
   ]
 
   const tableRows: TextTableContent = [header]
@@ -576,13 +628,15 @@ function buildIndexesTableContent(
   selectedIndex: number,
   theme: Theme,
   rowCapacity: number,
+  sortBy: IndexSortBy,
+  sortDirection: SortDirection,
 ): TextTableContent {
   const header: TextChunk[][] = [
     headerCell('INDEX', theme),
     headerCell('KEYS', theme),
     headerCell('OPTS', theme),
-    headerCell('SIZE', theme),
-    headerCell('OPS', theme),
+    sortableHeaderCell('SIZE', theme, sortBy === 'size', sortDirection),
+    sortableHeaderCell('OPS', theme, sortBy === 'ops', sortDirection),
     headerCell('SINCE', theme),
   ]
 

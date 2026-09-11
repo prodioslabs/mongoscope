@@ -40,14 +40,22 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
   {
     keys: 'n',
     helpLabel: 'Sort collections by name (toggle direction)',
-    footerLabel: 'sort name',
     bindings: [{ key: 'n', cmd: 'indexes.sort-collection-name' }],
   },
   {
     keys: 'i',
     helpLabel: 'Sort collections by index count (toggle direction)',
-    footerLabel: 'sort idx',
     bindings: [{ key: 'i', cmd: 'indexes.sort-collection-indexes' }],
+  },
+  {
+    keys: 's',
+    helpLabel: 'Sort indexes by size (toggle direction)',
+    bindings: [{ key: 's', cmd: 'indexes.sort-size' }],
+  },
+  {
+    keys: 'o',
+    helpLabel: 'Sort indexes by ops (toggle direction)',
+    bindings: [{ key: 'o', cmd: 'indexes.sort-ops' }],
   },
   {
     keys: 'c',
@@ -73,5 +81,6 @@ export const INDEXES_FOOTER: FooterChip[] = [
     INDEXES_SHORTCUTS[1]!,
     INDEXES_SHORTCUTS[2]!,
   ]),
-  { keys: 'n/i', label: 'sort name/idx' },
+  { keys: 'n/i', label: 'sort collections' },
+  { keys: 's/o', label: 'sort size/ops' },
 ]
