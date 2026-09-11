@@ -6,7 +6,7 @@ import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patt
 
 export type AppScreen = 'welcome' | 'dashboard'
 
-export type AppTab = 'slow-queries' | 'live-ops' | 'timeline' | 'replication' | 'indexes' | 'logs'
+export type AppTab = 'slow-queries' | 'live-ops' | 'replication' | 'indexes' | 'logs'
 
 export type SlowQueriesPendingNavigation = {
   patternId?: number
@@ -27,20 +27,18 @@ export type TabDefinition = {
 export const TABS: readonly TabDefinition[] = [
   { id: 'slow-queries', key: '1', label: 'Slow Queries' },
   { id: 'live-ops', key: '2', label: 'Live Ops' },
-  { id: 'timeline', key: '3', label: 'Timeline' },
-  { id: 'replication', key: '4', label: 'Replication' },
-  { id: 'indexes', key: '5', label: 'Indexes' },
-  { id: 'logs', key: '6', label: 'Logs' },
+  { id: 'replication', key: '3', label: 'Replication' },
+  { id: 'indexes', key: '4', label: 'Indexes' },
+  { id: 'logs', key: '5', label: 'Logs' },
 ] as const
 
 export function tabFromKey(key: string): AppTab | null {
   return match(key)
     .with('1', () => 'slow-queries' as const)
     .with('2', () => 'live-ops' as const)
-    .with('3', () => 'timeline' as const)
-    .with('4', () => 'replication' as const)
-    .with('5', () => 'indexes' as const)
-    .with('6', () => 'logs' as const)
+    .with('3', () => 'replication' as const)
+    .with('4', () => 'indexes' as const)
+    .with('5', () => 'logs' as const)
     .otherwise(() => null)
 }
 

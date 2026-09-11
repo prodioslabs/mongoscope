@@ -25,7 +25,7 @@ type FocusField = 'name' | 'uri'
 type AddConnectionFormProps = {
   appMode: AppKeymapMode
   enabled?: boolean
-  /** When false, do not steal focus on mount (keeps dashboard 1–6 usable). */
+  /** When false, do not steal focus on mount (keeps dashboard 1–5 usable). */
   autoFocus?: boolean
   showFooterKeybindings?: boolean
   onSuccess: (profile: ConnectionProfile) => void
@@ -128,7 +128,7 @@ export function AddConnectionForm({
 
       return {
         appMode,
-        // Above dashboard Tab-cycle (200) so Name↔URI wins; 1–6 still hit the dashboard layer
+        // Above dashboard Tab-cycle (200) so Name↔URI wins; 1–5 still hit the dashboard layer
         // because this layer does not bind digit keys.
         priority: 250,
         enabled: enabled && !addConnection.isPending,
