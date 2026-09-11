@@ -53,6 +53,16 @@ export function formatIndexFlags(flags: IndexOptionFlag[]): string {
   return flags.join(',')
 }
 
+export function truncateIndexCell(value: string, maxLen: number): string {
+  if (value.length <= maxLen) {
+    return value
+  }
+  if (maxLen <= 1) {
+    return '…'
+  }
+  return `${value.slice(0, maxLen - 1)}…`
+}
+
 /** Compact `{ a: 1, b: -1 }` → `a:1,b:-1`. */
 export function formatIndexKey(key: unknown): string {
   if (key == null || typeof key !== 'object' || Array.isArray(key)) {

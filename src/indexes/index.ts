@@ -5,6 +5,7 @@ export {
   formatIndexKey,
   formatOps,
   formatSince,
+  truncateIndexCell,
 } from './format'
 export {
   extractIndexFlags,

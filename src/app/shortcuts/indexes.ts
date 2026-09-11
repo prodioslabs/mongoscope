@@ -17,14 +17,14 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: '↑/↓ / j/k',
-    helpLabel: 'Navigate collections',
-    footerLabel: 'collection',
+    helpLabel: 'Navigate index rows',
+    footerLabel: 'navigate',
     footerKeys: '↑↓/jk',
     bindings: [
-      { key: 'up', cmd: 'indexes.prev-collection' },
-      { key: 'k', cmd: 'indexes.prev-collection' },
-      { key: 'down', cmd: 'indexes.next-collection' },
-      { key: 'j', cmd: 'indexes.next-collection' },
+      { key: 'up', cmd: 'indexes.move-up' },
+      { key: 'k', cmd: 'indexes.move-up' },
+      { key: 'down', cmd: 'indexes.move-down' },
+      { key: 'j', cmd: 'indexes.move-down' },
     ],
   },
   {

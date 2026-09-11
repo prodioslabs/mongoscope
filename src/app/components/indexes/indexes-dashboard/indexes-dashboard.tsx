@@ -1,23 +1,31 @@
-import { TextAttributes } from '@opentui/core'
+import { type TextChunk, type TextTableContent, TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
-import { useRenderer } from '@opentui/react'
+import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState } from 'react'
 import {
   formatBytes,
   formatIndexFlags,
   formatOps,
   formatSince,
+  truncateIndexCell,
   type CollectionIndexes,
   type IndexesSnapshot,
   type IndexRow,
 } from '../../../../indexes'
 import { displayText } from '../../../../lib/display-text'
+import {
+  computeTableCapacity,
+  headerCell,
+  padTableRows,
+  tableCell,
+} from '../../../lib/text-table-content'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { whenNotEditing } from '../../../lib/when-not-editing'
 import { INDEXES_FOOTER, INDEXES_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
-import { selectedForeground } from '../../../theme'
+import { type Theme } from '../../../theme'
+import { DataTextTable } from '../../data-text-table'
 import { useFooterKeybindings } from '../../footer-keybindings'
 
 type IndexesDashboardProps = {
@@ -25,15 +33,26 @@ type IndexesDashboardProps = {
   isPending: boolean
 }
 
-const COLLECTION_LIST_WIDTH = 28
+type FlatIndexRow = {
+  id: string
+  collection: string
+  index: IndexRow
+  usageUnavailable: boolean
+  collectionError: string | null
+}
+
 const EMPTY_DATABASES: string[] = []
 const EMPTY_COLLECTIONS: CollectionIndexes[] = []
 const EMPTY_ERRORS: IndexesSnapshot['errors'] = { databases: null, collections: null }
+
+/** Tab bar, footer, DbSelector, title, DB chips, notes, table chrome. */
+const INDEXES_CHROME_ROWS = 16
 
 export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps) {
   const theme = useTheme((s) => s.theme)
   const renderer = useRenderer()
   const notEditing = whenNotEditing(renderer)
+  const { height: terminalHeight } = useTerminalDimensions()
   const selectedDatabase = useSession((s) => s.selectedDatabase)
   const setSelectedDatabase = useSession((s) => s.setSelectedDatabase)
 
@@ -41,17 +60,26 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const collections = snapshot?.collections ?? EMPTY_COLLECTIONS
   const errors = snapshot?.errors ?? EMPTY_ERRORS
 
-  const [selectedCollectionIndex, setSelectedCollectionIndex] = useState(0)
+  const rows = flattenCollectionIndexes(collections)
+
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
+  const [scrollOffset, setScrollOffset] = useState(0)
+
+  const capacity = computeTableCapacity(INDEXES_CHROME_ROWS, terminalHeight)
 
   const databasesRef = useRef(databases)
-  const collectionsRef = useRef(collections)
+  const rowsRef = useRef(rows)
   const selectedDatabaseRef = useRef(selectedDatabase)
-  const selectedCollectionIndexRef = useRef(selectedCollectionIndex)
+  const selectedRowIdRef = useRef(selectedRowId)
+  const scrollOffsetRef = useRef(scrollOffset)
+  const capacityRef = useRef(capacity)
 
   databasesRef.current = databases
-  collectionsRef.current = collections
+  rowsRef.current = rows
   selectedDatabaseRef.current = selectedDatabase
-  selectedCollectionIndexRef.current = selectedCollectionIndex
+  selectedRowIdRef.current = selectedRowId
+  scrollOffsetRef.current = scrollOffset
+  capacityRef.current = capacity
 
   useEffect(
     function autoSelectDatabaseWhenNeeded() {
@@ -80,17 +108,34 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   )
 
   useEffect(
-    function clampSelectedCollectionIndex() {
-      const length = collections.length
-      setSelectedCollectionIndex((index) => {
-        if (length === 0) {
-          return 0
+    function reconcileRowSelection() {
+      if (rows.length === 0) {
+        setSelectedRowId(null)
+        setScrollOffset(0)
+        return
+      }
+
+      setSelectedRowId((current) => {
+        if (current != null && rows.some((row) => row.id === current)) {
+          return current
         }
-        const nextIndex = Math.min(index, length - 1)
-        return nextIndex === index ? index : nextIndex
+        return rows[0]?.id ?? null
       })
     },
-    [collections.length],
+    [rows],
+  )
+
+  useEffect(
+    function clampScrollOffset() {
+      setScrollOffset((offset) => {
+        if (rows.length === 0) {
+          return 0
+        }
+        const maxOffset = Math.max(0, rows.length - capacity)
+        return Math.min(offset, maxOffset)
+      })
+    },
+    [capacity, rows.length],
   )
 
   useFooterKeybindings(INDEXES_FOOTER)
@@ -106,17 +151,37 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         const currentIndex = current == null ? 0 : Math.max(0, list.indexOf(current))
         const nextIndex = (currentIndex + delta + list.length) % list.length
         setSelectedDatabase(list[nextIndex] ?? null)
-        setSelectedCollectionIndex(0)
+        setSelectedRowId(null)
+        setScrollOffset(0)
       }
 
-      function moveCollection(delta: number) {
-        const length = collectionsRef.current.length
+      function moveSelection(delta: number) {
+        const currentRows = rowsRef.current
+        const length = currentRows.length
         if (length === 0) {
           return
         }
-        setSelectedCollectionIndex((index) => {
-          return (index + delta + length) % length
-        })
+
+        let prev = currentRows.findIndex((row) => row.id === selectedRowIdRef.current)
+        if (prev < 0) {
+          prev = delta > 0 ? -1 : length
+        }
+
+        const next = Math.max(0, Math.min(length - 1, prev + delta))
+        const nextRow = currentRows[next]
+        if (nextRow == null) {
+          return
+        }
+
+        setSelectedRowId(nextRow.id)
+
+        const cap = capacityRef.current
+        const offset = scrollOffsetRef.current
+        if (next < offset) {
+          setScrollOffset(next)
+        } else if (next >= offset + cap) {
+          setScrollOffset(next - cap + 1)
+        }
       }
 
       return {
@@ -138,15 +203,15 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
             },
           },
           {
-            name: 'indexes.prev-collection',
+            name: 'indexes.move-up',
             run() {
-              moveCollection(-1)
+              moveSelection(-1)
             },
           },
           {
-            name: 'indexes.next-collection',
+            name: 'indexes.move-down',
             run() {
-              moveCollection(1)
+              moveSelection(1)
             },
           },
         ],
@@ -156,14 +221,26 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
     [notEditing, setSelectedDatabase],
   )
 
-  const highlightFg = selectedForeground(theme)
-  const focusedCollection: CollectionIndexes | null =
-    collections[selectedCollectionIndex] ?? null
+  const resolvedIndex =
+    selectedRowId == null ? -1 : rows.findIndex((row) => row.id === selectedRowId)
+  const visible = rows.slice(scrollOffset, scrollOffset + capacity)
+  const relativeSelectedIndex =
+    resolvedIndex >= scrollOffset && resolvedIndex < scrollOffset + capacity
+      ? resolvedIndex - scrollOffset
+      : -1
+
+  const content = buildIndexesTableContent(visible, relativeSelectedIndex, theme, capacity)
+  const usageUnavailable = collections.some((collection) => collection.usageUnavailable)
+  const collectionError = collections.find((collection) => collection.error != null)?.error ?? null
 
   return (
-    <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1} gap={1}>
-      <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
-        <text content="Indexes" fg={theme.text} attributes={TextAttributes.BOLD} />
+    <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1} gap={0}>
+      <box flexDirection="row" justifyContent="space-between" flexShrink={0} paddingBottom={0}>
+        <text
+          content="indexes — inventory & usage"
+          fg={theme.text}
+          attributes={TextAttributes.BOLD}
+        />
         <text
           content={displayText(isPending && snapshot == null ? 'refresh: …' : 'refresh: 5s')}
           fg={theme.textMuted}
@@ -174,7 +251,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         <text content={displayText(errors.databases.message)} fg={theme.error} />
       ) : null}
 
-      <box flexDirection="row" flexWrap="wrap" gap={1} flexShrink={0}>
+      <box flexDirection="row" flexWrap="wrap" gap={1} flexShrink={0} paddingBottom={0}>
         <text content="DB" fg={theme.textMuted} flexShrink={0} />
         {databases.length === 0 ? (
           <text content="(none)" fg={theme.textMuted} />
@@ -185,7 +262,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
               <text
                 key={name}
                 content={displayText(selected ? `[${name}]` : name)}
-                fg={selected ? theme.accent : theme.textMuted}
+                fg={selected ? theme.primary : theme.textMuted}
                 {...(selected ? { attributes: TextAttributes.BOLD } : {})}
               />
             )
@@ -197,162 +274,113 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         <text content={displayText(errors.collections.message)} fg={theme.error} />
       ) : null}
 
+      {collectionError != null ? (
+        <text content={displayText(collectionError.message)} fg={theme.error} />
+      ) : null}
+
+      {usageUnavailable ? (
+        <text content="usage n/a on some collections (needs indexStats / clusterMonitor)" fg={theme.textMuted} />
+      ) : null}
+
       {selectedDatabase == null ? (
-        <text content="Select a database to inspect indexes." fg={theme.textMuted} />
+        <box paddingTop={1}>
+          <text content="Select a database to inspect indexes." fg={theme.textMuted} />
+        </box>
       ) : (
-        <box flexGrow={1} flexShrink={1} flexDirection="row" gap={1}>
-          <box
-            width={COLLECTION_LIST_WIDTH}
-            flexShrink={0}
-            flexDirection="column"
-            border
-            borderStyle="single"
-            borderColor={theme.border}
-            paddingLeft={1}
-            paddingRight={1}
-          >
-            <text
-              content=" collections "
-              fg={theme.textMuted}
-              attributes={TextAttributes.BOLD}
-              flexShrink={0}
-            />
-            {collections.length === 0 ? (
+        <box flexGrow={1} flexShrink={1} flexDirection="column" gap={0}>
+          <DataTextTable content={content} theme={theme} />
+          {rows.length === 0 ? (
+            <box flexShrink={0}>
               <text
-                content={displayText(isPending ? 'Loading…' : 'No collections')}
+                content={displayText(isPending ? 'Loading indexes…' : 'no indexes in this database')}
                 fg={theme.textMuted}
               />
-            ) : (
-              collections.map(function renderCollectionRow(collection, index) {
-                const highlighted = index === selectedCollectionIndex
-                return (
-                  <box
-                    key={collection.name}
-                    flexDirection="row"
-                    gap={1}
-                    backgroundColor={highlighted ? theme.primary : undefined}
-                  >
-                    <text
-                      content={displayText(collection.name)}
-                      fg={highlighted ? highlightFg : theme.text}
-                      flexGrow={1}
-                    />
-                    <text
-                      content={displayText(String(collection.indexes.length))}
-                      fg={highlighted ? highlightFg : theme.textMuted}
-                      flexShrink={0}
-                    />
-                  </box>
-                )
-              })
-            )}
-          </box>
-
-          <box
-            flexGrow={1}
-            flexShrink={1}
-            flexDirection="column"
-            border
-            borderStyle="single"
-            borderColor={theme.border}
-            paddingLeft={1}
-            paddingRight={1}
-          >
-            <IndexDetailPanel collection={focusedCollection} isPending={isPending} />
-          </box>
+            </box>
+          ) : null}
         </box>
       )}
     </box>
   )
 }
 
-type IndexDetailPanelProps = {
-  collection: CollectionIndexes | null
-  isPending: boolean
+function flattenCollectionIndexes(collections: CollectionIndexes[]): FlatIndexRow[] {
+  const rows: FlatIndexRow[] = []
+  for (const collection of collections) {
+    if (collection.error != null) {
+      rows.push({
+        id: `${collection.name}::__error__`,
+        collection: collection.name,
+        index: {
+          name: '—',
+          keyLabel: collection.error.message,
+          flags: [],
+          sizeBytes: null,
+          ops: null,
+          since: null,
+        },
+        usageUnavailable: collection.usageUnavailable,
+        collectionError: collection.error.message,
+      })
+      continue
+    }
+
+    for (const index of collection.indexes) {
+      rows.push({
+        id: `${collection.name}::${index.name}`,
+        collection: collection.name,
+        index,
+        usageUnavailable: collection.usageUnavailable,
+        collectionError: null,
+      })
+    }
+  }
+  return rows
 }
 
-function IndexDetailPanel({ collection, isPending }: IndexDetailPanelProps) {
-  const theme = useTheme((s) => s.theme)
+function buildIndexesTableContent(
+  rows: FlatIndexRow[],
+  selectedIndex: number,
+  theme: Theme,
+  rowCapacity: number,
+): TextTableContent {
+  const header: TextChunk[][] = [
+    headerCell('COLLECTION', theme),
+    headerCell('INDEX', theme),
+    headerCell('KEYS', theme),
+    headerCell('OPTS', theme),
+    headerCell('SIZE', theme),
+    headerCell('OPS', theme),
+    headerCell('SINCE', theme),
+  ]
 
-  if (collection == null) {
-    return (
-      <text
-        content={displayText(isPending ? 'Loading indexes…' : 'Select a collection')}
-        fg={theme.textMuted}
-      />
-    )
+  const tableRows: TextTableContent = [header]
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]!
+    const selected = i === selectedIndex
+    tableRows.push(buildIndexTableRow(row, selected, theme))
   }
 
-  return (
-    <box flexDirection="column" gap={0} flexGrow={1}>
-      <box flexDirection="row" justifyContent="space-between" flexShrink={0} paddingBottom={0}>
-        <text
-          content={displayText(` ${collection.name} `)}
-          fg={theme.text}
-          attributes={TextAttributes.BOLD}
-        />
-        <text
-          content={displayText(
-            collection.totalIndexSizeBytes == null
-              ? ''
-              : `total ${formatBytes(collection.totalIndexSizeBytes)}`,
-          )}
-          fg={theme.textMuted}
-        />
-      </box>
-
-      {collection.error != null ? (
-        <text content={displayText(collection.error.message)} fg={theme.error} />
-      ) : null}
-
-      {collection.usageUnavailable ? (
-        <text content="usage n/a (needs indexStats / clusterMonitor)" fg={theme.textMuted} />
-      ) : null}
-
-      {collection.error == null && collection.indexes.length === 0 ? (
-        <text content="No indexes" fg={theme.textMuted} />
-      ) : null}
-
-      {collection.indexes.length > 0 ? (
-        <>
-          <IndexHeaderRow />
-          {collection.indexes.map(function renderIndexRow(row) {
-            return <IndexDataRow key={row.name} row={row} />
-          })}
-        </>
-      ) : null}
-    </box>
-  )
+  return padTableRows(tableRows, rowCapacity)
 }
 
-function IndexHeaderRow() {
-  const theme = useTheme((s) => s.theme)
-  return (
-    <box flexDirection="row" gap={1} flexShrink={0}>
-      <text content="name" fg={theme.textMuted} width={18} />
-      <text content="keys" fg={theme.textMuted} width={22} />
-      <text content="opts" fg={theme.textMuted} width={16} />
-      <text content="size" fg={theme.textMuted} width={10} />
-      <text content="ops" fg={theme.textMuted} width={8} />
-      <text content="since" fg={theme.textMuted} />
-    </box>
-  )
-}
+function buildIndexTableRow(row: FlatIndexRow, selected: boolean, theme: Theme): TextChunk[][] {
+  const collectionLabel = truncateIndexCell(row.collection, 18)
+  const collectionCell = selected
+    ? tableCell(`${collectionLabel} ●`, theme.primary)
+    : tableCell(collectionLabel, theme.text)
 
-type IndexDataRowProps = {
-  row: IndexRow
-}
+  const isErrorRow = row.collectionError != null
+  const nameColor = isErrorRow ? theme.error : theme.text
+  const mutedOrError = isErrorRow ? theme.error : theme.textMuted
 
-function IndexDataRow({ row }: IndexDataRowProps) {
-  const theme = useTheme((s) => s.theme)
-  return (
-    <box flexDirection="row" gap={1} flexShrink={0}>
-      <text content={displayText(row.name)} fg={theme.text} width={18} />
-      <text content={displayText(row.keyLabel)} fg={theme.text} width={22} />
-      <text content={displayText(formatIndexFlags(row.flags))} fg={theme.textMuted} width={16} />
-      <text content={displayText(formatBytes(row.sizeBytes))} fg={theme.textMuted} width={10} />
-      <text content={displayText(formatOps(row.ops))} fg={theme.textMuted} width={8} />
-      <text content={displayText(formatSince(row.since))} fg={theme.textMuted} />
-    </box>
-  )
+  return [
+    collectionCell,
+    tableCell(truncateIndexCell(row.index.name, 20), nameColor),
+    tableCell(truncateIndexCell(row.index.keyLabel, 24), mutedOrError),
+    tableCell(truncateIndexCell(formatIndexFlags(row.index.flags), 16), theme.textMuted),
+    tableCell(formatBytes(row.index.sizeBytes), theme.textMuted),
+    tableCell(formatOps(row.index.ops), theme.textMuted),
+    tableCell(formatSince(row.index.since), theme.textMuted),
+  ]
 }

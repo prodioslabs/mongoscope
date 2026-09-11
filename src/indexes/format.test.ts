@@ -5,6 +5,7 @@ import {
   formatIndexKey,
   formatOps,
   formatSince,
+  truncateIndexCell,
 } from './format'
 
 describe('formatBytes', () => {
@@ -62,5 +63,12 @@ describe('formatIndexFlags', () => {
   it('joins flags or shows em dash', () => {
     expect(formatIndexFlags(['unique', 'sparse'])).toBe('unique,sparse')
     expect(formatIndexFlags([])).toBe('—')
+  })
+})
+
+describe('truncateIndexCell', () => {
+  it('truncates with an ellipsis', () => {
+    expect(truncateIndexCell('abcdefghij', 6)).toBe('abcde…')
+    expect(truncateIndexCell('short', 10)).toBe('short')
   })
 })
