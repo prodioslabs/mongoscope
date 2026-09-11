@@ -1,5 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchReplicationSnapshot, type ReplicationSnapshot } from '../../replication'
+import {
+  appendLagSample,
+  buildLagTrendView,
+  emptyLagHistory,
+  fetchReplicationSnapshot,
+  pickLagTrendMember,
+  type LagHistoryState,
+  type LagTrendView,
+  type ReplicationSnapshot,
+} from '../../replication'
 import { liveConnectionManager } from '../../live-connection'
 import { useLiveConnection } from '../stores/live-connection'
 import { useSession } from '../stores/session'
@@ -10,6 +19,11 @@ export const replicationKeys = {
     [...replicationKeys.all, 'snapshot', connectionId, generation] as const,
 }
 
+export type ReplicationQueryData = {
+  snapshot: ReplicationSnapshot
+  lagTrend: LagTrendView | null
+}
+
 const EMPTY_SNAPSHOT: ReplicationSnapshot = {
   topology: null,
   oplog: null,
@@ -18,6 +32,9 @@ const EMPTY_SNAPSHOT: ReplicationSnapshot = {
     oplog: null,
   },
 }
+
+/** Session-only lag samples keyed by live-connection generation. */
+const lagHistoryByGeneration = new Map<number, LagHistoryState>()
 
 export function useReplicationSnapshot(enabled: boolean) {
   const connectionId = useLiveConnection((s) => s.connectionId)
@@ -34,7 +51,7 @@ export function useReplicationSnapshot(enabled: boolean) {
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
     staleTime: 0,
-    queryFn: async function fetchReplicationQuery(): Promise<ReplicationSnapshot> {
+    queryFn: async function fetchReplicationQuery(): Promise<ReplicationQueryData> {
       const snapshotBefore = liveConnectionManager.getSnapshot()
       const generationAtStart = snapshotBefore.generation
       const client = liveConnectionManager.getActiveClient()
@@ -50,10 +67,24 @@ export function useReplicationSnapshot(enabled: boolean) {
         snapshotAfter.status !== 'connected' ||
         liveConnectionManager.getActiveClient() == null
       ) {
-        return EMPTY_SNAPSHOT
+        return { snapshot: EMPTY_SNAPSHOT, lagTrend: null }
       }
 
-      return snapshot
+      const focused = pickLagTrendMember(snapshot.topology?.members ?? [])
+      let lagTrend: LagTrendView | null = null
+      if (focused != null) {
+        const previous = lagHistoryByGeneration.get(generationAtStart) ?? emptyLagHistory()
+        const next = appendLagSample(previous, focused)
+        lagHistoryByGeneration.set(generationAtStart, next)
+        for (const key of lagHistoryByGeneration.keys()) {
+          if (key !== generationAtStart) {
+            lagHistoryByGeneration.delete(key)
+          }
+        }
+        lagTrend = buildLagTrendView(next)
+      }
+
+      return { snapshot, lagTrend }
     },
   })
 }

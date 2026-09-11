@@ -1,114 +1,261 @@
-import { TextAttributes, type TextChunk, type TextTableContent } from '@opentui/core'
+import { TextAttributes } from '@opentui/core'
 import { useTerminalDimensions } from '@opentui/react'
-import { partialBarString } from '../../../../live-ops'
 import {
   formatBytes,
   formatGrowthRate,
   formatLagSeconds,
-  formatMemberLabel,
-  formatPriorityVotes,
+  formatMemberMeta,
   formatWindowHours,
-  type MemberSeverity,
+  horizontalBarString,
+  verticalBarChartLines,
+  type LagTrendView,
   type OplogWindow,
   type ReplicationPanelError,
-  type ReplicationSnapshot,
   type TopologyMember,
 } from '../../../../replication'
 import { displayText } from '../../../../lib/display-text'
-import {
-  computeTableCapacity,
-  headerCell,
-  padTableRows,
-  severityColor,
-  tableCell,
-  type Severity,
-} from '../../../lib/text-table-content'
+import type { ReplicationQueryData } from '../../../queries/replication'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
-import { DataTextTable } from '../../data-text-table'
 
 type ReplicationDashboardProps = {
-  snapshot: ReplicationSnapshot | undefined
+  data: ReplicationQueryData | undefined
   isPending: boolean
 }
 
 const NARROW_WIDTH = 100
-const OPLOG_BAR_WIDTH = 28
-/** Tab bar, footer, DbSelector, headers, oplog panel, padding. */
-const REPLICATION_CHROME_ROWS = 18
-const REPLICATION_NARROW_CHROME_ROWS = 24
+const OPLOG_BAR_WIDTH = 40
+const LAG_CHART_HEIGHT = 6
+const RIGHT_PANEL_WIDTH = 34
 
-export function ReplicationDashboard({ snapshot, isPending }: ReplicationDashboardProps) {
+export function ReplicationDashboard({ data, isPending }: ReplicationDashboardProps) {
   const theme = useTheme((s) => s.theme)
   const dimensions = useTerminalDimensions()
   const narrow = dimensions.width < NARROW_WIDTH
-  const chromeRows = narrow ? REPLICATION_NARROW_CHROME_ROWS : REPLICATION_CHROME_ROWS
-  const rowCapacity = computeTableCapacity(chromeRows, dimensions.height)
 
+  const snapshot = data?.snapshot
+  const lagTrend = data?.lagTrend ?? null
   const topology = snapshot?.topology ?? null
   const oplog = snapshot?.oplog ?? null
   const errors = snapshot?.errors ?? { topology: null, oplog: null }
   const members = topology?.members ?? []
-  const setLabel = topology?.setName != null ? topology.setName : 'replica set'
+  const setLabel = topology?.setName != null ? `replica set ${topology.setName}` : 'replica set'
 
-  const tableContent = buildTopologyTableContent(members, theme, rowCapacity)
+  const mainPanel = (
+    <TopologyOplogPanel
+      setLabel={setLabel}
+      memberCount={members.length}
+      members={members}
+      topologyError={errors.topology}
+      oplog={oplog}
+      oplogError={errors.oplog}
+      isPending={isPending && snapshot == null}
+    />
+  )
 
-  const topologyPanel = (
-    <box flexGrow={1} flexShrink={1} flexDirection="column" gap={0}>
-      <box flexDirection="row" justifyContent="space-between" flexShrink={0} paddingBottom={0}>
-        <text
-          content={displayText(`${setLabel} — topology`)}
-          fg={theme.text}
-          attributes={TextAttributes.BOLD}
-        />
-        <text
-          content={displayText(isPending && snapshot == null ? 'refresh: …' : 'refresh: 5s')}
-          fg={theme.textMuted}
-        />
+  const lagPanel = <LagTrendPanel lagTrend={lagTrend} isPending={isPending && snapshot == null} />
+
+  if (narrow) {
+    return (
+      <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1} gap={1}>
+        {mainPanel}
+        {lagPanel}
       </box>
-      {errors.topology != null ? (
-        <text content={displayText(errors.topology.message)} fg={theme.error} />
-      ) : null}
-      <DataTextTable content={tableContent} theme={theme} />
-      {errors.topology == null && members.length === 0 && !isPending ? (
-        <text content="no replica set members" fg={theme.textMuted} />
-      ) : null}
-    </box>
-  )
-
-  const oplogPanel = (
-    <OplogWindowPanel oplog={oplog} error={errors.oplog} isPending={isPending && snapshot == null} />
-  )
+    )
+  }
 
   return (
-    <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1} gap={1}>
-      {narrow ? (
-        <>
-          {topologyPanel}
-          {oplogPanel}
-        </>
-      ) : (
-        <box flexGrow={1} flexShrink={1} flexDirection="row" gap={1}>
-          <box flexGrow={1} flexShrink={1} flexDirection="column">
-            {topologyPanel}
-          </box>
-          <box width={36} flexShrink={0} flexDirection="column">
-            {oplogPanel}
-          </box>
-        </box>
-      )}
+    <box flexGrow={1} flexShrink={1} flexDirection="row" paddingLeft={1} paddingRight={1} gap={1}>
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
+        {mainPanel}
+      </box>
+      <box width={RIGHT_PANEL_WIDTH} flexShrink={0} flexDirection="column">
+        {lagPanel}
+      </box>
     </box>
   )
 }
 
-type OplogWindowPanelProps = {
+type TopologyOplogPanelProps = {
+  setLabel: string
+  memberCount: number
+  members: TopologyMember[]
+  topologyError: ReplicationPanelError | null
+  oplog: OplogWindow | null
+  oplogError: ReplicationPanelError | null
+  isPending: boolean
+}
+
+function TopologyOplogPanel({
+  setLabel,
+  memberCount,
+  members,
+  topologyError,
+  oplog,
+  oplogError,
+  isPending,
+}: TopologyOplogPanelProps) {
+  const theme = useTheme((s) => s.theme)
+
+  return (
+    <box
+      flexGrow={1}
+      flexShrink={1}
+      flexDirection="column"
+      gap={1}
+      paddingLeft={1}
+      paddingRight={1}
+      paddingTop={0}
+      paddingBottom={1}
+      border
+      borderStyle="single"
+      borderColor={theme.border}
+      backgroundColor={theme.backgroundPanel}
+      title={` ${setLabel} — topology `}
+      titleColor={theme.textMuted}
+      titleAlignment="left"
+    >
+      <box flexDirection="row" justifyContent="flex-end" flexShrink={0}>
+        <text
+          content={displayText(memberCount === 1 ? '1 member' : `${memberCount} members`)}
+          fg={theme.textMuted}
+        />
+      </box>
+
+      {topologyError != null ? (
+        <text content={displayText(topologyError.message)} fg={theme.error} />
+      ) : isPending ? (
+        <text content="loading…" fg={theme.textMuted} />
+      ) : members.length === 0 ? (
+        <text content="no replica set members" fg={theme.textMuted} />
+      ) : (
+        <box flexDirection="column" gap={0} flexShrink={0}>
+          {members.map(function renderMember(member) {
+            return <MemberRow key={member.id} member={member} />
+          })}
+        </box>
+      )}
+
+      <OplogSection oplog={oplog} error={oplogError} isPending={isPending} />
+    </box>
+  )
+}
+
+type MemberRowProps = {
+  member: TopologyMember
+}
+
+function MemberRow({ member }: MemberRowProps) {
+  const theme = useTheme((s) => s.theme)
+  const dotColor = memberDotColor(member, theme)
+  const stateColor = member.stateStr.toUpperCase() === 'PRIMARY' ? theme.success : theme.text
+  const lagLabel =
+    member.stateStr.toUpperCase() === 'PRIMARY' || member.lagSeconds == null
+      ? '—'
+      : formatLagSeconds(member.lagSeconds)
+
+  return (
+    <box flexDirection="row" gap={1} flexShrink={0} height={1}>
+      <text content="●" fg={dotColor} wrapMode="none" flexShrink={0} />
+      <text
+        content={displayText(member.stateStr.padEnd(10, ' '))}
+        fg={stateColor}
+        attributes={TextAttributes.BOLD}
+        wrapMode="none"
+        flexShrink={0}
+      />
+      <text
+        content={displayText(member.host)}
+        fg={theme.text}
+        wrapMode="none"
+        flexShrink={1}
+        flexGrow={1}
+      />
+      <text
+        content={displayText(formatMemberMeta(member.priority, member.votes))}
+        fg={theme.textMuted}
+        wrapMode="none"
+        flexShrink={0}
+      />
+      <text
+        content={displayText(lagLabel.padStart(6, ' '))}
+        fg={member.severity === 'warning' ? theme.warning : theme.textMuted}
+        wrapMode="none"
+        flexShrink={0}
+      />
+    </box>
+  )
+}
+
+type OplogSectionProps = {
   oplog: OplogWindow | null
   error: ReplicationPanelError | null
   isPending: boolean
 }
 
-function OplogWindowPanel({ oplog, error, isPending }: OplogWindowPanelProps) {
+function OplogSection({ oplog, error, isPending }: OplogSectionProps) {
   const theme = useTheme((s) => s.theme)
+  const dimensions = useTerminalDimensions()
+  const barWidth = Math.min(OPLOG_BAR_WIDTH, Math.max(16, dimensions.width - 50))
+
+  return (
+    <box flexDirection="column" gap={0} flexShrink={0} paddingTop={1}>
+      <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
+        <text content="oplog window" fg={theme.textMuted} />
+        <text
+          content={displayText(
+            oplog?.windowHours != null ? `${formatWindowHours(oplog.windowHours)} remaining` : '—',
+          )}
+          fg={theme.text}
+        />
+      </box>
+
+      {error != null ? (
+        <text content={displayText(error.message)} fg={theme.error} />
+      ) : isPending ? (
+        <text content="loading…" fg={theme.textMuted} />
+      ) : oplog == null ? (
+        <text content="unavailable" fg={theme.textMuted} />
+      ) : (
+        <>
+          <text
+            content={horizontalBarString(oplog.fillPercent, barWidth)}
+            fg={oplog.fillsOverMax ? theme.warning : theme.info}
+            wrapMode="none"
+          />
+          <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
+            <text
+              content={displayText(
+                `oplog size: ${formatBytes(oplog.usedBytes)}${
+                  oplog.maxBytes > 0 ? ` / ${formatBytes(oplog.maxBytes)}` : ''
+                }`,
+              )}
+              fg={theme.textMuted}
+            />
+            <text
+              content={displayText(`growth rate: ${formatGrowthRate(oplog.growthBytesPerHour)}`)}
+              fg={theme.textMuted}
+            />
+          </box>
+        </>
+      )}
+    </box>
+  )
+}
+
+type LagTrendPanelProps = {
+  lagTrend: LagTrendView | null
+  isPending: boolean
+}
+
+function LagTrendPanel({ lagTrend, isPending }: LagTrendPanelProps) {
+  const theme = useTheme((s) => s.theme)
+  const titleMember =
+    lagTrend != null ? shortHost(lagTrend.memberName) : '—'
+  const chartLines =
+    lagTrend != null && !lagTrend.collecting
+      ? verticalBarChartLines(lagTrend.bars, LAG_CHART_HEIGHT)
+      : null
 
   return (
     <box
@@ -123,108 +270,70 @@ function OplogWindowPanel({ oplog, error, isPending }: OplogWindowPanelProps) {
       borderStyle="single"
       borderColor={theme.border}
       backgroundColor={theme.backgroundPanel}
-      title=" oplog window "
+      title={` lag trend — ${titleMember} `}
       titleColor={theme.textMuted}
       titleAlignment="left"
     >
-      {error != null ? (
-        <text content={displayText(error.message)} fg={theme.error} />
-      ) : isPending ? (
+      <box flexDirection="row" justifyContent="flex-end" flexShrink={0}>
+        <text content="10m" fg={theme.textMuted} />
+      </box>
+
+      {isPending ? (
         <text content="loading…" fg={theme.textMuted} />
-      ) : oplog == null ? (
-        <text content="unavailable" fg={theme.textMuted} />
+      ) : lagTrend == null ? (
+        <text content="no secondary lag to chart" fg={theme.textMuted} />
+      ) : lagTrend.collecting || chartLines == null ? (
+        <text content="collecting samples…" fg={theme.textMuted} />
       ) : (
-        <>
-          <box flexDirection="row" gap={1} flexShrink={0}>
-            <text
-              content={partialBarString(oplog.fillPercent, OPLOG_BAR_WIDTH)}
-              fg={oplog.fillsOverMax ? theme.warning : theme.success}
-              wrapMode="none"
-            />
-          </box>
-          <StatLine
-            label="fill"
-            value={
-              oplog.fillsOverMax
-                ? `${oplog.fillPercent.toFixed(0)}% (over max)`
-                : `${oplog.fillPercent.toFixed(0)}%`
-            }
-          />
-          <StatLine label="window" value={formatWindowHours(oplog.windowHours)} />
-          <StatLine
-            label="size"
-            value={`${formatBytes(oplog.usedBytes)} / ${formatBytes(oplog.maxBytes)}`}
-          />
-          <StatLine label="growth" value={formatGrowthRate(oplog.growthBytesPerHour)} />
-        </>
+        <box flexDirection="column" gap={0} flexShrink={0} height={LAG_CHART_HEIGHT}>
+          {chartLines.map(function renderChartLine(line, index) {
+            return (
+              <text
+                key={`lag-bar-${index}`}
+                content={line}
+                fg={theme.warning}
+                wrapMode="none"
+                height={1}
+              />
+            )
+          })}
+        </box>
       )}
+
+      <box flexDirection="row" justifyContent="space-between" flexShrink={0} paddingTop={1}>
+        <text
+          content={displayText(
+            `peak lag  ${lagTrend != null ? formatLagSeconds(lagTrend.peakLagSeconds) : '—'}`,
+          )}
+          fg={theme.textMuted}
+        />
+        <text
+          content={displayText(
+            `current  ${lagTrend != null ? formatLagSeconds(lagTrend.currentLagSeconds) : '—'}`,
+          )}
+          fg={theme.text}
+        />
+      </box>
     </box>
   )
 }
 
-type StatLineProps = {
-  label: string
-  value: string
-}
-
-function StatLine({ label, value }: StatLineProps) {
-  const theme = useTheme((s) => s.theme)
-  return (
-    <box flexDirection="row" gap={1} flexShrink={0}>
-      <text content={displayText(label.padEnd(7, ' '))} fg={theme.textMuted} wrapMode="none" />
-      <text content={displayText(value)} fg={theme.text} wrapMode="none" />
-    </box>
-  )
-}
-
-function buildTopologyTableContent(
-  members: TopologyMember[],
-  theme: Theme,
-  rowCapacity: number,
-): TextTableContent {
-  const header: TextChunk[][] = [
-    headerCell('', theme),
-    headerCell('MEMBER', theme),
-    headerCell('STATE', theme),
-    headerCell('HOST', theme),
-    headerCell('PRI/V', theme),
-    headerCell('LAG', theme),
-  ]
-
-  const rows: TextTableContent = [header]
-  for (const member of members) {
-    rows.push(buildTopologyRow(member, theme))
+function memberDotColor(member: TopologyMember, theme: Theme) {
+  if (member.severity === 'error') {
+    return theme.error
   }
-  return padTableRows(rows, rowCapacity)
-}
-
-function buildTopologyRow(member: TopologyMember, theme: Theme): TextChunk[][] {
-  const severity = memberSeverityToTableSeverity(member.severity)
-  const dotColor = severityColor(theme, severity)
-  const stateColor =
-    member.severity === 'success'
-      ? theme.success
-      : member.severity === 'warning'
-        ? theme.warning
-        : theme.error
-
-  return [
-    tableCell('●', dotColor),
-    tableCell(formatMemberLabel(member.name), theme.text),
-    tableCell(member.stateStr, stateColor),
-    tableCell(member.host, theme.textMuted),
-    tableCell(formatPriorityVotes(member.priority, member.votes), theme.textMuted),
-    tableCell(formatLagSeconds(member.lagSeconds), theme.text),
-  ]
-}
-
-function memberSeverityToTableSeverity(severity: MemberSeverity): Severity {
-  switch (severity) {
-    case 'success':
-      return 'success'
-    case 'warning':
-      return 'warning'
-    case 'error':
-      return 'error'
+  if (member.severity === 'warning') {
+    return theme.warning
   }
+  if (member.stateStr.toUpperCase() === 'PRIMARY') {
+    return theme.success
+  }
+  // Healthy secondary — mockup uses info/blue, not the same green as PRIMARY.
+  return theme.info
+}
+
+function shortHost(hostPort: string): string {
+  const host = hostPort.includes(':') ? hostPort.slice(0, hostPort.lastIndexOf(':')) : hostPort
+  const firstLabel = host.split('.')[0]
+  return firstLabel != null && firstLabel !== '' ? firstLabel : host
 }

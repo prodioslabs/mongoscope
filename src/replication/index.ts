@@ -8,9 +8,25 @@ export {
   formatGrowthRate,
   formatLagSeconds,
   formatMemberLabel,
+  formatMemberMeta,
   formatPriorityVotes,
   formatWindowHours,
+  horizontalBarString,
+  verticalBarChartLines,
 } from './format'
+export {
+  appendLagSample,
+  buildLagTrendView,
+  emptyLagHistory,
+  LAG_CHART_BAR_COUNT,
+  LAG_HISTORY_WINDOW_MS,
+  pickLagTrendMember,
+  poolLagSamples,
+  pruneLagHistory,
+  type LagHistoryState,
+  type LagSample,
+  type LagTrendView,
+} from './lag-history'
 export {
   LAG_WARNING_SECONDS,
   memberStatusSeverity,

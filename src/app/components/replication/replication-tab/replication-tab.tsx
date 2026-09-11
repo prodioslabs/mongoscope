@@ -17,7 +17,7 @@ export function ReplicationTab() {
   const profiles = profilesData ?? []
 
   const dashboardEnabled = liveStatus === 'connected'
-  const { data: snapshot, isPending } = useReplicationSnapshot(dashboardEnabled)
+  const { data, isPending } = useReplicationSnapshot(dashboardEnabled)
 
   let body: ReactNode
   if (profiles.length === 0) {
@@ -50,7 +50,7 @@ export function ReplicationTab() {
       </box>
     )
   } else if (liveStatus === 'connected') {
-    body = <ReplicationDashboard snapshot={snapshot} isPending={isPending} />
+    body = <ReplicationDashboard data={data} isPending={isPending} />
   } else {
     body = null
   }
