@@ -6,6 +6,7 @@ import { useLiveConnection } from '../../../stores/live-connection'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { DbSelector } from '../../db-selector'
+import { useFooterStatus } from '../../footer-keybindings'
 import { ReplicationDashboard } from '../replication-dashboard'
 
 export function ReplicationTab() {
@@ -18,6 +19,9 @@ export function ReplicationTab() {
 
   const dashboardEnabled = liveStatus === 'connected'
   const { data, isPending } = useReplicationSnapshot(dashboardEnabled)
+
+  // `c` / connections footer comes from DbSelector; only status is tab-owned.
+  useFooterStatus(dashboardEnabled ? 'replication · refresh 5s' : null)
 
   let body: ReactNode
   if (profiles.length === 0) {
