@@ -1,4 +1,5 @@
 import { formatIndexKey } from './format'
+import { indexBuildKey, type IndexBuildProgressByKey } from './parse-index-builds'
 import type { IndexOptionFlag, IndexRow } from './types'
 
 export const SYSTEM_DATABASE_NAMES = new Set(['admin', 'local', 'config'])
@@ -109,6 +110,7 @@ export type IndexUsageByName = Map<
   {
     ops: number | null
     since: Date | null
+    building: boolean
   }
 >
 
@@ -120,6 +122,7 @@ export function parseIndexStatsDocs(docs: unknown[]): IndexUsageByName {
     }
     const record = doc as {
       name?: unknown
+      building?: unknown
       accesses?: { ops?: unknown; since?: unknown }
     }
     if (typeof record.name !== 'string' || record.name.trim() === '') {
@@ -130,6 +133,7 @@ export function parseIndexStatsDocs(docs: unknown[]): IndexUsageByName {
     byName.set(record.name, {
       ops: typeof opsRaw === 'number' && Number.isFinite(opsRaw) ? opsRaw : null,
       since: toDate(sinceRaw),
+      building: record.building === true,
     })
   }
   return byName
@@ -162,8 +166,17 @@ export function normalizeIndexSpecs(
   specs: unknown[],
   indexSizes: Record<string, number>,
   usageByName: IndexUsageByName | null,
+  options?: {
+    database?: string
+    collection?: string
+    buildsByKey?: IndexBuildProgressByKey | null
+  },
 ): IndexRow[] {
+  const database = options?.database ?? null
+  const collection = options?.collection ?? null
+  const buildsByKey = options?.buildsByKey ?? null
   const rows: IndexRow[] = []
+
   for (const spec of specs) {
     if (spec == null || typeof spec !== 'object') {
       continue
@@ -174,6 +187,11 @@ export function normalizeIndexSpecs(
       continue
     }
     const usage = usageByName?.get(name) ?? null
+    const build =
+      database != null && collection != null && buildsByKey != null
+        ? (buildsByKey.get(indexBuildKey(database, collection, name)) ?? null)
+        : null
+
     rows.push({
       name,
       keyLabel: formatIndexKey(record.key),
@@ -181,6 +199,9 @@ export function normalizeIndexSpecs(
       sizeBytes: indexSizes[name] ?? null,
       ops: usage?.ops ?? null,
       since: usage?.since ?? null,
+      building: build != null || usage?.building === true,
+      buildPercent: build?.percent ?? null,
+      buildMessage: build?.message ?? null,
     })
   }
   return rows

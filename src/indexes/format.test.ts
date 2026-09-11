@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatBytes,
+  formatBuildProgress,
   formatIndexFlags,
   formatIndexKey,
   formatOps,
@@ -70,5 +71,13 @@ describe('truncateIndexCell', () => {
   it('truncates with an ellipsis', () => {
     expect(truncateIndexCell('abcdefghij', 6)).toBe('abcde…')
     expect(truncateIndexCell('short', 10)).toBe('short')
+  })
+})
+
+describe('formatBuildProgress', () => {
+  it('formats percent, building, and idle', () => {
+    expect(formatBuildProgress({ building: false, buildPercent: null })).toBe('—')
+    expect(formatBuildProgress({ building: true, buildPercent: 42 })).toBe('42%')
+    expect(formatBuildProgress({ building: true, buildPercent: null })).toBe('building')
   })
 })

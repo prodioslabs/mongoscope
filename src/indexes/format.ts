@@ -53,6 +53,23 @@ export function formatIndexFlags(flags: IndexOptionFlag[]): string {
   return flags.join(',')
 }
 
+export function formatBuildProgress(input: {
+  building: boolean
+  buildPercent: number | null
+}): string {
+  if (!input.building) {
+    return '—'
+  }
+  if (input.buildPercent != null && Number.isFinite(input.buildPercent)) {
+    const rounded = Math.round(input.buildPercent * 10) / 10
+    if (Number.isInteger(rounded)) {
+      return `${rounded}%`
+    }
+    return `${rounded.toFixed(1)}%`
+  }
+  return 'building'
+}
+
 export function truncateIndexCell(value: string, maxLen: number): string {
   if (value.length <= maxLen) {
     return value

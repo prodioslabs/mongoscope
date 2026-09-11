@@ -21,6 +21,9 @@ export type IndexRow = {
   sizeBytes: number | null
   ops: number | null
   since: Date | null
+  building: boolean
+  buildPercent: number | null
+  buildMessage: string | null
 }
 
 export type CollectionIndexes = {
@@ -40,5 +43,6 @@ export type IndexesSnapshot = {
   errors: {
     databases: IndexesPanelError | null
     collections: IndexesPanelError | null
+    builds: IndexesPanelError | null
   }
 }

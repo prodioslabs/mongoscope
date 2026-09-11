@@ -67,8 +67,13 @@ describe('parseIndexStatsDocs', () => {
       { name: 'a_1', accesses: { ops: 0, since } },
       { name: '' },
     ])
-    expect(map.get('_id_')).toEqual({ ops: 10, since })
-    expect(map.get('a_1')).toEqual({ ops: 0, since })
+    expect(map.get('_id_')).toEqual({ ops: 10, since, building: false })
+    expect(map.get('a_1')).toEqual({ ops: 0, since, building: false })
+  })
+
+  it('records building from $indexStats', () => {
+    const map = parseIndexStatsDocs([{ name: 'a_1', building: true, accesses: { ops: 0 } }])
+    expect(map.get('a_1')?.building).toBe(true)
   })
 })
 
@@ -110,6 +115,9 @@ describe('normalizeIndexSpecs', () => {
         sizeBytes: 100,
         ops: null,
         since: null,
+        building: false,
+        buildPercent: null,
+        buildMessage: null,
       },
       {
         name: 'a_1',
@@ -118,13 +126,56 @@ describe('normalizeIndexSpecs', () => {
         sizeBytes: 200,
         ops: 42,
         since: new Date('2024-02-01T00:00:00.000Z'),
+        building: false,
+        buildPercent: null,
+        buildMessage: null,
       },
     ])
+  })
+
+  it('merges $currentOp build progress onto matching rows', () => {
+    const builds = new Map([
+      [
+        'shop.orders::a_1',
+        {
+          database: 'shop',
+          collection: 'orders',
+          indexName: 'a_1',
+          percent: 42,
+          message: 'Index Build: 42%',
+        },
+      ],
+    ])
+    const rows = normalizeIndexSpecs(
+      [{ name: 'a_1', key: { a: 1 } }],
+      { a_1: 200 },
+      null,
+      { database: 'shop', collection: 'orders', buildsByKey: builds },
+    )
+    expect(rows[0]).toMatchObject({
+      building: true,
+      buildPercent: 42,
+      buildMessage: 'Index Build: 42%',
+    })
+  })
+
+  it('marks building from $indexStats when currentOp has no match', () => {
+    const usage = parseIndexStatsDocs([{ name: 'a_1', building: true }])
+    const rows = normalizeIndexSpecs([{ name: 'a_1', key: { a: 1 } }], {}, usage, {
+      database: 'shop',
+      collection: 'orders',
+      buildsByKey: new Map(),
+    })
+    expect(rows[0]).toMatchObject({
+      building: true,
+      buildPercent: null,
+    })
   })
 
   it('keeps sizes when usage map is null', () => {
     const rows = normalizeIndexSpecs([{ name: '_id_', key: { _id: 1 } }], { _id_: 50 }, null)
     expect(rows[0]?.ops).toBeNull()
     expect(rows[0]?.sizeBytes).toBe(50)
+    expect(rows[0]?.building).toBe(false)
   })
 })

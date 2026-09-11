@@ -8,6 +8,10 @@ import {
   parseListDatabasesResult,
 } from './normalize'
 import { panelErrorFromUnknown } from './panel-error'
+import {
+  parseIndexBuildOps,
+  type IndexBuildProgressByKey,
+} from './parse-index-builds'
 import type { CollectionIndexes, IndexesSnapshot } from './types'
 
 export type IndexesClient = Pick<MongoClientLike, 'db'>
@@ -20,19 +24,39 @@ const COLLECTION_FETCH_CONCURRENCY = 5
 
 /**
  * Fetch database list (always) and, when `selectedDatabase` is set, collection
- * index inventory with sizes + usage. Per-collection failures are isolated.
+ * index inventory with sizes + usage + in-flight build progress.
+ * Per-collection failures are isolated; `$currentOp` builds are fetched once.
  */
 export async function fetchIndexesSnapshot(
   client: IndexesClient,
   selectedDatabase: string | null,
 ): Promise<FetchIndexesSnapshotResult> {
-  const databasesResult = await settle(async function loadDatabases() {
-    return client.db('admin').admin().command({ listDatabases: 1, nameOnly: true })
-  })
+  const [databasesResult, buildsResult] = await Promise.all([
+    settle(async function loadDatabases() {
+      return client.db('admin').admin().command({ listDatabases: 1, nameOnly: true })
+    }),
+    settle(async function loadIndexBuilds() {
+      return client
+        .db('admin')
+        .aggregate([
+          { $currentOp: { idleConnections: true, allUsers: true } },
+          {
+            $match: {
+              $or: [
+                { op: 'command', 'command.createIndexes': { $exists: true } },
+                { op: 'none', msg: /^Index Build/ },
+              ],
+            },
+          },
+        ])
+        .toArray()
+    }),
+  ])
 
   const errors: IndexesSnapshot['errors'] = {
     databases: null,
     collections: null,
+    builds: null,
   }
 
   let databases: string[] = []
@@ -40,6 +64,13 @@ export async function fetchIndexesSnapshot(
     databases = filterPickerDatabases(parseListDatabasesResult(databasesResult.value))
   } else {
     errors.databases = panelErrorFromUnknown(databasesResult.reason, 'failed to list databases')
+  }
+
+  let buildsByKey: IndexBuildProgressByKey | null = null
+  if (buildsResult.status === 'fulfilled') {
+    buildsByKey = parseIndexBuildOps(buildsResult.value)
+  } else {
+    errors.builds = toBuildsPanelError(buildsResult.reason)
   }
 
   if (selectedDatabase == null || selectedDatabase.trim() === '') {
@@ -77,7 +108,7 @@ export async function fetchIndexesSnapshot(
     collectionNames,
     COLLECTION_FETCH_CONCURRENCY,
     async function loadCollectionIndexes(name) {
-      return fetchCollectionIndexes(client, selectedDatabase, name)
+      return fetchCollectionIndexes(client, selectedDatabase, name, buildsByKey)
     },
   )
 
@@ -95,6 +126,7 @@ async function fetchCollectionIndexes(
   client: IndexesClient,
   databaseName: string,
   collectionName: string,
+  buildsByKey: IndexBuildProgressByKey | null,
 ): Promise<CollectionIndexes> {
   const db = client.db(databaseName)
   const collection: CollectionLike = db.collection(collectionName)
@@ -127,10 +159,25 @@ async function fetchCollectionIndexes(
   return {
     name: collectionName,
     totalIndexSizeBytes,
-    indexes: normalizeIndexSpecs(indexesResult.value, indexSizes, usageByName),
+    indexes: normalizeIndexSpecs(indexesResult.value, indexSizes, usageByName, {
+      database: databaseName,
+      collection: collectionName,
+      buildsByKey,
+    }),
     error: null,
     usageUnavailable,
   }
+}
+
+function toBuildsPanelError(reason: unknown): IndexesSnapshot['errors']['builds'] {
+  const mapped = panelErrorFromUnknown(reason, 'failed to load index builds')
+  if (mapped.kind === 'permission') {
+    return {
+      kind: 'permission',
+      message: 'insufficient permissions (needs inprog / clusterMonitor for build progress)',
+    }
+  }
+  return mapped
 }
 
 async function settle<T>(fn: () => Promise<T>): Promise<PromiseSettledResult<T>> {

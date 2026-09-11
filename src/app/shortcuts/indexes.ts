@@ -73,6 +73,11 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
     helpLabel: '$indexStats ops/since are from the connected node only',
     bindings: [],
   },
+  {
+    keys: 'build',
+    helpLabel: 'BUILD % comes from $currentOp on the connected node (idleConnections included)',
+    bindings: [],
+  },
 ]
 
 export const INDEXES_FOOTER: FooterChip[] = [

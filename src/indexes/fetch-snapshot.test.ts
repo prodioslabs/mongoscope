@@ -12,6 +12,7 @@ function createFakeClient(handlers: {
   indexes?: (dbName: string, collectionName: string) => Promise<unknown[]>
   collStats?: (dbName: string, collectionName: string) => Promise<unknown>
   indexStats?: (dbName: string, collectionName: string) => Promise<unknown[]>
+  currentOpBuilds?: () => Promise<unknown[]>
 }): MongoClientLike {
   return {
     async connect() {},
@@ -47,9 +48,15 @@ function createFakeClient(handlers: {
           }
           return { ok: 1 }
         },
-        aggregate() {
+        aggregate(pipeline) {
           return {
             async toArray() {
+              if (dbName === 'admin' && pipeline[0] && '$currentOp' in pipeline[0]) {
+                if (handlers.currentOpBuilds == null) {
+                  return []
+                }
+                return handlers.currentOpBuilds()
+              }
               return []
             },
           }
@@ -115,6 +122,7 @@ describe('fetchIndexesSnapshot', () => {
     expect(snapshot.selectedDatabase).toBe('shop')
     expect(snapshot.errors.databases).toBeNull()
     expect(snapshot.errors.collections).toBeNull()
+    expect(snapshot.errors.builds).toBeNull()
     expect(snapshot.collections).toHaveLength(1)
     expect(snapshot.collections[0]).toMatchObject({
       name: 'orders',
@@ -130,6 +138,9 @@ describe('fetchIndexesSnapshot', () => {
         sizeBytes: 100,
         ops: null,
         since: null,
+        building: false,
+        buildPercent: null,
+        buildMessage: null,
       },
       {
         name: 'status_1',
@@ -138,8 +149,44 @@ describe('fetchIndexesSnapshot', () => {
         sizeBytes: 200,
         ops: 9,
         since: new Date('2024-03-01T00:00:00.000Z'),
+        building: false,
+        buildPercent: null,
+        buildMessage: null,
       },
     ])
+  })
+
+  it('joins $currentOp build progress onto matching indexes', async () => {
+    const client = createFakeClient({
+      listDatabases: async () => ({ databases: [{ name: 'shop' }] }),
+      listCollections: async () => ({ cursor: { firstBatch: [{ name: 'orders' }] } }),
+      indexes: async () => [
+        { name: '_id_', key: { _id: 1 } },
+        { name: 'status_1', key: { status: 1 } },
+      ],
+      collStats: async () => ({ indexSizes: { _id_: 1, status_1: 2 }, totalIndexSize: 3 }),
+      indexStats: async () => [],
+      currentOpBuilds: async () => [
+        {
+          op: 'command',
+          ns: 'shop.orders',
+          msg: 'Index Build: 55%',
+          progress: { done: 55, total: 100 },
+          command: {
+            createIndexes: 'orders',
+            indexes: [{ name: 'status_1', key: { status: 1 } }],
+          },
+        },
+      ],
+    })
+
+    const { snapshot } = await fetchIndexesSnapshot(client, 'shop')
+    const status = snapshot.collections[0]?.indexes.find((row) => row.name === 'status_1')
+    expect(status).toMatchObject({
+      building: true,
+      buildPercent: 55,
+      buildMessage: 'Index Build: 55%',
+    })
   })
 
   it('returns databases only when no database is selected', async () => {
@@ -184,5 +231,22 @@ describe('fetchIndexesSnapshot', () => {
       message: 'insufficient permissions',
     })
     expect(snapshot.collections).toEqual([])
+  })
+
+  it('surfaces build-progress permission errors without blanking inventory', async () => {
+    const client = createFakeClient({
+      listDatabases: async () => ({ databases: [{ name: 'shop' }] }),
+      listCollections: async () => ({ cursor: { firstBatch: [{ name: 'orders' }] } }),
+      indexes: async () => [{ name: '_id_', key: { _id: 1 } }],
+      collStats: async () => ({ indexSizes: { _id_: 10 }, totalIndexSize: 10 }),
+      indexStats: async () => [],
+      currentOpBuilds: async () => {
+        throw Object.assign(new Error('not authorized'), { code: 13 })
+      },
+    })
+
+    const { snapshot } = await fetchIndexesSnapshot(client, 'shop')
+    expect(snapshot.errors.builds?.kind).toBe('permission')
+    expect(snapshot.collections[0]?.indexes).toHaveLength(1)
   })
 })

@@ -4,6 +4,7 @@ import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState } from 'react'
 import {
   formatBytes,
+  formatBuildProgress,
   formatIndexFlags,
   formatOps,
   formatSince,
@@ -40,7 +41,11 @@ type SortDirection = 'asc' | 'desc'
 const COLLECTION_LIST_WIDTH = 36
 const EMPTY_DATABASES: string[] = []
 const EMPTY_COLLECTIONS: CollectionIndexes[] = []
-const EMPTY_ERRORS: IndexesSnapshot['errors'] = { databases: null, collections: null }
+const EMPTY_ERRORS: IndexesSnapshot['errors'] = {
+  databases: null,
+  collections: null,
+  builds: null,
+}
 
 /** Tab bar, footer, DbSelector, title, DB chips, notes, table chrome. */
 const INDEXES_CHROME_ROWS = 16
@@ -473,6 +478,9 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
 
           <box flexGrow={1} flexShrink={1} flexDirection="column" gap={0}>
             <IndexTableHeader collection={focusedCollection} />
+            {errors.builds != null ? (
+              <text content={displayText(errors.builds.message)} fg={theme.warning} />
+            ) : null}
             {focusedCollection?.error != null ? (
               <text content={displayText(focusedCollection.error.message)} fg={theme.error} />
             ) : null}
@@ -635,6 +643,7 @@ function buildIndexesTableContent(
     headerCell('INDEX', theme),
     headerCell('KEYS', theme),
     headerCell('OPTS', theme),
+    headerCell('BUILD', theme),
     sortableHeaderCell('SIZE', theme, sortBy === 'size', sortDirection),
     sortableHeaderCell('OPS', theme, sortBy === 'ops', sortDirection),
     headerCell('SINCE', theme),
@@ -656,11 +665,17 @@ function buildIndexTableRow(row: IndexRow, selected: boolean, theme: Theme): Tex
   const nameCell = selected
     ? tableCell(`${nameLabel} ●`, theme.primary)
     : tableCell(nameLabel, theme.text)
+  const buildLabel = formatBuildProgress({
+    building: row.building,
+    buildPercent: row.buildPercent,
+  })
+  const buildColor = row.building ? theme.warning : theme.textMuted
 
   return [
     nameCell,
     tableCell(truncateIndexCell(row.keyLabel, 28), theme.text),
     tableCell(truncateIndexCell(formatIndexFlags(row.flags), 16), theme.textMuted),
+    tableCell(buildLabel, buildColor),
     tableCell(formatBytes(row.sizeBytes), theme.textMuted),
     tableCell(formatOps(row.ops), theme.textMuted),
     tableCell(formatSince(row.since), theme.textMuted),
