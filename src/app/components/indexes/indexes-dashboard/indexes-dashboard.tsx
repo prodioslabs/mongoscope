@@ -1,4 +1,4 @@
-import { type TextChunk, type TextTableContent, TextAttributes } from '@opentui/core'
+import { bold, fg, type TextChunk, type TextTableContent, TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState } from 'react'
@@ -21,10 +21,10 @@ import {
 } from '../../../lib/text-table-content'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { whenNotEditing } from '../../../lib/when-not-editing'
-import { INDEXES_FOOTER } from '../../../shortcuts'
+import { INDEXES_FOOTER, INDEXES_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
-import { selectedForeground, type Theme } from '../../../theme'
+import { type Theme } from '../../../theme'
 import { DataTextTable } from '../../data-text-table'
 import { useFooterKeybindings } from '../../footer-keybindings'
 
@@ -33,7 +33,10 @@ type IndexesDashboardProps = {
   isPending: boolean
 }
 
-const COLLECTION_LIST_WIDTH = 28
+type CollectionSortBy = 'name' | 'indexes'
+type SortDirection = 'asc' | 'desc'
+
+const COLLECTION_LIST_WIDTH = 36
 const EMPTY_DATABASES: string[] = []
 const EMPTY_COLLECTIONS: CollectionIndexes[] = []
 const EMPTY_ERRORS: IndexesSnapshot['errors'] = { databases: null, collections: null }
@@ -53,33 +56,49 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const collections = snapshot?.collections ?? EMPTY_COLLECTIONS
   const errors = snapshot?.errors ?? EMPTY_ERRORS
 
-  const [selectedCollectionIndex, setSelectedCollectionIndex] = useState(0)
+  const [collectionSortBy, setCollectionSortBy] = useState<CollectionSortBy>('name')
+  const [collectionSortDirection, setCollectionSortDirection] = useState<SortDirection>('asc')
+  const [selectedCollectionName, setSelectedCollectionName] = useState<string | null>(null)
+  const [collectionScrollOffset, setCollectionScrollOffset] = useState(0)
   const [selectedIndexName, setSelectedIndexName] = useState<string | null>(null)
-  const [scrollOffset, setScrollOffset] = useState(0)
+  const [indexScrollOffset, setIndexScrollOffset] = useState(0)
 
   const capacity = computeTableCapacity(INDEXES_CHROME_ROWS, terminalHeight)
-  const highlightFg = selectedForeground(theme)
+  const sortedCollections = sortCollections(collections, collectionSortBy, collectionSortDirection)
+
+  const selectedCollectionIndex =
+    selectedCollectionName == null
+      ? -1
+      : sortedCollections.findIndex((collection) => collection.name === selectedCollectionName)
   const focusedCollection: CollectionIndexes | null =
-    collections[selectedCollectionIndex] ?? null
+    selectedCollectionIndex >= 0
+      ? (sortedCollections[selectedCollectionIndex] ?? null)
+      : (sortedCollections[0] ?? null)
   const indexRows = focusedCollection?.indexes ?? []
 
   const databasesRef = useRef(databases)
-  const collectionsRef = useRef(collections)
+  const sortedCollectionsRef = useRef(sortedCollections)
   const indexRowsRef = useRef(indexRows)
   const selectedDatabaseRef = useRef(selectedDatabase)
-  const selectedCollectionIndexRef = useRef(selectedCollectionIndex)
+  const selectedCollectionNameRef = useRef(selectedCollectionName)
   const selectedIndexNameRef = useRef(selectedIndexName)
-  const scrollOffsetRef = useRef(scrollOffset)
+  const collectionScrollOffsetRef = useRef(collectionScrollOffset)
+  const indexScrollOffsetRef = useRef(indexScrollOffset)
   const capacityRef = useRef(capacity)
+  const collectionSortByRef = useRef(collectionSortBy)
+  const collectionSortDirectionRef = useRef(collectionSortDirection)
 
   databasesRef.current = databases
-  collectionsRef.current = collections
+  sortedCollectionsRef.current = sortedCollections
   indexRowsRef.current = indexRows
   selectedDatabaseRef.current = selectedDatabase
-  selectedCollectionIndexRef.current = selectedCollectionIndex
+  selectedCollectionNameRef.current = selectedCollectionName
   selectedIndexNameRef.current = selectedIndexName
-  scrollOffsetRef.current = scrollOffset
+  collectionScrollOffsetRef.current = collectionScrollOffset
+  indexScrollOffsetRef.current = indexScrollOffset
   capacityRef.current = capacity
+  collectionSortByRef.current = collectionSortBy
+  collectionSortDirectionRef.current = collectionSortDirection
 
   useEffect(
     function autoSelectDatabaseWhenNeeded() {
@@ -108,24 +127,42 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   )
 
   useEffect(
-    function clampSelectedCollectionIndex() {
-      const length = collections.length
-      setSelectedCollectionIndex((index) => {
-        if (length === 0) {
-          return 0
+    function reconcileCollectionSelection() {
+      if (collections.length === 0) {
+        setSelectedCollectionName(null)
+        setCollectionScrollOffset(0)
+        return
+      }
+
+      setSelectedCollectionName((current) => {
+        if (current != null && collections.some((collection) => collection.name === current)) {
+          return current
         }
-        const nextIndex = Math.min(index, length - 1)
-        return nextIndex === index ? index : nextIndex
+        const sorted = sortCollections(collections, collectionSortBy, collectionSortDirection)
+        return sorted[0]?.name ?? null
       })
     },
-    [collections.length],
+    [collections, collectionSortBy, collectionSortDirection],
+  )
+
+  useEffect(
+    function clampCollectionScrollOffset() {
+      setCollectionScrollOffset((offset) => {
+        if (sortedCollections.length === 0) {
+          return 0
+        }
+        const maxOffset = Math.max(0, sortedCollections.length - capacity)
+        return Math.min(offset, maxOffset)
+      })
+    },
+    [capacity, sortedCollections.length],
   )
 
   useEffect(
     function reconcileIndexSelection() {
       if (indexRows.length === 0) {
         setSelectedIndexName(null)
-        setScrollOffset(0)
+        setIndexScrollOffset(0)
         return
       }
 
@@ -135,14 +172,14 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         }
         return indexRows[0]?.name ?? null
       })
-      setScrollOffset(0)
+      setIndexScrollOffset(0)
     },
     [focusedCollection?.name, indexRows.length],
   )
 
   useEffect(
-    function clampScrollOffset() {
-      setScrollOffset((offset) => {
+    function clampIndexScrollOffset() {
+      setIndexScrollOffset((offset) => {
         if (indexRows.length === 0) {
           return 0
         }
@@ -166,19 +203,39 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         const currentIndex = current == null ? 0 : Math.max(0, list.indexOf(current))
         const nextIndex = (currentIndex + delta + list.length) % list.length
         setSelectedDatabase(list[nextIndex] ?? null)
-        setSelectedCollectionIndex(0)
+        setSelectedCollectionName(null)
         setSelectedIndexName(null)
-        setScrollOffset(0)
+        setCollectionScrollOffset(0)
+        setIndexScrollOffset(0)
       }
 
       function moveCollection(delta: number) {
-        const length = collectionsRef.current.length
+        const list = sortedCollectionsRef.current
+        const length = list.length
         if (length === 0) {
           return
         }
-        setSelectedCollectionIndex((index) => {
-          return (index + delta + length) % length
-        })
+
+        let prev = list.findIndex((collection) => collection.name === selectedCollectionNameRef.current)
+        if (prev < 0) {
+          prev = delta > 0 ? -1 : length
+        }
+
+        const next = Math.max(0, Math.min(length - 1, prev + delta))
+        const nextCollection = list[next]
+        if (nextCollection == null) {
+          return
+        }
+
+        setSelectedCollectionName(nextCollection.name)
+
+        const cap = capacityRef.current
+        const offset = collectionScrollOffsetRef.current
+        if (next < offset) {
+          setCollectionScrollOffset(next)
+        } else if (next >= offset + cap) {
+          setCollectionScrollOffset(next - cap + 1)
+        }
       }
 
       function moveIndexSelection(delta: number) {
@@ -202,12 +259,25 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         setSelectedIndexName(nextRow.name)
 
         const cap = capacityRef.current
-        const offset = scrollOffsetRef.current
+        const offset = indexScrollOffsetRef.current
         if (next < offset) {
-          setScrollOffset(next)
+          setIndexScrollOffset(next)
         } else if (next >= offset + cap) {
-          setScrollOffset(next - cap + 1)
+          setIndexScrollOffset(next - cap + 1)
         }
+      }
+
+      function applyCollectionSort(next: CollectionSortBy) {
+        if (sortedCollectionsRef.current.length === 0) {
+          return
+        }
+        if (collectionSortByRef.current === next) {
+          setCollectionSortDirection((direction) => (direction === 'desc' ? 'asc' : 'desc'))
+        } else {
+          setCollectionSortBy(next)
+          setCollectionSortDirection(next === 'name' ? 'asc' : 'desc')
+        }
+        setCollectionScrollOffset(0)
       }
 
       return {
@@ -252,34 +322,55 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
               moveIndexSelection(1)
             },
           },
+          {
+            name: 'indexes.sort-collection-name',
+            run() {
+              applyCollectionSort('name')
+            },
+          },
+          {
+            name: 'indexes.sort-collection-indexes',
+            run() {
+              applyCollectionSort('indexes')
+            },
+          },
         ],
-        bindings: [
-          { key: 'left', cmd: 'indexes.prev-database' },
-          { key: 'right', cmd: 'indexes.next-database' },
-          { key: '[', cmd: 'indexes.prev-collection' },
-          { key: ']', cmd: 'indexes.next-collection' },
-          { key: 'up', cmd: 'indexes.move-up' },
-          { key: 'k', cmd: 'indexes.move-up' },
-          { key: 'down', cmd: 'indexes.move-down' },
-          { key: 'j', cmd: 'indexes.move-down' },
-        ],
+        bindings: toBindings(INDEXES_SHORTCUTS),
       }
     },
     [notEditing, setSelectedDatabase],
   )
 
+  const visibleCollections = sortedCollections.slice(
+    collectionScrollOffset,
+    collectionScrollOffset + capacity,
+  )
+  const relativeCollectionSelectedIndex =
+    selectedCollectionIndex >= collectionScrollOffset &&
+    selectedCollectionIndex < collectionScrollOffset + capacity
+      ? selectedCollectionIndex - collectionScrollOffset
+      : -1
+
   const resolvedIndex =
     selectedIndexName == null
       ? -1
       : indexRows.findIndex((row) => row.name === selectedIndexName)
-  const visible = indexRows.slice(scrollOffset, scrollOffset + capacity)
+  const visibleIndexes = indexRows.slice(indexScrollOffset, indexScrollOffset + capacity)
   const relativeSelectedIndex =
-    resolvedIndex >= scrollOffset && resolvedIndex < scrollOffset + capacity
-      ? resolvedIndex - scrollOffset
+    resolvedIndex >= indexScrollOffset && resolvedIndex < indexScrollOffset + capacity
+      ? resolvedIndex - indexScrollOffset
       : -1
 
-  const tableContent = buildIndexesTableContent(
-    visible,
+  const collectionsTableContent = buildCollectionsTableContent(
+    visibleCollections,
+    relativeCollectionSelectedIndex,
+    theme,
+    capacity,
+    collectionSortBy,
+    collectionSortDirection,
+  )
+  const indexesTableContent = buildIndexesTableContent(
+    visibleIndexes,
     relativeSelectedIndex,
     theme,
     capacity,
@@ -330,51 +421,16 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         <text content="Select a database to inspect indexes." fg={theme.textMuted} />
       ) : (
         <box flexGrow={1} flexShrink={1} flexDirection="row" gap={1}>
-          <box
-            width={COLLECTION_LIST_WIDTH}
-            flexShrink={0}
-            flexDirection="column"
-            border
-            borderStyle="single"
-            borderColor={theme.border}
-            paddingLeft={1}
-            paddingRight={1}
-          >
-            <text
-              content=" collections "
-              fg={theme.textMuted}
-              attributes={TextAttributes.BOLD}
-              flexShrink={0}
-            />
-            {collections.length === 0 ? (
-              <text
-                content={displayText(isPending ? 'Loading…' : 'No collections')}
-                fg={theme.textMuted}
-              />
-            ) : (
-              collections.map(function renderCollectionRow(collection, index) {
-                const highlighted = index === selectedCollectionIndex
-                return (
-                  <box
-                    key={collection.name}
-                    flexDirection="row"
-                    gap={1}
-                    backgroundColor={highlighted ? theme.primary : undefined}
-                  >
-                    <text
-                      content={displayText(collection.name)}
-                      fg={highlighted ? highlightFg : theme.text}
-                      flexGrow={1}
-                    />
-                    <text
-                      content={displayText(String(collection.indexes.length))}
-                      fg={highlighted ? highlightFg : theme.textMuted}
-                      flexShrink={0}
-                    />
-                  </box>
-                )
-              })
-            )}
+          <box width={COLLECTION_LIST_WIDTH} flexShrink={0} flexDirection="column" gap={0}>
+            <DataTextTable content={collectionsTableContent} theme={theme} />
+            {sortedCollections.length === 0 ? (
+              <box flexShrink={0}>
+                <text
+                  content={displayText(isPending ? 'Loading…' : 'no collections')}
+                  fg={theme.textMuted}
+                />
+              </box>
+            ) : null}
           </box>
 
           <box flexGrow={1} flexShrink={1} flexDirection="column" gap={0}>
@@ -388,7 +444,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
                 fg={theme.textMuted}
               />
             ) : null}
-            <DataTextTable content={tableContent} theme={theme} />
+            <DataTextTable content={indexesTableContent} theme={theme} />
             {focusedCollection != null &&
             focusedCollection.error == null &&
             indexRows.length === 0 ? (
@@ -434,6 +490,85 @@ function IndexTableHeader({ collection }: IndexTableHeaderProps) {
       />
     </box>
   )
+}
+
+function sortCollections(
+  collections: CollectionIndexes[],
+  sortBy: CollectionSortBy,
+  sortDirection: SortDirection,
+): CollectionIndexes[] {
+  const copy = collections.slice()
+  const ascending = sortDirection === 'asc'
+  copy.sort(function compareCollections(a, b) {
+    if (sortBy === 'indexes') {
+      const delta = a.indexes.length - b.indexes.length
+      if (delta !== 0) {
+        return ascending ? delta : -delta
+      }
+    }
+
+    const nameDelta = a.name.localeCompare(b.name)
+    return ascending ? nameDelta : -nameDelta
+  })
+  return copy
+}
+
+function sortArrow(sortDirection: SortDirection): string {
+  return sortDirection === 'desc' ? '▼' : '▲'
+}
+
+function collectionHeaderLabel(
+  base: string,
+  column: CollectionSortBy,
+  sortBy: CollectionSortBy,
+  sortDirection: SortDirection,
+): string {
+  if (column !== sortBy) {
+    return base
+  }
+  return `${base} ${sortArrow(sortDirection)}`
+}
+
+function sortableHeaderCell(label: string, theme: Theme, active: boolean): TextChunk[] {
+  return [bold(fg(active ? theme.primary : theme.textMuted)(label))]
+}
+
+function buildCollectionsTableContent(
+  collections: CollectionIndexes[],
+  selectedIndex: number,
+  theme: Theme,
+  rowCapacity: number,
+  sortBy: CollectionSortBy,
+  sortDirection: SortDirection,
+): TextTableContent {
+  const header: TextChunk[][] = [
+    sortableHeaderCell(
+      collectionHeaderLabel('COLLECTION', 'name', sortBy, sortDirection),
+      theme,
+      sortBy === 'name',
+    ),
+    sortableHeaderCell(
+      collectionHeaderLabel('IDX', 'indexes', sortBy, sortDirection),
+      theme,
+      sortBy === 'indexes',
+    ),
+  ]
+
+  const tableRows: TextTableContent = [header]
+
+  for (let i = 0; i < collections.length; i++) {
+    const collection = collections[i]!
+    const selected = i === selectedIndex
+    const nameLabel = truncateIndexCell(collection.name, 22)
+    tableRows.push([
+      selected
+        ? tableCell(`${nameLabel} ●`, theme.primary)
+        : tableCell(nameLabel, theme.text),
+      tableCell(String(collection.indexes.length), theme.textMuted),
+    ])
+  }
+
+  return padTableRows(tableRows, rowCapacity)
 }
 
 function buildIndexesTableContent(

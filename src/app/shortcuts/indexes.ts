@@ -38,6 +38,18 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
     ],
   },
   {
+    keys: 'n',
+    helpLabel: 'Sort collections by name (toggle direction)',
+    footerLabel: 'sort name',
+    bindings: [{ key: 'n', cmd: 'indexes.sort-collection-name' }],
+  },
+  {
+    keys: 'i',
+    helpLabel: 'Sort collections by index count (toggle direction)',
+    footerLabel: 'sort idx',
+    bindings: [{ key: 'i', cmd: 'indexes.sort-collection-indexes' }],
+  },
+  {
     keys: 'c',
     helpLabel: 'Select or manage the MongoDB connection',
     footerLabel: 'connections',
@@ -55,8 +67,11 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
   },
 ]
 
-export const INDEXES_FOOTER: FooterChip[] = toFooter([
-  INDEXES_SHORTCUTS[0]!,
-  INDEXES_SHORTCUTS[1]!,
-  INDEXES_SHORTCUTS[2]!,
-])
+export const INDEXES_FOOTER: FooterChip[] = [
+  ...toFooter([
+    INDEXES_SHORTCUTS[0]!,
+    INDEXES_SHORTCUTS[1]!,
+    INDEXES_SHORTCUTS[2]!,
+  ]),
+  { keys: 'n/i', label: 'sort name/idx' },
+]
