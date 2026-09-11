@@ -16,6 +16,16 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
     ],
   },
   {
+    keys: '[ / ]',
+    helpLabel: 'Switch collection',
+    footerLabel: 'collection',
+    footerKeys: '[]',
+    bindings: [
+      { key: '[', cmd: 'indexes.prev-collection' },
+      { key: ']', cmd: 'indexes.next-collection' },
+    ],
+  },
+  {
     keys: '↑/↓ / j/k',
     helpLabel: 'Navigate index rows',
     footerLabel: 'navigate',
@@ -48,4 +58,5 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
 export const INDEXES_FOOTER: FooterChip[] = toFooter([
   INDEXES_SHORTCUTS[0]!,
   INDEXES_SHORTCUTS[1]!,
+  INDEXES_SHORTCUTS[2]!,
 ])
