@@ -47,6 +47,8 @@ type SessionState = {
   activeTab: AppTab
   /** Selected connection for Live Ops / Indexes (session-only; not persisted). */
   activeConnectionId: string | null
+  /** Selected MongoDB database for Indexes (session-only; cleared on connection change). */
+  selectedDatabase: string | null
   /** Consumed once when Slow Queries tab mounts after cross-tab navigation. */
   pendingSlowQueriesNav: SlowQueriesPendingNavigation | null
   logPath: string | null
@@ -62,6 +64,7 @@ type SessionState = {
   consumePendingSlowQueriesNav: () => SlowQueriesPendingNavigation | null
   setScreen: (screen: AppScreen) => void
   setActiveConnectionId: (id: string | null) => void
+  setSelectedDatabase: (database: string | null) => void
   goToWelcome: () => void
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
@@ -78,6 +81,7 @@ export const useSession = create<SessionState>((set, get) => ({
   screen: 'welcome',
   activeTab: 'slow-queries',
   activeConnectionId: null,
+  selectedDatabase: null,
   pendingSlowQueriesNav: null,
   logPath: null,
   logStore: null,
@@ -111,7 +115,11 @@ export const useSession = create<SessionState>((set, get) => ({
   },
 
   setActiveConnectionId(id) {
-    set({ activeConnectionId: id })
+    set({ activeConnectionId: id, selectedDatabase: null })
+  },
+
+  setSelectedDatabase(database) {
+    set({ selectedDatabase: database })
   },
 
   goToWelcome() {
@@ -174,6 +182,7 @@ export const useSession = create<SessionState>((set, get) => ({
       screen: 'welcome',
       activeTab: 'slow-queries',
       activeConnectionId: null,
+      selectedDatabase: null,
       pendingSlowQueriesNav: null,
       logPath: null,
       logStore: null,

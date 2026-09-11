@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { MongoClientLike } from './client-factory'
+import type { CollectionLike, MongoClientLike } from './client-factory'
 import { LiveConnectionError } from './errors'
 import { createLiveConnectionManager } from './manager'
 
@@ -7,12 +7,26 @@ type FakeClient = MongoClientLike & {
   closeListeners: Set<() => void>
   connectImpl: () => Promise<void>
   pingImpl: () => Promise<unknown>
+  dbCommandImpl: (dbName: string, command: Record<string, unknown>) => Promise<unknown>
+  collectionIndexesImpl: (dbName: string, collectionName: string) => Promise<unknown[]>
+  collectionAggregateImpl: (
+    dbName: string,
+    collectionName: string,
+    pipeline: Record<string, unknown>[],
+  ) => Promise<unknown[]>
   closed: boolean
 }
 
 function createFakeClient(overrides?: {
   connectImpl?: () => Promise<void>
   pingImpl?: () => Promise<unknown>
+  dbCommandImpl?: (dbName: string, command: Record<string, unknown>) => Promise<unknown>
+  collectionIndexesImpl?: (dbName: string, collectionName: string) => Promise<unknown[]>
+  collectionAggregateImpl?: (
+    dbName: string,
+    collectionName: string,
+    pipeline: Record<string, unknown>[],
+  ) => Promise<unknown[]>
 }): FakeClient {
   const closeListeners = new Set<() => void>()
   const client: FakeClient = {
@@ -20,6 +34,16 @@ function createFakeClient(overrides?: {
     closeListeners,
     connectImpl: overrides?.connectImpl ?? (async () => {}),
     pingImpl: overrides?.pingImpl ?? (async () => ({ ok: 1 })),
+    dbCommandImpl:
+      overrides?.dbCommandImpl ??
+      (async (_dbName, command) => {
+        if (command.ping === 1 || command.ping === true) {
+          return client.pingImpl()
+        }
+        return { ok: 1 }
+      }),
+    collectionIndexesImpl: overrides?.collectionIndexesImpl ?? (async () => []),
+    collectionAggregateImpl: overrides?.collectionAggregateImpl ?? (async () => []),
     async connect() {
       await client.connectImpl()
     },
@@ -29,19 +53,40 @@ function createFakeClient(overrides?: {
         listener()
       }
     },
-    db() {
+    db(dbName = 'test') {
       return {
         admin() {
           return {
-            command: async () => client.pingImpl(),
+            command: async (command) => {
+              if (command.ping === 1 || command.ping === true) {
+                return client.pingImpl()
+              }
+              return client.dbCommandImpl('admin', command)
+            },
           }
         },
+        command: async (command) => client.dbCommandImpl(dbName, command),
         aggregate() {
           return {
             async toArray() {
               return []
             },
           }
+        },
+        collection(name) {
+          const collection: CollectionLike = {
+            async indexes() {
+              return client.collectionIndexesImpl(dbName, name)
+            },
+            aggregate(pipeline) {
+              return {
+                async toArray() {
+                  return client.collectionAggregateImpl(dbName, name, pipeline)
+                },
+              }
+            },
+          }
+          return collection
         },
       }
     },
@@ -264,5 +309,64 @@ describe('createLiveConnectionManager', () => {
     expect(statuses[0]).toBe('idle')
     expect(statuses).toContain('connecting')
     expect(statuses.at(-1)).toBe('connected')
+  })
+
+  it('exposes db.command, collection.indexes, and collection.aggregate through the client seam', async () => {
+    const client = createFakeClient({
+      dbCommandImpl: async (dbName, command) => {
+        if (dbName === 'shop' && command.collStats === 'orders') {
+          return { indexSizes: { _id_: 1024 }, totalIndexSize: 1024 }
+        }
+        if (dbName === 'admin' && command.listDatabases === 1) {
+          return { databases: [{ name: 'shop' }] }
+        }
+        return { ok: 1 }
+      },
+      collectionIndexesImpl: async (dbName, collectionName) => {
+        if (dbName === 'shop' && collectionName === 'orders') {
+          return [{ name: '_id_', key: { _id: 1 } }]
+        }
+        return []
+      },
+      collectionAggregateImpl: async (dbName, collectionName, pipeline) => {
+        if (
+          dbName === 'shop' &&
+          collectionName === 'orders' &&
+          pipeline[0] &&
+          '$indexStats' in pipeline[0]
+        ) {
+          return [
+            {
+              name: '_id_',
+              accesses: { ops: 12, since: new Date('2024-01-01T00:00:00.000Z') },
+            },
+          ]
+        }
+        return []
+      },
+    })
+    const manager = createLiveConnectionManager({
+      createClient: () => client,
+    })
+
+    await manager.connect('id-1', 'mongodb://127.0.0.1:27017')
+    const active = manager.getActiveClient()
+    expect(active).toBe(client)
+
+    const listed = await active!.db('admin').admin().command({ listDatabases: 1, nameOnly: true })
+    expect(listed).toEqual({ databases: [{ name: 'shop' }] })
+
+    const shop = active!.db('shop')
+    const stats = await shop.command({ collStats: 'orders' })
+    expect(stats).toEqual({ indexSizes: { _id_: 1024 }, totalIndexSize: 1024 })
+
+    const indexes = await shop.collection('orders').indexes()
+    expect(indexes).toEqual([{ name: '_id_', key: { _id: 1 } }])
+
+    const usage = await shop
+      .collection('orders')
+      .aggregate([{ $indexStats: {} }])
+      .toArray()
+    expect(usage).toHaveLength(1)
   })
 })
