@@ -23,7 +23,6 @@ export function Dashboard() {
   const content = match(activeTab)
     .with('slow-queries', () => <SlowQueriesTab />)
     .with('live-ops', () => <LiveOpsTab />)
-    .with('timeline', () => <TabPlaceholder name="Timeline" />)
     .with('replication', () => <TabPlaceholder name="Replication" />)
     .with('indexes', () => <IndexesTab />)
     .with('logs', () => <TabPlaceholder name="Logs" />)

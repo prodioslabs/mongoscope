@@ -3,10 +3,10 @@ import { type Shortcut } from './types'
 
 export const DASHBOARD_SHORTCUTS: readonly Shortcut[] = [
   {
-    keys: '1–6',
+    keys: '1–5',
     helpLabel: 'Switch tabs',
     footerLabel: 'tabs',
-    footerKeys: '1-6',
+    footerKeys: '1-5',
     bindings: TABS.map((tab) => ({ key: tab.key, cmd: 'app.select-tab' })),
   },
   {

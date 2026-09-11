@@ -258,16 +258,18 @@ export function SlowQueriesTab() {
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column">
-      <box flexDirection="row" flexShrink={0} gap={1} paddingLeft={1} paddingBottom={0}>
-        <StatsCard label="PATTERNS" value={stats.patternCount} />
-        <StatsCard label="QUERIES" value={stats.queryCount} />
+      <box flexDirection="row" flexShrink={0} gap={1} paddingLeft={1} paddingRight={1} paddingBottom={0}>
+        <StatsCard icon="◈" label="patterns" value={stats.patternCount} />
+        <StatsCard icon="≡" label="queries" value={stats.queryCount} />
         <StatsCard
-          label="SLOWEST"
+          icon="◷"
+          label="slowest"
           value={stats.slowest}
           valueColor={severityColor(theme, stats.slowestSeverity)}
         />
         <StatsCard
-          label="COLLSCAN"
+          icon="⚠"
+          label="collscan"
           value={stats.collscanShare}
           valueColor={severityColor(theme, stats.collscanSeverity)}
         />

@@ -49,7 +49,7 @@ export async function start(options: AppOptions) {
     },
   })
   keymap.setData('app.mode', 'base' satisfies AppKeymapMode)
-  // Clear any leaked overlay holds from a previous HMR cycle so base keys (1–6 tabs) work.
+  // Clear any leaked overlay holds from a previous HMR cycle so base keys (1–5 tabs) work.
   overlayMode.clear(keymap)
 
   createRoot(renderer).render(
