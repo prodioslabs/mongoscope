@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchIndexesSnapshot, type IndexesSnapshot } from '../../indexes'
 import { liveConnectionManager } from '../../live-connection'
 import { useLiveConnection } from '../stores/live-connection'
@@ -29,6 +29,7 @@ export function useIndexesSnapshot(enabled: boolean) {
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
     staleTime: 0,
+    placeholderData: keepPreviousData,
     queryFn: async function fetchIndexesQuery(): Promise<IndexesSnapshot> {
       const snapshotBefore = liveConnectionManager.getSnapshot()
       const generationAtStart = snapshotBefore.generation
@@ -45,15 +46,9 @@ export function useIndexesSnapshot(enabled: boolean) {
         snapshotAfter.status !== 'connected' ||
         liveConnectionManager.getActiveClient() == null
       ) {
-        return {
-          databases: [],
-          selectedDatabase,
-          collections: [],
-          errors: {
-            databases: null,
-            collections: null,
-          },
-        }
+        // Keep prior UI state via placeholderData; do not publish an empty list
+        // that would clear selectedDatabase and retrigger this query.
+        throw new Error('Connection changed during indexes fetch')
       }
 
       return snapshot

@@ -26,6 +26,9 @@ type IndexesDashboardProps = {
 }
 
 const COLLECTION_LIST_WIDTH = 28
+const EMPTY_DATABASES: string[] = []
+const EMPTY_COLLECTIONS: CollectionIndexes[] = []
+const EMPTY_ERRORS: IndexesSnapshot['errors'] = { databases: null, collections: null }
 
 export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps) {
   const theme = useTheme((s) => s.theme)
@@ -34,9 +37,9 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const selectedDatabase = useSession((s) => s.selectedDatabase)
   const setSelectedDatabase = useSession((s) => s.setSelectedDatabase)
 
-  const databases = snapshot?.databases ?? []
-  const collections = snapshot?.collections ?? []
-  const errors = snapshot?.errors ?? { databases: null, collections: null }
+  const databases = snapshot?.databases ?? EMPTY_DATABASES
+  const collections = snapshot?.collections ?? EMPTY_COLLECTIONS
+  const errors = snapshot?.errors ?? EMPTY_ERRORS
 
   const [selectedCollectionIndex, setSelectedCollectionIndex] = useState(0)
 
@@ -52,29 +55,42 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
 
   useEffect(
     function autoSelectDatabaseWhenNeeded() {
-      if (databases.length === 0) {
+      // Avoid treating a missing/pending query result as an empty DB list — that
+      // clears selection, changes the query key, and loops forever.
+      if (snapshot == null) {
+        return
+      }
+
+      const nextDatabases = snapshot.databases
+      if (nextDatabases.length === 0) {
         if (selectedDatabase != null) {
           setSelectedDatabase(null)
         }
         return
       }
-      if (selectedDatabase == null || !databases.includes(selectedDatabase)) {
-        setSelectedDatabase(databases[0] ?? null)
+
+      if (selectedDatabase == null || !nextDatabases.includes(selectedDatabase)) {
+        const nextDatabase = nextDatabases[0] ?? null
+        if (nextDatabase !== selectedDatabase) {
+          setSelectedDatabase(nextDatabase)
+        }
       }
     },
-    [databases, selectedDatabase, setSelectedDatabase],
+    [snapshot, selectedDatabase, setSelectedDatabase],
   )
 
   useEffect(
     function clampSelectedCollectionIndex() {
+      const length = collections.length
       setSelectedCollectionIndex((index) => {
-        if (collections.length === 0) {
+        if (length === 0) {
           return 0
         }
-        return Math.min(index, collections.length - 1)
+        const nextIndex = Math.min(index, length - 1)
+        return nextIndex === index ? index : nextIndex
       })
     },
-    [collections],
+    [collections.length],
   )
 
   useFooterKeybindings(INDEXES_FOOTER)
