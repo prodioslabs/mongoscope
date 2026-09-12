@@ -70,6 +70,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const consumePendingIndexesNav = useSession((s) => s.consumePendingIndexesNav)
   const indexesSuggestion = useSession((s) => s.indexesSuggestion)
   const clearIndexesSuggestion = useSession((s) => s.clearIndexesSuggestion)
+  const alignIndexesSuggestion = useSession((s) => s.alignIndexesSuggestion)
 
   const databases = snapshot?.databases ?? EMPTY_DATABASES
   const collections = snapshot?.collections ?? EMPTY_COLLECTIONS
@@ -83,10 +84,24 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const [collectionScrollOffset, setCollectionScrollOffset] = useState(0)
   const [selectedIndexName, setSelectedIndexName] = useState<string | null>(null)
   const [indexScrollOffset, setIndexScrollOffset] = useState(0)
-  /** Applied once collections for the target DB are available. */
-  const [pendingCollectionTarget, setPendingCollectionTarget] = useState<string | null>(null)
+  /** Jump target from Slow Queries; held until the live DB inventory can resolve it. */
+  const [pendingJump, setPendingJump] = useState<{
+    database: string
+    collection: string
+  } | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function showTransientStatus(message: string) {
+    setStatusMessage(message)
+    if (statusTimerRef.current != null) {
+      clearTimeout(statusTimerRef.current)
+    }
+    statusTimerRef.current = setTimeout(function clearTransientStatus() {
+      setStatusMessage(null)
+      statusTimerRef.current = null
+    }, STATUS_CLEAR_MS)
+  }
 
   const capacity = computeTableCapacity(INDEXES_CHROME_ROWS, terminalHeight)
   const sortedCollections = sortCollections(collections, collectionSortBy, collectionSortDirection)
@@ -144,24 +159,18 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         return
       }
 
+      setPendingJump({
+        database: pending.database,
+        collection: pending.collection,
+      })
       setSelectedDatabase(pending.database)
-      setPendingCollectionTarget(pending.collection)
-      // Select immediately so the suggestion banner has a stable collection target
-      // while the matching DB snapshot loads.
       setSelectedCollectionName(pending.collection)
       setSelectedIndexName(null)
       setCollectionScrollOffset(0)
       setIndexScrollOffset(0)
 
       if (pending.statusMessage != null && pending.statusMessage.trim() !== '') {
-        setStatusMessage(pending.statusMessage)
-        if (statusTimerRef.current != null) {
-          clearTimeout(statusTimerRef.current)
-        }
-        statusTimerRef.current = setTimeout(function clearTransientStatus() {
-          setStatusMessage(null)
-          statusTimerRef.current = null
-        }, STATUS_CLEAR_MS)
+        showTransientStatus(pending.statusMessage)
       }
     },
     [pendingIndexesNav, consumePendingIndexesNav, setSelectedDatabase],
@@ -179,10 +188,95 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   )
 
   useEffect(
+    function resolvePendingIndexesJump() {
+      if (pendingJump == null || snapshot == null) {
+        return
+      }
+
+      const availableDatabases = snapshot.databases
+      if (availableDatabases.length === 0) {
+        return
+      }
+
+      const resolvedDatabase = resolveName(availableDatabases, pendingJump.database)
+      if (resolvedDatabase == null) {
+        const fallback = availableDatabases[0]!
+        showTransientStatus(
+          `database "${pendingJump.database}" not on this connection — showing ${fallback}`,
+        )
+        setPendingJump(null)
+        setSelectedDatabase(fallback)
+        setSelectedCollectionName(null)
+        return
+      }
+
+      if (selectedDatabase !== resolvedDatabase) {
+        setSelectedDatabase(resolvedDatabase)
+        return
+      }
+
+      // Wait until inventory is for the resolved DB (not keepPreviousData from another DB).
+      if (snapshot.selectedDatabase !== resolvedDatabase) {
+        return
+      }
+
+      if (collections.length === 0) {
+        if (!isPending) {
+          showTransientStatus(`no collections in ${resolvedDatabase}`)
+          setPendingJump(null)
+          alignIndexesSuggestion(resolvedDatabase, pendingJump.collection)
+        }
+        return
+      }
+
+      const resolvedCollection = resolveName(
+        collections.map((collection) => collection.name),
+        pendingJump.collection,
+      )
+      if (resolvedCollection == null) {
+        showTransientStatus(
+          `collection "${pendingJump.collection}" not found in ${resolvedDatabase}`,
+        )
+        setPendingJump(null)
+        alignIndexesSuggestion(resolvedDatabase, pendingJump.collection)
+        return
+      }
+
+      alignIndexesSuggestion(resolvedDatabase, resolvedCollection)
+      setSelectedCollectionName(resolvedCollection)
+
+      const targetIndex = sortedCollections.findIndex(
+        (collection) => collection.name === resolvedCollection,
+      )
+      if (targetIndex >= 0) {
+        const maxOffset = Math.max(0, sortedCollections.length - capacity)
+        const nextOffset = Math.min(
+          Math.max(0, targetIndex - Math.floor(capacity / 2)),
+          maxOffset,
+        )
+        setCollectionScrollOffset(nextOffset)
+      }
+
+      setPendingJump(null)
+    },
+    [
+      pendingJump,
+      snapshot,
+      selectedDatabase,
+      collections,
+      sortedCollections,
+      capacity,
+      isPending,
+      setSelectedDatabase,
+      alignIndexesSuggestion,
+    ],
+  )
+
+  useEffect(
     function autoSelectDatabaseWhenNeeded() {
       // Avoid treating a missing/pending query result as an empty DB list — that
       // clears selection, changes the query key, and loops forever.
-      if (snapshot == null || pendingCollectionTarget != null) {
+      if (snapshot == null || pendingJump != null) {
         return
       }
 
@@ -201,50 +295,12 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         }
       }
     },
-    [snapshot, selectedDatabase, setSelectedDatabase, pendingCollectionTarget],
-  )
-
-  useEffect(
-    function applyPendingCollectionTarget() {
-      if (pendingCollectionTarget == null) {
-        return
-      }
-
-      // keepPreviousData can still show the previous DB's collections after a jump —
-      // wait until the snapshot matches the selected database before applying/abandoning.
-      if (snapshot == null || snapshot.selectedDatabase !== selectedDatabase) {
-        return
-      }
-
-      const targetIndex = sortedCollections.findIndex(
-        (collection) => collection.name === pendingCollectionTarget,
-      )
-      if (targetIndex < 0) {
-        if (collections.length > 0) {
-          setPendingCollectionTarget(null)
-        }
-        return
-      }
-
-      setSelectedCollectionName(pendingCollectionTarget)
-      const maxOffset = Math.max(0, sortedCollections.length - capacity)
-      const nextOffset = Math.min(Math.max(0, targetIndex - Math.floor(capacity / 2)), maxOffset)
-      setCollectionScrollOffset(nextOffset)
-      setPendingCollectionTarget(null)
-    },
-    [
-      pendingCollectionTarget,
-      snapshot,
-      selectedDatabase,
-      sortedCollections,
-      collections.length,
-      capacity,
-    ],
+    [snapshot, selectedDatabase, setSelectedDatabase, pendingJump],
   )
 
   useEffect(
     function reconcileCollectionSelection() {
-      if (pendingCollectionTarget != null) {
+      if (pendingJump != null) {
         return
       }
 
@@ -262,27 +318,24 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         return sorted[0]?.name ?? null
       })
     },
-    [collections, collectionSortBy, collectionSortDirection, pendingCollectionTarget],
+    [collections, collectionSortBy, collectionSortDirection, pendingJump],
   )
 
   useEffect(
     function clearIndexesSuggestionWhenLeavingCollection() {
-      if (indexesSuggestion == null || pendingCollectionTarget != null) {
+      if (indexesSuggestion == null || pendingJump != null) {
         return
       }
       if (selectedCollectionName == null) {
         return
       }
-      if (selectedCollectionName !== indexesSuggestion.collection) {
+      if (
+        selectedCollectionName.toLowerCase() !== indexesSuggestion.collection.toLowerCase()
+      ) {
         clearIndexesSuggestion()
       }
     },
-    [
-      pendingCollectionTarget,
-      selectedCollectionName,
-      indexesSuggestion,
-      clearIndexesSuggestion,
-    ],
+    [pendingJump, selectedCollectionName, indexesSuggestion, clearIndexesSuggestion],
   )
 
   useEffect(
@@ -290,7 +343,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
       if (indexesSuggestion?.keyLabel == null || focusedCollection == null) {
         return
       }
-      if (focusedCollection.name !== indexesSuggestion.collection) {
+      if (focusedCollection.name.toLowerCase() !== indexesSuggestion.collection.toLowerCase()) {
         return
       }
 
@@ -633,8 +686,9 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
             reason: indexesSuggestion.reason,
           }}
           indexes={
-            focusedCollection?.name === indexesSuggestion.collection
-              ? (focusedCollection.indexes ?? [])
+            focusedCollection != null &&
+            focusedCollection.name.toLowerCase() === indexesSuggestion.collection.toLowerCase()
+              ? focusedCollection.indexes
               : []
           }
           theme={theme}
@@ -691,6 +745,15 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
 
 type IndexTableHeaderProps = {
   collection: CollectionIndexes | null
+}
+
+/** Exact match first, then case-insensitive — MongoDB names are case-sensitive but logs often differ in casing. */
+function resolveName(names: readonly string[], wanted: string): string | null {
+  if (names.includes(wanted)) {
+    return wanted
+  }
+  const lowered = wanted.toLowerCase()
+  return names.find((name) => name.toLowerCase() === lowered) ?? null
 }
 
 function IndexTableHeader({ collection }: IndexTableHeaderProps) {

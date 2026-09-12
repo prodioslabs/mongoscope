@@ -89,6 +89,8 @@ type SessionState = {
   consumePendingSlowQueriesNav: () => SlowQueriesPendingNavigation | null
   consumePendingIndexesNav: () => IndexesPendingNavigation | null
   clearIndexesSuggestion: () => void
+  /** Align sticky suggestion names after case-insensitive DB/collection resolve. */
+  alignIndexesSuggestion: (database: string, collection: string) => void
   setScreen: (screen: AppScreen) => void
   setActiveConnectionId: (id: string | null) => void
   setSelectedDatabase: (database: string | null) => void
@@ -184,6 +186,23 @@ export const useSession = create<SessionState>((set, get) => ({
 
   clearIndexesSuggestion() {
     set({ indexesSuggestion: null })
+  },
+
+  alignIndexesSuggestion(database, collection) {
+    const current = get().indexesSuggestion
+    if (current == null) {
+      return
+    }
+    if (current.database === database && current.collection === collection) {
+      return
+    }
+    set({
+      indexesSuggestion: {
+        ...current,
+        database,
+        collection,
+      },
+    })
   },
 
   setScreen(screen) {
