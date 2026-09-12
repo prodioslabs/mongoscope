@@ -29,7 +29,7 @@ export const QUERY_DETAIL_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'i',
-    helpLabel: 'Open Indexes for this namespace / suggested index',
+    helpLabel: 'Jump to Indexes (focus collection + suggested vs existing)',
     footerLabel: 'indexes',
     bindings: [{ key: 'i', cmd: 'query-detail.open-indexes' }],
   },

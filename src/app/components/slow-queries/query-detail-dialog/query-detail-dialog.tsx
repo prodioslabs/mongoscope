@@ -4,6 +4,7 @@ import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   getPatternExplain,
+  splitNamespace,
   type PatternExplain,
   type QueryPattern,
   type QueryPatternStore,
@@ -51,7 +52,9 @@ export function QueryDetailDialog({
   const scrollRef = useRef<ScrollBoxRenderable | null>(null)
   const onCloseRef = useRef(onClose)
   const explainRef = useRef<PatternExplain | null>(null)
+  const patternRef = useRef(pattern)
   onCloseRef.current = onClose
+  patternRef.current = pattern
   const [explain, setExplain] = useState<PatternExplain | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
@@ -129,6 +132,7 @@ export function QueryDetailDialog({
       return {
         appMode: 'palette' satisfies AppKeymapMode,
         enabled: open,
+        priority: 50,
         commands: [
           {
             name: 'query-detail.toggle-raw',
@@ -164,33 +168,27 @@ export function QueryDetailDialog({
             name: 'query-detail.open-indexes',
             run() {
               const current = explainRef.current
-              if (current == null) {
-                return
+              const selectedPattern = patternRef.current
+              const suggestion = current?.suggestedIndex ?? null
+              const namespace =
+                suggestion?.namespace ?? current?.namespace ?? selectedPattern?.namespace ?? ''
+              let database = suggestion?.database ?? ''
+              let collection = suggestion?.collection ?? ''
+              if (database === '' || collection === '') {
+                const split = splitNamespace(namespace)
+                database = split.db
+                collection = split.collection
               }
-              const suggestion = current.suggestedIndex
-              const namespace = suggestion?.namespace ?? current.namespace
-              const database = suggestion?.database
-              const collection = suggestion?.collection
-              if (database == null || collection == null || database.trim() === '') {
-                // Fall back to splitting namespace when suggestion is absent.
-                const dot = namespace.indexOf('.')
-                if (dot <= 0) {
-                  return
-                }
-                const db = namespace.slice(0, dot)
-                const coll = namespace.slice(dot + 1)
-                onCloseRef.current()
-                navigateToTab('indexes', {
-                  indexes: {
-                    database: db,
-                    collection: coll,
-                    statusMessage: `opened indexes for ${namespace}`,
-                  },
-                })
+
+              if (
+                database.trim() === '' ||
+                collection.trim() === '' ||
+                namespace.trim() === '' ||
+                namespace === '—'
+              ) {
                 return
               }
 
-              onCloseRef.current()
               navigateToTab('indexes', {
                 indexes: {
                   database,
@@ -204,6 +202,7 @@ export function QueryDetailDialog({
                       : `opened indexes for ${namespace}`,
                 },
               })
+              onCloseRef.current()
             },
           },
           {

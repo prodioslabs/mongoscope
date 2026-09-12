@@ -194,7 +194,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
     function autoSelectDatabaseWhenNeeded() {
       // Avoid treating a missing/pending query result as an empty DB list — that
       // clears selection, changes the query key, and loops forever.
-      if (snapshot == null) {
+      if (snapshot == null || pendingCollectionTarget != null) {
         return
       }
 
@@ -213,7 +213,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         }
       }
     },
-    [snapshot, selectedDatabase, setSelectedDatabase],
+    [snapshot, selectedDatabase, setSelectedDatabase, pendingCollectionTarget],
   )
 
   useEffect(
@@ -222,12 +222,17 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         return
       }
 
+      // keepPreviousData can still show the previous DB's collections after a jump —
+      // wait until the snapshot matches the selected database before applying/abandoning.
+      if (snapshot == null || snapshot.selectedDatabase !== selectedDatabase) {
+        return
+      }
+
       const targetIndex = sortedCollections.findIndex(
         (collection) => collection.name === pendingCollectionTarget,
       )
       if (targetIndex < 0) {
-        // Collections for this DB loaded without the target — abandon jump target.
-        if (collections.length > 0 && !isPending) {
+        if (collections.length > 0) {
           setPendingCollectionTarget(null)
         }
         return
@@ -241,10 +246,11 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
     },
     [
       pendingCollectionTarget,
+      snapshot,
+      selectedDatabase,
       sortedCollections,
       collections.length,
       capacity,
-      isPending,
     ],
   )
 

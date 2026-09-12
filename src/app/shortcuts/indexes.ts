@@ -79,9 +79,9 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
     bindings: [],
   },
   {
-    keys: 'from SQ',
+    keys: 'i (in SQ)',
     helpLabel:
-      'In Slow Queries explain, press i to jump here with suggested vs existing index (read-only)',
+      'From Slow Queries details (enter → i): jump here with suggested vs existing index (read-only)',
     bindings: [],
   },
 ]

@@ -23,6 +23,11 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
     ],
   },
   {
+    keys: 'enter then i',
+    helpLabel: 'Jump to Indexes for this namespace / suggested index (from query details)',
+    bindings: [],
+  },
+  {
     keys: 'c',
     helpLabel: 'Sort by count',
     bindings: [{ key: 'c', cmd: 'slow-queries.sort-count' }],
