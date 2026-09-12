@@ -14,11 +14,16 @@ type SuggestIndexInput = {
  * and the filter has equality fields.
  */
 export function suggestIndex(input: SuggestIndexInput): IndexSuggestion | null {
-  if (input.plan !== 'COLLSCAN') return null
-  if (input.equalityFields.length === 0) return null
+  if (input.plan !== 'COLLSCAN') {
+    return null
+  }
+  if (input.equalityFields.length === 0) {
+    return null
+  }
 
-  const { collection } = splitNamespace(input.namespace)
-  const keys = input.equalityFields.map((f) => `${f}: 1`).join(', ')
+  const { db, collection } = splitNamespace(input.namespace)
+  const keyLabel = input.equalityFields.map((field) => `${field}:1`).join(',')
+  const keys = input.equalityFields.map((field) => `${field}: 1`).join(', ')
   const command = `db.${collection}.createIndex({ ${keys} })`
 
   const estimatedExamined = Math.max(1, input.nReturned)
@@ -31,7 +36,16 @@ export function suggestIndex(input: SuggestIndexInput): IndexSuggestion | null {
 
   const reason = `ESR rule · equality fields only · est. docsExamined -> ~${formatCount(estimatedExamined)} (-${reductionLabel}%)`
 
-  return { command, reason, estimatedExamined }
+  return {
+    command,
+    reason,
+    estimatedExamined,
+    namespace: input.namespace,
+    database: db,
+    collection,
+    equalityFields: [...input.equalityFields],
+    keyLabel,
+  }
 }
 
 function formatCount(n: number): string {

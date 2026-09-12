@@ -31,6 +31,13 @@ export type IndexSuggestion = {
   command: string
   reason: string
   estimatedExamined: number
+  /** Full `db.collection` namespace from the slow-query sample. */
+  namespace: string
+  database: string
+  collection: string
+  equalityFields: string[]
+  /** Compact key label matching Indexes inventory, e.g. `status:1,district:1`. */
+  keyLabel: string
 }
 
 export type PatternExplain = {

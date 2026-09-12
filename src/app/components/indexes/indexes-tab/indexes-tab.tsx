@@ -6,7 +6,6 @@ import { useLiveConnection } from '../../../stores/live-connection'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { DbSelector } from '../../db-selector'
-import { useFooterStatus } from '../../footer-keybindings'
 import { IndexesDashboard } from '../indexes-dashboard'
 
 export function IndexesTab() {
@@ -19,9 +18,6 @@ export function IndexesTab() {
 
   const dashboardEnabled = liveStatus === 'connected'
   const { data: snapshot, isPending } = useIndexesSnapshot(dashboardEnabled)
-
-  // `c` / connections footer comes from DbSelector; only status is tab-owned.
-  useFooterStatus(dashboardEnabled ? 'indexes · refresh 5s' : null)
 
   let body: ReactNode
   if (profiles.length === 0) {

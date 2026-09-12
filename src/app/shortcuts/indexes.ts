@@ -78,6 +78,12 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
     helpLabel: 'BUILD % comes from $currentOp on the connected node (idleConnections included)',
     bindings: [],
   },
+  {
+    keys: 'from SQ',
+    helpLabel:
+      'In Slow Queries explain, press i to jump here with suggested vs existing index (read-only)',
+    bindings: [],
+  },
 ]
 
 export const INDEXES_FOOTER: FooterChip[] = [

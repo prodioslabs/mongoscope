@@ -3,6 +3,7 @@ import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState } from 'react'
 import {
+  findIndexMatchingSuggestion,
   formatBytes,
   formatBuildProgress,
   formatIndexFlags,
@@ -27,7 +28,7 @@ import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 import { DataTextTable } from '../../data-text-table'
-import { useFooterKeybindings } from '../../footer-keybindings'
+import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 
 type IndexesDashboardProps = {
   snapshot: IndexesSnapshot | undefined
@@ -47,8 +48,16 @@ const EMPTY_ERRORS: IndexesSnapshot['errors'] = {
   builds: null,
 }
 
-/** Tab bar, footer, DbSelector, title, DB chips, notes, table chrome. */
-const INDEXES_CHROME_ROWS = 16
+/** Tab bar, footer, DbSelector, title, DB chips, suggestion banner, notes, table chrome. */
+const INDEXES_CHROME_ROWS = 19
+const STATUS_CLEAR_MS = 4_000
+
+type SuggestionBanner = {
+  collection: string
+  keyLabel?: string
+  command?: string
+  reason?: string
+}
 
 export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps) {
   const theme = useTheme((s) => s.theme)
@@ -57,6 +66,8 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const { height: terminalHeight } = useTerminalDimensions()
   const selectedDatabase = useSession((s) => s.selectedDatabase)
   const setSelectedDatabase = useSession((s) => s.setSelectedDatabase)
+  const pendingIndexesNav = useSession((s) => s.pendingIndexesNav)
+  const consumePendingIndexesNav = useSession((s) => s.consumePendingIndexesNav)
 
   const databases = snapshot?.databases ?? EMPTY_DATABASES
   const collections = snapshot?.collections ?? EMPTY_COLLECTIONS
@@ -70,6 +81,11 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const [collectionScrollOffset, setCollectionScrollOffset] = useState(0)
   const [selectedIndexName, setSelectedIndexName] = useState<string | null>(null)
   const [indexScrollOffset, setIndexScrollOffset] = useState(0)
+  /** Applied once collections for the target DB are available. */
+  const [pendingCollectionTarget, setPendingCollectionTarget] = useState<string | null>(null)
+  const [suggestionBanner, setSuggestionBanner] = useState<SuggestionBanner | null>(null)
+  const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const capacity = computeTableCapacity(INDEXES_CHROME_ROWS, terminalHeight)
   const sortedCollections = sortCollections(collections, collectionSortBy, collectionSortDirection)
@@ -117,6 +133,64 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   indexSortDirectionRef.current = indexSortDirection
 
   useEffect(
+    function consumePendingIndexesNavigation() {
+      if (pendingIndexesNav == null) {
+        return
+      }
+
+      const pending = consumePendingIndexesNav()
+      if (pending == null) {
+        return
+      }
+
+      setSelectedDatabase(pending.database)
+      setPendingCollectionTarget(pending.collection)
+      setSelectedCollectionName(null)
+      setSelectedIndexName(null)
+      setCollectionScrollOffset(0)
+      setIndexScrollOffset(0)
+
+      if (
+        pending.suggestedCommand != null ||
+        pending.suggestedKeyLabel != null ||
+        pending.suggestedReason != null
+      ) {
+        setSuggestionBanner({
+          collection: pending.collection,
+          keyLabel: pending.suggestedKeyLabel,
+          command: pending.suggestedCommand,
+          reason: pending.suggestedReason,
+        })
+      } else {
+        setSuggestionBanner(null)
+      }
+
+      if (pending.statusMessage != null && pending.statusMessage.trim() !== '') {
+        setStatusMessage(pending.statusMessage)
+        if (statusTimerRef.current != null) {
+          clearTimeout(statusTimerRef.current)
+        }
+        statusTimerRef.current = setTimeout(function clearTransientStatus() {
+          setStatusMessage(null)
+          statusTimerRef.current = null
+        }, STATUS_CLEAR_MS)
+      }
+    },
+    [pendingIndexesNav, consumePendingIndexesNav, setSelectedDatabase],
+  )
+
+  useEffect(
+    function cleanupStatusTimer() {
+      return function disposeStatusTimer() {
+        if (statusTimerRef.current != null) {
+          clearTimeout(statusTimerRef.current)
+        }
+      }
+    },
+    [],
+  )
+
+  useEffect(
     function autoSelectDatabaseWhenNeeded() {
       // Avoid treating a missing/pending query result as an empty DB list — that
       // clears selection, changes the query key, and loops forever.
@@ -143,7 +217,43 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   )
 
   useEffect(
+    function applyPendingCollectionTarget() {
+      if (pendingCollectionTarget == null) {
+        return
+      }
+
+      const targetIndex = sortedCollections.findIndex(
+        (collection) => collection.name === pendingCollectionTarget,
+      )
+      if (targetIndex < 0) {
+        // Collections for this DB loaded without the target — abandon jump target.
+        if (collections.length > 0 && !isPending) {
+          setPendingCollectionTarget(null)
+        }
+        return
+      }
+
+      setSelectedCollectionName(pendingCollectionTarget)
+      const maxOffset = Math.max(0, sortedCollections.length - capacity)
+      const nextOffset = Math.min(Math.max(0, targetIndex - Math.floor(capacity / 2)), maxOffset)
+      setCollectionScrollOffset(nextOffset)
+      setPendingCollectionTarget(null)
+    },
+    [
+      pendingCollectionTarget,
+      sortedCollections,
+      collections.length,
+      capacity,
+      isPending,
+    ],
+  )
+
+  useEffect(
     function reconcileCollectionSelection() {
+      if (pendingCollectionTarget != null) {
+        return
+      }
+
       if (collections.length === 0) {
         setSelectedCollectionName(null)
         setCollectionScrollOffset(0)
@@ -158,7 +268,58 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         return sorted[0]?.name ?? null
       })
     },
-    [collections, collectionSortBy, collectionSortDirection],
+    [collections, collectionSortBy, collectionSortDirection, pendingCollectionTarget],
+  )
+
+  useEffect(
+    function clearSuggestionBannerWhenLeavingCollection() {
+      if (pendingCollectionTarget != null || suggestionBanner == null) {
+        return
+      }
+      if (selectedCollectionName !== suggestionBanner.collection) {
+        setSuggestionBanner(null)
+      }
+    },
+    [pendingCollectionTarget, selectedCollectionName, suggestionBanner],
+  )
+
+  useEffect(
+    function selectIndexMatchingSuggestion() {
+      if (suggestionBanner?.keyLabel == null || focusedCollection == null) {
+        return
+      }
+      if (focusedCollection.name !== suggestionBanner.collection) {
+        return
+      }
+
+      const rows = sortIndexRows(
+        focusedCollection.indexes,
+        indexSortBy,
+        indexSortDirection,
+      )
+      const match = findIndexMatchingSuggestion(rows, suggestionBanner.keyLabel)
+      if (match == null) {
+        return
+      }
+
+      const matchIndex = rows.findIndex((row) => row.name === match.name)
+      if (matchIndex < 0) {
+        return
+      }
+
+      setSelectedIndexName(match.name)
+      const maxOffset = Math.max(0, rows.length - capacity)
+      setIndexScrollOffset(Math.min(Math.max(0, matchIndex - Math.floor(capacity / 2)), maxOffset))
+    },
+    [
+      suggestionBanner?.keyLabel,
+      suggestionBanner?.collection,
+      focusedCollection?.name,
+      focusedCollection?.indexes,
+      indexSortBy,
+      indexSortDirection,
+      capacity,
+    ],
   )
 
   useEffect(
@@ -207,6 +368,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   )
 
   useFooterKeybindings(INDEXES_FOOTER)
+  useFooterStatus(statusMessage ?? 'indexes · refresh 5s')
 
   useBindings(
     function createIndexesNavigationLayer() {
@@ -460,6 +622,16 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         <text content={displayText(errors.collections.message)} fg={theme.error} />
       ) : null}
 
+      {suggestionBanner != null &&
+      selectedCollectionName === suggestionBanner.collection &&
+      pendingCollectionTarget == null ? (
+        <SuggestionBannerView
+          banner={suggestionBanner}
+          indexes={focusedCollection?.indexes ?? []}
+          theme={theme}
+        />
+      ) : null}
+
       {selectedDatabase == null ? (
         <text content="Select a database to inspect indexes." fg={theme.textMuted} />
       ) : (
@@ -534,6 +706,54 @@ function IndexTableHeader({ collection }: IndexTableHeaderProps) {
         )}
         fg={theme.textMuted}
       />
+    </box>
+  )
+}
+
+type SuggestionBannerViewProps = {
+  banner: SuggestionBanner
+  indexes: IndexRow[]
+  theme: Theme
+}
+
+function SuggestionBannerView({ banner, indexes, theme }: SuggestionBannerViewProps) {
+  const match =
+    banner.keyLabel != null ? findIndexMatchingSuggestion(indexes, banner.keyLabel) : null
+
+  return (
+    <box flexDirection="column" gap={0} flexShrink={0}>
+      <text content="suggested vs existing" fg={theme.primary} attributes={TextAttributes.BOLD} />
+      {banner.command != null ? (
+        <text content={displayText(banner.command)} fg={theme.success} wrapMode="word" />
+      ) : null}
+      {banner.reason != null ? (
+        <text content={displayText(banner.reason)} fg={theme.textMuted} wrapMode="word" />
+      ) : null}
+      {banner.keyLabel != null ? (
+        match != null ? (
+          <text
+            content={displayText(
+              `covering index found: ${match.name} (${match.keyLabel})`,
+            )}
+            fg={theme.success}
+            wrapMode="word"
+          />
+        ) : (
+          <text
+            content={displayText(
+              `no covering index for ${banner.keyLabel} (read-only — create outside MongoScope)`,
+            )}
+            fg={theme.warning}
+            wrapMode="word"
+          />
+        )
+      ) : (
+        <text
+          content="jumped from Slow Queries (no ESR suggestion on that sample)"
+          fg={theme.textMuted}
+          wrapMode="word"
+        />
+      )}
     </box>
   )
 }

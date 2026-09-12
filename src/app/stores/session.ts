@@ -14,8 +14,20 @@ export type SlowQueriesPendingNavigation = {
   statusMessage?: string
 }
 
+/** Cross-tab jump from Slow Queries suggestIndex (or namespace) into Indexes. */
+export type IndexesPendingNavigation = {
+  database: string
+  collection: string
+  /** Compact key label from ESR suggestion, when present. */
+  suggestedKeyLabel?: string
+  suggestedCommand?: string
+  suggestedReason?: string
+  statusMessage?: string
+}
+
 export type TabNavigationContext = {
   slowQueries?: SlowQueriesPendingNavigation
+  indexes?: IndexesPendingNavigation
 }
 
 export type TabDefinition = {
@@ -51,6 +63,8 @@ type SessionState = {
   selectedDatabase: string | null
   /** Consumed once when Slow Queries tab mounts after cross-tab navigation. */
   pendingSlowQueriesNav: SlowQueriesPendingNavigation | null
+  /** Consumed once when Indexes tab/dashboard mounts after cross-tab navigation. */
+  pendingIndexesNav: IndexesPendingNavigation | null
   logPath: string | null
   logStore: LogStore | null
   queryPatterns: QueryPatternStore | null
@@ -62,6 +76,7 @@ type SessionState = {
   setTab: (tab: AppTab) => void
   navigateToTab: (tab: AppTab, context?: TabNavigationContext) => void
   consumePendingSlowQueriesNav: () => SlowQueriesPendingNavigation | null
+  consumePendingIndexesNav: () => IndexesPendingNavigation | null
   setScreen: (screen: AppScreen) => void
   setActiveConnectionId: (id: string | null) => void
   setSelectedDatabase: (database: string | null) => void
@@ -69,7 +84,6 @@ type SessionState = {
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
 }
-
 function progressPercent(bytesRead: number, fileSize: number): number {
   if (fileSize === 0) {
     return 100
@@ -83,6 +97,7 @@ export const useSession = create<SessionState>((set, get) => ({
   activeConnectionId: null,
   selectedDatabase: null,
   pendingSlowQueriesNav: null,
+  pendingIndexesNav: null,
   logPath: null,
   logStore: null,
   queryPatterns: null,
@@ -98,6 +113,7 @@ export const useSession = create<SessionState>((set, get) => ({
     set({
       activeTab: tab,
       pendingSlowQueriesNav: context?.slowQueries ?? null,
+      pendingIndexesNav: context?.indexes ?? null,
     })
   },
 
@@ -107,6 +123,15 @@ export const useSession = create<SessionState>((set, get) => ({
       return null
     }
     set({ pendingSlowQueriesNav: null })
+    return pending
+  },
+
+  consumePendingIndexesNav() {
+    const pending = get().pendingIndexesNav
+    if (pending == null) {
+      return null
+    }
+    set({ pendingIndexesNav: null })
     return pending
   },
 
@@ -184,6 +209,7 @@ export const useSession = create<SessionState>((set, get) => ({
       activeConnectionId: null,
       selectedDatabase: null,
       pendingSlowQueriesNav: null,
+      pendingIndexesNav: null,
       logPath: null,
       logStore: null,
       queryPatterns: null,

@@ -28,6 +28,12 @@ export const QUERY_DETAIL_SHORTCUTS: readonly Shortcut[] = [
     bindings: [{ key: 'r', cmd: 'query-detail.toggle-raw' }],
   },
   {
+    keys: 'i',
+    helpLabel: 'Open Indexes for this namespace / suggested index',
+    footerLabel: 'indexes',
+    bindings: [{ key: 'i', cmd: 'query-detail.open-indexes' }],
+  },
+  {
     keys: 'esc',
     helpLabel: 'Close details',
     footerLabel: 'close',

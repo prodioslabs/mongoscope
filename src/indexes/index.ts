@@ -25,6 +25,7 @@ export {
   type IndexBuildProgress,
   type IndexBuildProgressByKey,
 } from './parse-index-builds'
+export { findIndexMatchingSuggestion } from './match-suggestion'
 export { isUnauthorizedError } from './permissions'
 export type {
   CollectionIndexes,
