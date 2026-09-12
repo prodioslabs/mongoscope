@@ -68,6 +68,8 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const setSelectedDatabase = useSession((s) => s.setSelectedDatabase)
   const pendingIndexesNav = useSession((s) => s.pendingIndexesNav)
   const consumePendingIndexesNav = useSession((s) => s.consumePendingIndexesNav)
+  const indexesSuggestion = useSession((s) => s.indexesSuggestion)
+  const clearIndexesSuggestion = useSession((s) => s.clearIndexesSuggestion)
 
   const databases = snapshot?.databases ?? EMPTY_DATABASES
   const collections = snapshot?.collections ?? EMPTY_COLLECTIONS
@@ -83,7 +85,6 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   const [indexScrollOffset, setIndexScrollOffset] = useState(0)
   /** Applied once collections for the target DB are available. */
   const [pendingCollectionTarget, setPendingCollectionTarget] = useState<string | null>(null)
-  const [suggestionBanner, setSuggestionBanner] = useState<SuggestionBanner | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -145,25 +146,12 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
 
       setSelectedDatabase(pending.database)
       setPendingCollectionTarget(pending.collection)
-      setSelectedCollectionName(null)
+      // Select immediately so the suggestion banner has a stable collection target
+      // while the matching DB snapshot loads.
+      setSelectedCollectionName(pending.collection)
       setSelectedIndexName(null)
       setCollectionScrollOffset(0)
       setIndexScrollOffset(0)
-
-      if (
-        pending.suggestedCommand != null ||
-        pending.suggestedKeyLabel != null ||
-        pending.suggestedReason != null
-      ) {
-        setSuggestionBanner({
-          collection: pending.collection,
-          keyLabel: pending.suggestedKeyLabel,
-          command: pending.suggestedCommand,
-          reason: pending.suggestedReason,
-        })
-      } else {
-        setSuggestionBanner(null)
-      }
 
       if (pending.statusMessage != null && pending.statusMessage.trim() !== '') {
         setStatusMessage(pending.statusMessage)
@@ -278,23 +266,31 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   )
 
   useEffect(
-    function clearSuggestionBannerWhenLeavingCollection() {
-      if (pendingCollectionTarget != null || suggestionBanner == null) {
+    function clearIndexesSuggestionWhenLeavingCollection() {
+      if (indexesSuggestion == null || pendingCollectionTarget != null) {
         return
       }
-      if (selectedCollectionName !== suggestionBanner.collection) {
-        setSuggestionBanner(null)
+      if (selectedCollectionName == null) {
+        return
+      }
+      if (selectedCollectionName !== indexesSuggestion.collection) {
+        clearIndexesSuggestion()
       }
     },
-    [pendingCollectionTarget, selectedCollectionName, suggestionBanner],
+    [
+      pendingCollectionTarget,
+      selectedCollectionName,
+      indexesSuggestion,
+      clearIndexesSuggestion,
+    ],
   )
 
   useEffect(
     function selectIndexMatchingSuggestion() {
-      if (suggestionBanner?.keyLabel == null || focusedCollection == null) {
+      if (indexesSuggestion?.keyLabel == null || focusedCollection == null) {
         return
       }
-      if (focusedCollection.name !== suggestionBanner.collection) {
+      if (focusedCollection.name !== indexesSuggestion.collection) {
         return
       }
 
@@ -303,7 +299,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         indexSortBy,
         indexSortDirection,
       )
-      const match = findIndexMatchingSuggestion(rows, suggestionBanner.keyLabel)
+      const match = findIndexMatchingSuggestion(rows, indexesSuggestion.keyLabel)
       if (match == null) {
         return
       }
@@ -318,8 +314,8 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
       setIndexScrollOffset(Math.min(Math.max(0, matchIndex - Math.floor(capacity / 2)), maxOffset))
     },
     [
-      suggestionBanner?.keyLabel,
-      suggestionBanner?.collection,
+      indexesSuggestion?.keyLabel,
+      indexesSuggestion?.collection,
       focusedCollection?.name,
       focusedCollection?.indexes,
       indexSortBy,
@@ -628,12 +624,19 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         <text content={displayText(errors.collections.message)} fg={theme.error} />
       ) : null}
 
-      {suggestionBanner != null &&
-      selectedCollectionName === suggestionBanner.collection &&
-      pendingCollectionTarget == null ? (
+      {indexesSuggestion != null ? (
         <SuggestionBannerView
-          banner={suggestionBanner}
-          indexes={focusedCollection?.indexes ?? []}
+          banner={{
+            collection: indexesSuggestion.collection,
+            keyLabel: indexesSuggestion.keyLabel,
+            command: indexesSuggestion.command,
+            reason: indexesSuggestion.reason,
+          }}
+          indexes={
+            focusedCollection?.name === indexesSuggestion.collection
+              ? (focusedCollection.indexes ?? [])
+              : []
+          }
           theme={theme}
         />
       ) : null}

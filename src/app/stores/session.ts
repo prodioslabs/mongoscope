@@ -25,6 +25,15 @@ export type IndexesPendingNavigation = {
   statusMessage?: string
 }
 
+/** Sticky Slow Queries suggestion shown on Indexes until dismissed or left. */
+export type IndexesSuggestionContext = {
+  database: string
+  collection: string
+  keyLabel?: string
+  command?: string
+  reason?: string
+}
+
 export type TabNavigationContext = {
   slowQueries?: SlowQueriesPendingNavigation
   indexes?: IndexesPendingNavigation
@@ -65,6 +74,8 @@ type SessionState = {
   pendingSlowQueriesNav: SlowQueriesPendingNavigation | null
   /** Consumed once when Indexes tab/dashboard mounts after cross-tab navigation. */
   pendingIndexesNav: IndexesPendingNavigation | null
+  /** Sticky suggested-index banner for Indexes (survives remount; cleared on leave). */
+  indexesSuggestion: IndexesSuggestionContext | null
   logPath: string | null
   logStore: LogStore | null
   queryPatterns: QueryPatternStore | null
@@ -77,12 +88,32 @@ type SessionState = {
   navigateToTab: (tab: AppTab, context?: TabNavigationContext) => void
   consumePendingSlowQueriesNav: () => SlowQueriesPendingNavigation | null
   consumePendingIndexesNav: () => IndexesPendingNavigation | null
+  clearIndexesSuggestion: () => void
   setScreen: (screen: AppScreen) => void
   setActiveConnectionId: (id: string | null) => void
   setSelectedDatabase: (database: string | null) => void
   goToWelcome: () => void
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
+}
+
+function suggestionFromIndexesNav(
+  pending: IndexesPendingNavigation,
+): IndexesSuggestionContext | null {
+  if (
+    pending.suggestedCommand == null &&
+    pending.suggestedKeyLabel == null &&
+    pending.suggestedReason == null
+  ) {
+    return null
+  }
+  return {
+    database: pending.database,
+    collection: pending.collection,
+    keyLabel: pending.suggestedKeyLabel,
+    command: pending.suggestedCommand,
+    reason: pending.suggestedReason,
+  }
 }
 function progressPercent(bytesRead: number, fileSize: number): number {
   if (fileSize === 0) {
@@ -98,6 +129,7 @@ export const useSession = create<SessionState>((set, get) => ({
   selectedDatabase: null,
   pendingSlowQueriesNav: null,
   pendingIndexesNav: null,
+  indexesSuggestion: null,
   logPath: null,
   logStore: null,
   queryPatterns: null,
@@ -106,14 +138,29 @@ export const useSession = create<SessionState>((set, get) => ({
   parseError: null,
 
   setTab(tab) {
-    set({ activeTab: tab })
+    if (tab === 'indexes') {
+      set({ activeTab: tab })
+      return
+    }
+    set({
+      activeTab: tab,
+      pendingIndexesNav: null,
+      indexesSuggestion: null,
+    })
   },
 
   navigateToTab(tab, context) {
+    const indexesNav = context?.indexes ?? null
     set({
       activeTab: tab,
       pendingSlowQueriesNav: context?.slowQueries ?? null,
-      pendingIndexesNav: context?.indexes ?? null,
+      pendingIndexesNav: indexesNav,
+      indexesSuggestion:
+        indexesNav != null
+          ? suggestionFromIndexesNav(indexesNav)
+          : tab === 'indexes'
+            ? get().indexesSuggestion
+            : null,
     })
   },
 
@@ -133,6 +180,10 @@ export const useSession = create<SessionState>((set, get) => ({
     }
     set({ pendingIndexesNav: null })
     return pending
+  },
+
+  clearIndexesSuggestion() {
+    set({ indexesSuggestion: null })
   },
 
   setScreen(screen) {
@@ -210,6 +261,7 @@ export const useSession = create<SessionState>((set, get) => ({
       selectedDatabase: null,
       pendingSlowQueriesNav: null,
       pendingIndexesNav: null,
+      indexesSuggestion: null,
       logPath: null,
       logStore: null,
       queryPatterns: null,

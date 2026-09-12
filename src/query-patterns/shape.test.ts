@@ -51,4 +51,14 @@ describe('equalityFieldsOfFilter', () => {
   it('skips top-level operators', () => {
     expect(equalityFieldsOfFilter({ $or: [{ a: 1 }, { b: 1 }] })).toEqual([])
   })
+
+  it('treats $eq and extended JSON wrappers as equality', () => {
+    expect(
+      equalityFieldsOfFilter({
+        status: { $eq: 'pending' },
+        _id: { $oid: '507f1f77bcf86cd799439011' },
+        age: { $gt: 18 },
+      }),
+    ).toEqual(['status', '_id'])
+  })
 })
