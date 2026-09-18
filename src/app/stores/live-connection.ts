@@ -1,8 +1,5 @@
 import { create } from 'zustand'
-import {
-  liveConnectionManager,
-  type LiveConnectionSnapshot,
-} from '../../live-connection'
+import { liveConnectionManager, type LiveConnectionSnapshot } from '../../live-connection'
 
 type LiveConnectionStore = LiveConnectionSnapshot & {
   retry: () => Promise<void>

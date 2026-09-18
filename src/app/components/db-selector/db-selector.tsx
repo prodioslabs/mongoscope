@@ -123,7 +123,10 @@ export function DbSelector() {
       }}
     >
       <text content="DB" fg={theme.textMuted} attributes={TextAttributes.BOLD} flexShrink={0} />
-      <text content={displayText(label)} fg={activeProfile != null ? theme.text : theme.textMuted} />
+      <text
+        content={displayText(label)}
+        fg={activeProfile != null ? theme.text : theme.textMuted}
+      />
       {statusLabel != null ? (
         <text content={displayText(statusLabel)} fg={statusFg} flexShrink={0} />
       ) : null}

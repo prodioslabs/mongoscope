@@ -35,8 +35,7 @@ export function findBestMatchingPattern(
 
   const opMatches = patterns.filter(function matchesOp(pattern) {
     return (
-      normalizeNamespace(pattern.namespace) === namespace &&
-      pattern.op.trim().toLowerCase() === op
+      normalizeNamespace(pattern.namespace) === namespace && pattern.op.trim().toLowerCase() === op
     )
   })
   if (opMatches.length > 0) {

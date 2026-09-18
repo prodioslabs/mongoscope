@@ -10,6 +10,4 @@ export const CONNECTIONS_TAB_SHORTCUTS: readonly Shortcut[] = [
   },
 ]
 
-export const CONNECTIONS_TAB_FOOTER: FooterChip[] = [
-  { keys: 'c', label: 'connections' },
-]
+export const CONNECTIONS_TAB_FOOTER: FooterChip[] = [{ keys: 'c', label: 'connections' }]

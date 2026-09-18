@@ -112,7 +112,8 @@ function formatShape(value: unknown): string {
 
 /**
  * Collect top-level equality field names from a filter (skip `$`-operator keys
- * and fields whose value is an operator object like `{ $gt: … }`).
+ * and fields whose value is a range/array operator like `{ $gt: … }` / `{ $in: … }`).
+ * Treats primitives, `$eq`, and extended-JSON BSON wrappers (`$oid`, `$date`, …) as equality.
  */
 export function equalityFieldsOfFilter(value: unknown): string[] {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return []
@@ -120,15 +121,31 @@ export function equalityFieldsOfFilter(value: unknown): string[] {
   const obj = value as Record<string, unknown>
   for (const key of Object.keys(obj)) {
     if (key.startsWith('$')) continue
-    const v = obj[key]
-    if (isOperatorObject(v)) continue
-    fields.push(key)
+    if (isEqualityFieldValue(obj[key])) {
+      fields.push(key)
+    }
   }
   return fields
 }
 
-function isOperatorObject(value: unknown): boolean {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
+function isEqualityFieldValue(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return true
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return true
+  }
+  if (Array.isArray(value)) {
+    return true
+  }
+  if (typeof value !== 'object') {
+    return true
+  }
+
   const keys = Object.keys(value as Record<string, unknown>)
-  return keys.length > 0 && keys.every((k) => k.startsWith('$'))
+  if (keys.length !== 1) {
+    return false
+  }
+  const only = keys[0]!
+  return only === '$eq' || isBsonWrapperKey(only)
 }

@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { normalizeRecentReplicationEvents } from './recent-events'
 
-function line(partial: {
-  c: string
-  msg: string
-  t?: string
-}): string {
+function line(partial: { c: string; msg: string; t?: string }): string {
   return JSON.stringify({
     t: { $date: partial.t ?? '2026-07-29T03:14:00.000Z' },
     s: 'I',
@@ -33,7 +29,11 @@ describe('normalizeRecentReplicationEvents', () => {
 
   it('respects the display limit', () => {
     const log = Array.from({ length: 20 }, (_, i) =>
-      line({ c: 'REPL', msg: `event ${i}`, t: `2026-07-29T03:${String(i).padStart(2, '0')}:00.000Z` }),
+      line({
+        c: 'REPL',
+        msg: `event ${i}`,
+        t: `2026-07-29T03:${String(i).padStart(2, '0')}:00.000Z`,
+      }),
     )
     expect(normalizeRecentReplicationEvents({ log }, 5)).toHaveLength(5)
   })

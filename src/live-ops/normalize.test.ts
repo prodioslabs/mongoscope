@@ -154,9 +154,7 @@ describe('buildLockNote', () => {
       },
     ])
 
-    expect(note).toBe(
-      'op 10 is blocked waiting on Collection:W lock held by op 20',
-    )
+    expect(note).toBe('op 10 is blocked waiting on Collection:W lock held by op 20')
   })
 
   it('falls back when waiters exist without a holder', () => {

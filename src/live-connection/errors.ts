@@ -74,10 +74,7 @@ export function mapConnectFailure(error: unknown): LiveConnectionError {
     (error instanceof Error && error.name === 'MongoParseError')
   ) {
     if (textMatches(raw, ['missing host'])) {
-      return new LiveConnectionError(
-        'invalid_uri',
-        'Invalid MongoDB connection URI: missing host',
-      )
+      return new LiveConnectionError('invalid_uri', 'Invalid MongoDB connection URI: missing host')
     }
     return new LiveConnectionError('invalid_uri', 'Invalid MongoDB connection URI')
   }
@@ -87,10 +84,7 @@ export function mapConnectFailure(error: unknown): LiveConnectionError {
     hasCode(error, AUTH_NAME) ||
     textMatches(raw, ['Authentication failed', 'auth failed', 'not authorized', 'SCRAM'])
   ) {
-    return new LiveConnectionError(
-      'auth',
-      'Authentication failed. Check username and password.',
-    )
+    return new LiveConnectionError('auth', 'Authentication failed. Check username and password.')
   }
 
   if (

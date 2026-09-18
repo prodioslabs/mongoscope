@@ -9,7 +9,9 @@ import {
 } from './lag-history'
 import type { TopologyMember } from './types'
 
-function member(partial: Partial<TopologyMember> & Pick<TopologyMember, 'id' | 'name'>): TopologyMember {
+function member(
+  partial: Partial<TopologyMember> & Pick<TopologyMember, 'id' | 'name'>,
+): TopologyMember {
   return {
     id: partial.id,
     name: partial.name,

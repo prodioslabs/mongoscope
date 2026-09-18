@@ -117,13 +117,7 @@ export function ConnectionsDialog() {
         popOverlayKeybindings('connections-dialog')
       }
     },
-    [
-      dialogOpen,
-      dialogView,
-      pendingDelete,
-      pushOverlayKeybindings,
-      popOverlayKeybindings,
-    ],
+    [dialogOpen, dialogView, pendingDelete, pushOverlayKeybindings, popOverlayKeybindings],
   )
 
   function handleClose() {

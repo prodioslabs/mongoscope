@@ -1,6 +1,6 @@
 import type { MongoClientLike } from '../live-connection'
 import { isUnauthorizedError } from './permissions'
-import type { KillOpFailureReason, KillOpResult } from './types'
+import type { KillOpResult } from './types'
 
 const EMPTY_OPID = '—'
 

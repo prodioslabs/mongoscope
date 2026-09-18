@@ -19,14 +19,19 @@ export type FindCursorLike = {
 
 export type CollectionLike = {
   find(filter?: Record<string, unknown>): FindCursorLike
+  /** Index inventory (`listIndexes` under the hood). */
+  indexes(): Promise<unknown[]>
+  /** Collection-scoped aggregate (e.g. `[{ $indexStats: {} }]`). */
+  aggregate(pipeline: Record<string, unknown>[]): AggregateCursorLike
 }
 
 export type MongoDbLike = {
   admin(): {
     command(command: Record<string, unknown>): Promise<unknown>
   }
-  /** Database-scoped command (e.g. `{ collStats: 'oplog.rs' }` on `local`). */
+  /** Database-scoped command (e.g. `{ listCollections: 1 }`, `{ collStats: 'orders' }`, `{ collStats: 'oplog.rs' }` on `local`). */
   command(command: Record<string, unknown>): Promise<unknown>
+
   aggregate(pipeline: Record<string, unknown>[]): AggregateCursorLike
   collection(name: string): CollectionLike
 }
@@ -42,7 +47,10 @@ export type MongoClientLike = {
 
 export type CreateMongoClient = (uri: string, options: MongoClientOptions) => MongoClientLike
 
-export function defaultCreateMongoClient(uri: string, options: MongoClientOptions): MongoClientLike {
+export function defaultCreateMongoClient(
+  uri: string,
+  options: MongoClientOptions,
+): MongoClientLike {
   // Driver Db/Collection APIs are wider than our seam; cast at the boundary.
   return new MongoClient(uri, options) as unknown as MongoClientLike
 }

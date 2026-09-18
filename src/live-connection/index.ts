@@ -9,11 +9,7 @@ export {
   type MongoClientLike,
   type MongoDbLike,
 } from './client-factory'
-export {
-  LiveConnectionError,
-  mapConnectFailure,
-  type LiveConnectionErrorCode,
-} from './errors'
+export { LiveConnectionError, mapConnectFailure, type LiveConnectionErrorCode } from './errors'
 export { formatLiveConnectionError } from './format-live-connection-error'
 export {
   createLiveConnectionManager,

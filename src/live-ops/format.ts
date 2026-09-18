@@ -198,7 +198,10 @@ export function collectionTopBarWidths(
     return { readWidth: 0, writeWidth: 0, emptyWidth: safeWidth }
   }
   const readWidth = Math.round((Math.max(0, readMs) / total) * safeWidth)
-  const writeWidth = Math.min(safeWidth - readWidth, Math.round((Math.max(0, writeMs) / total) * safeWidth))
+  const writeWidth = Math.min(
+    safeWidth - readWidth,
+    Math.round((Math.max(0, writeMs) / total) * safeWidth),
+  )
   const used = readWidth + writeWidth
   return {
     readWidth,
@@ -214,4 +217,3 @@ export function repeatBar(width: number): string {
   }
   return FULL_BLOCK.repeat(width)
 }
-

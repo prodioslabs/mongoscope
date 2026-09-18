@@ -3,7 +3,6 @@ import { extractSlowQueryAttr, formatJson, normalizePlanSummary } from './attr'
 import { suggestIndex } from './suggest-index'
 import type { PatternExplain, QueryPatternStore } from './types'
 
-
 const COMMAND_STRIP_KEYS = new Set([
   'lsid',
   '$clusterTime',

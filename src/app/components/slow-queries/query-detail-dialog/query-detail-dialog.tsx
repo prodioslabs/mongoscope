@@ -4,6 +4,7 @@ import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   getPatternExplain,
+  splitNamespace,
   type PatternExplain,
   type QueryPattern,
   type QueryPatternStore,
@@ -13,6 +14,7 @@ import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { overlayMode } from '../../../lib/overlay-mode'
 import { QUERY_DETAIL_SHORTCUTS, queryDetailFooter, toBindings } from '../../../shortcuts'
 import { useFooter } from '../../../stores/footer'
+import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 import { Dialog } from '../../ui/dialog'
@@ -44,14 +46,19 @@ export function QueryDetailDialog({
   const theme = useTheme((s) => s.theme)
   const keymap = useKeymap()
   const dimensions = useTerminalDimensions()
+  const navigateToTab = useSession((s) => s.navigateToTab)
   const pushOverlayKeybindings = useFooter((s) => s.pushOverlayKeybindings)
   const popOverlayKeybindings = useFooter((s) => s.popOverlayKeybindings)
   const scrollRef = useRef<ScrollBoxRenderable | null>(null)
   const onCloseRef = useRef(onClose)
+  const explainRef = useRef<PatternExplain | null>(null)
+  const patternRef = useRef(pattern)
   onCloseRef.current = onClose
+  patternRef.current = pattern
   const [explain, setExplain] = useState<PatternExplain | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
+  explainRef.current = explain
 
   useEffect(
     function syncQueryDetailOverlayMode() {
@@ -125,6 +132,7 @@ export function QueryDetailDialog({
       return {
         appMode: 'palette' satisfies AppKeymapMode,
         enabled: open,
+        priority: 50,
         commands: [
           {
             name: 'query-detail.toggle-raw',
@@ -157,6 +165,47 @@ export function QueryDetailDialog({
             },
           },
           {
+            name: 'query-detail.open-indexes',
+            run() {
+              const current = explainRef.current
+              const selectedPattern = patternRef.current
+              const suggestion = current?.suggestedIndex ?? null
+              const namespace =
+                suggestion?.namespace ?? current?.namespace ?? selectedPattern?.namespace ?? ''
+              let database = suggestion?.database ?? ''
+              let collection = suggestion?.collection ?? ''
+              if (database === '' || collection === '') {
+                const split = splitNamespace(namespace)
+                database = split.db
+                collection = split.collection
+              }
+
+              if (
+                database.trim() === '' ||
+                collection.trim() === '' ||
+                namespace.trim() === '' ||
+                namespace === '—'
+              ) {
+                return
+              }
+
+              navigateToTab('indexes', {
+                indexes: {
+                  database,
+                  collection,
+                  suggestedKeyLabel: suggestion?.keyLabel,
+                  suggestedCommand: suggestion?.command,
+                  suggestedReason: suggestion?.reason,
+                  statusMessage:
+                    suggestion != null
+                      ? `opened indexes for suggested ${suggestion.keyLabel}`
+                      : `opened indexes for ${namespace}`,
+                },
+              })
+              onCloseRef.current()
+            },
+          },
+          {
             name: 'query-detail.close',
             run() {
               onCloseRef.current()
@@ -166,7 +215,7 @@ export function QueryDetailDialog({
         bindings: toBindings(QUERY_DETAIL_SHORTCUTS),
       }
     },
-    [open],
+    [navigateToTab, open],
   )
 
   const width = Math.min(88, dimensions.width - 4)
@@ -277,6 +326,9 @@ export function QueryDetailDialog({
                       </text>
                       <text fg={theme.textMuted} wrapMode="word">
                         {explain.suggestedIndex.reason}
+                      </text>
+                      <text fg={theme.textMuted} wrapMode="word">
+                        Press i to open Indexes for this collection
                       </text>
                     </DetailSection>
                   ) : null}

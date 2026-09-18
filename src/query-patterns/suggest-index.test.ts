@@ -16,6 +16,10 @@ describe('suggestIndex', () => {
     expect(suggestion!.estimatedExamined).toBe(40)
     expect(suggestion!.reason).toContain('ESR rule')
     expect(suggestion!.reason).toContain('-99.9%')
+    expect(suggestion!.database).toBe('govdb')
+    expect(suggestion!.collection).toBe('applications')
+    expect(suggestion!.keyLabel).toBe('status:1,district:1')
+    expect(suggestion!.equalityFields).toEqual(['status', 'district'])
   })
 
   it('returns null for IXSCAN', () => {

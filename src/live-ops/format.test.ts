@@ -103,7 +103,12 @@ describe('collectionTopBarSegments integration with scale output', () => {
     const scale = computeCollectionTopScale(rows)
     const maxRow = scale.rows[0]
     expect(maxRow?.fillPercent).toBe(100)
-    const bar = collectionTopBarString(maxRow!.readMs, maxRow!.writeMs, trackWidth, scale.maxTotalMs)
+    const bar = collectionTopBarString(
+      maxRow!.readMs,
+      maxRow!.writeMs,
+      trackWidth,
+      scale.maxTotalMs,
+    )
     expect(bar.length).toBe(trackWidth)
     expect(bar).toBe('█'.repeat(trackWidth))
   })
