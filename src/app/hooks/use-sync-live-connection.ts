@@ -41,10 +41,7 @@ export function useSyncLiveConnection(): void {
         if (uri == null) {
           await liveConnectionManager.fail(
             activeConnectionId,
-            new LiveConnectionError(
-              'missing_uri',
-              'Connection profile not found or has no URI.',
-            ),
+            new LiveConnectionError('missing_uri', 'Connection profile not found or has no URI.'),
           )
           return
         }

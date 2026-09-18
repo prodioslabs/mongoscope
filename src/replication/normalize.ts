@@ -42,7 +42,11 @@ type SeverityInput = {
   lagSeconds: number | null
 }
 
-export function memberStatusSeverity({ health, stateStr, lagSeconds }: SeverityInput): MemberSeverity {
+export function memberStatusSeverity({
+  health,
+  stateStr,
+  lagSeconds,
+}: SeverityInput): MemberSeverity {
   const state = stateStr.toUpperCase()
   if (health !== 1 || ERROR_STATES.has(state)) {
     return 'error'

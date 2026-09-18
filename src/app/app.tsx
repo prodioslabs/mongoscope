@@ -78,29 +78,32 @@ export function App({ options }: AppProps) {
     }
   }
 
-  useBindings(function createAlwaysOnAppLayer() {
-    return {
-      commands: [
-        {
-          name: 'app.toggle-palette',
-          run() {
-            setHelpMenuOpenRef.current(false)
-            setPaletteOpenRef.current((open) => !open)
+  useBindings(
+    function createAlwaysOnAppLayer() {
+      return {
+        commands: [
+          {
+            name: 'app.toggle-palette',
+            run() {
+              setHelpMenuOpenRef.current(false)
+              setPaletteOpenRef.current((open) => !open)
+            },
           },
-        },
-        {
-          name: 'app.toggle-help',
-          // Avoid stealing `?` while typing in an input.
-          enabled: notEditing,
-          run() {
-            setPaletteOpenRef.current(false)
-            setHelpMenuOpenRef.current((open) => !open)
+          {
+            name: 'app.toggle-help',
+            // Avoid stealing `?` while typing in an input.
+            enabled: notEditing,
+            run() {
+              setPaletteOpenRef.current(false)
+              setHelpMenuOpenRef.current((open) => !open)
+            },
           },
-        },
-      ],
-      bindings: toBindings(GLOBAL_ALWAYS_ON_SHORTCUTS),
-    }
-  }, [notEditing])
+        ],
+        bindings: toBindings(GLOBAL_ALWAYS_ON_SHORTCUTS),
+      }
+    },
+    [notEditing],
+  )
 
   useBindings(
     function createBaseAppLayer() {

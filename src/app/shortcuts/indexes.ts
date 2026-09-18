@@ -87,11 +87,7 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
 ]
 
 export const INDEXES_FOOTER: FooterChip[] = [
-  ...toFooter([
-    INDEXES_SHORTCUTS[0]!,
-    INDEXES_SHORTCUTS[1]!,
-    INDEXES_SHORTCUTS[2]!,
-  ]),
+  ...toFooter([INDEXES_SHORTCUTS[0]!, INDEXES_SHORTCUTS[1]!, INDEXES_SHORTCUTS[2]!]),
   { keys: 'n/i', label: 'sort collections' },
   { keys: 's/o', label: 'sort size/ops' },
 ]

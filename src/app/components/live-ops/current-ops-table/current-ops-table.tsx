@@ -101,16 +101,13 @@ export function CurrentOpsTable({
     }, STATUS_CLEAR_MS)
   }, [])
 
-  useEffect(
-    function cleanupStatusTimer() {
-      return function disposeStatusTimer() {
-        if (statusTimerRef.current != null) {
-          clearTimeout(statusTimerRef.current)
-        }
+  useEffect(function cleanupStatusTimer() {
+    return function disposeStatusTimer() {
+      if (statusTimerRef.current != null) {
+        clearTimeout(statusTimerRef.current)
       }
-    },
-    [],
-  )
+    }
+  }, [])
 
   useEffect(
     function reconcileSelectionAfterPoll() {
@@ -347,36 +344,26 @@ export function CurrentOpsTable({
     )
   }
 
-  const resolvedIndex =
-    selectedOpid == null ? -1 : ops.findIndex((op) => op.opid === selectedOpid)
+  const resolvedIndex = selectedOpid == null ? -1 : ops.findIndex((op) => op.opid === selectedOpid)
   const visible = ops.slice(scrollOffset, scrollOffset + capacity)
   const relativeSelectedIndex =
     resolvedIndex >= scrollOffset && resolvedIndex < scrollOffset + capacity
       ? resolvedIndex - scrollOffset
       : -1
 
-  const content = buildCurrentOpTableContent(
-    visible,
-    relativeSelectedIndex,
-    theme,
-    capacity,
-  )
+  const content = buildCurrentOpTableContent(visible, relativeSelectedIndex, theme, capacity)
   const isEmpty = ops.length === 0
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column" gap={0}>
-      {ownOpsOnly ? (
-        <text content="showing own operations only" fg={theme.warning} />
-      ) : null}
+      {ownOpsOnly ? <text content="showing own operations only" fg={theme.warning} /> : null}
       <DataTextTable content={content} theme={theme} />
       {isEmpty ? (
         <box flexShrink={0} paddingTop={0}>
           <text content="no active operations" fg={theme.textMuted} />
         </box>
       ) : null}
-      {lockNote.trim() !== '' ? (
-        <text content={displayText(lockNote)} fg={theme.warning} />
-      ) : null}
+      {lockNote.trim() !== '' ? <text content={displayText(lockNote)} fg={theme.warning} /> : null}
       <KillOpConfirmDialog
         open={killConfirmOpen}
         target={killTarget}
@@ -423,9 +410,7 @@ function buildCurrentOpTableContent(
 function buildCurrentOpRow(op: CurrentOpRow, selected: boolean, theme: Theme): TextChunk[][] {
   const runningSeverity = runningMsSeverity(op.runningMs)
   const runningColor =
-    runningSeverity === 'normal'
-      ? theme.text
-      : severityColor(theme, runningSeverity)
+    runningSeverity === 'normal' ? theme.text : severityColor(theme, runningSeverity)
 
   const namespaceLabel = truncateLiveOpsCell(op.namespace, 20)
   const namespaceCell = selected

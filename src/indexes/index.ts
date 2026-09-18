@@ -1,4 +1,8 @@
-export { fetchIndexesSnapshot, type FetchIndexesSnapshotResult, type IndexesClient } from './fetch-snapshot'
+export {
+  fetchIndexesSnapshot,
+  type FetchIndexesSnapshotResult,
+  type IndexesClient,
+} from './fetch-snapshot'
 export {
   formatBytes,
   formatBuildProgress,

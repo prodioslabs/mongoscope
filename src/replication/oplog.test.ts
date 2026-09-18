@@ -54,11 +54,7 @@ describe('buildOplogWindow', () => {
   })
 
   it('clamps fillPercent display to 100 when oplog exceeds configured maxSize', () => {
-    const oplogWindow = buildOplogWindow(
-      { size: 600_000_000, maxSize: 500_000_000 },
-      first,
-      last,
-    )
+    const oplogWindow = buildOplogWindow({ size: 600_000_000, maxSize: 500_000_000 }, first, last)
     expect(oplogWindow.usedBytes).toBe(600_000_000)
     expect(oplogWindow.maxBytes).toBe(500_000_000)
     expect(oplogWindow.fillsOverMax).toBe(true)

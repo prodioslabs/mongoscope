@@ -129,7 +129,10 @@ async function fetchOplogWindow(client: ReplicationAdminClient): Promise<OplogWi
   )
 }
 
-function toTopologyPanelError(statusReason: unknown, configReason?: unknown): ReplicationPanelError {
+function toTopologyPanelError(
+  statusReason: unknown,
+  configReason?: unknown,
+): ReplicationPanelError {
   if (isUnauthorizedError(statusReason)) {
     return {
       kind: 'permission',
@@ -197,11 +200,11 @@ function isNotReplicaSetError(error: unknown): boolean {
   }
   const message =
     typeof (error as { message?: unknown }).message === 'string'
-      ? ((error as { message: string }).message).toLowerCase()
+      ? (error as { message: string }).message.toLowerCase()
       : ''
   const codeName =
     typeof (error as { codeName?: unknown }).codeName === 'string'
-      ? ((error as { codeName: string }).codeName).toLowerCase()
+      ? (error as { codeName: string }).codeName.toLowerCase()
       : ''
   return (
     message.includes('not running with --replset') ||

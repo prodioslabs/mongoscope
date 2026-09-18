@@ -25,9 +25,7 @@ export function normalizeWriteConcern(raw: unknown): WriteConcernView {
   }
 
   const source =
-    typeof record.defaultWriteConcernSource === 'string'
-      ? record.defaultWriteConcernSource
-      : null
+    typeof record.defaultWriteConcernSource === 'string' ? record.defaultWriteConcernSource : null
 
   return { defaultW, source }
 }

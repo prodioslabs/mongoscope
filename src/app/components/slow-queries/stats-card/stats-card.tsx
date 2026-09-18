@@ -15,8 +15,7 @@ type StatsCardProps = {
  */
 export function StatsCard({ label, value, icon, valueColor }: StatsCardProps) {
   const theme = useTheme((s) => s.theme)
-  const heading =
-    icon != null && icon.length > 0 ? `${icon} ${label}` : label
+  const heading = icon != null && icon.length > 0 ? `${icon} ${label}` : label
 
   return (
     <box

@@ -1,13 +1,7 @@
 #!/usr/bin/env bun
 /* eslint-disable no-console */
 
-import {
-  existsSync,
-  mkdirSync,
-  statSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs'
+import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

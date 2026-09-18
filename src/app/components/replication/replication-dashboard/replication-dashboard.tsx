@@ -70,16 +70,17 @@ export function ReplicationDashboard({ data, isPending }: ReplicationDashboardPr
         oplogError={errors.oplog}
         isPending={pending}
       />
-      <RecentEventsPanel
-        events={recentEvents}
-        error={errors.recentEvents}
-        isPending={pending}
-      />
+      <RecentEventsPanel events={recentEvents} error={errors.recentEvents} isPending={pending} />
     </box>
   )
 
   const sideColumn = (
-    <box flexShrink={0} flexDirection="column" gap={1} width={narrow ? undefined : RIGHT_PANEL_WIDTH}>
+    <box
+      flexShrink={0}
+      flexDirection="column"
+      gap={1}
+      width={narrow ? undefined : RIGHT_PANEL_WIDTH}
+    >
       <LagTrendPanel lagTrend={lagTrend} isPending={pending} />
       <HeartbeatsPanel heartbeats={heartbeats} error={errors.heartbeats} isPending={pending} />
       <WriteConcernPanel
@@ -92,7 +93,14 @@ export function ReplicationDashboard({ data, isPending }: ReplicationDashboardPr
 
   if (narrow) {
     return (
-      <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1} gap={1}>
+      <box
+        flexGrow={1}
+        flexShrink={1}
+        flexDirection="column"
+        paddingLeft={1}
+        paddingRight={1}
+        gap={1}
+      >
         {mainColumn}
         {sideColumn}
       </box>
@@ -284,14 +292,24 @@ function RecentEventsPanel({ events, error, isPending }: RecentEventsPanelProps)
         <box flexDirection="column" gap={0} flexShrink={0}>
           {visible.map(function renderEvent(event, index) {
             return (
-              <box key={`evt-${index}-${event.timestampMs ?? 0}`} flexDirection="row" gap={1} height={1}>
+              <box
+                key={`evt-${index}-${event.timestampMs ?? 0}`}
+                flexDirection="row"
+                gap={1}
+                height={1}
+              >
                 <text
                   content={displayText(event.timestampLabel.padEnd(16, ' '))}
                   fg={theme.textMuted}
                   wrapMode="none"
                   flexShrink={0}
                 />
-                <text content={displayText(event.message)} fg={theme.text} wrapMode="none" flexShrink={1} />
+                <text
+                  content={displayText(event.message)}
+                  fg={theme.text}
+                  wrapMode="none"
+                  flexShrink={1}
+                />
               </box>
             )
           })}
@@ -397,7 +415,11 @@ function HeartbeatsPanel({ heartbeats, error, isPending }: HeartbeatsPanelProps)
                   fg={theme.text}
                   wrapMode="none"
                 />
-                <text content={displayText(formatPingMs(edge.pingMs))} fg={theme.textMuted} wrapMode="none" />
+                <text
+                  content={displayText(formatPingMs(edge.pingMs))}
+                  fg={theme.textMuted}
+                  wrapMode="none"
+                />
               </box>
             )
           })}

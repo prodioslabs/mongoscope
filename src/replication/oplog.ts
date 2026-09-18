@@ -54,8 +54,7 @@ export function buildOplogWindow(
   }
 
   const windowHours = windowSeconds != null ? windowSeconds / 3600 : null
-  const growthBytesPerHour =
-    windowHours != null && windowHours > 0 ? usedBytes / windowHours : null
+  const growthBytesPerHour = windowHours != null && windowHours > 0 ? usedBytes / windowHours : null
 
   const fillsOverMax = maxBytes > 0 && usedBytes > maxBytes
   let fillPercent = 0

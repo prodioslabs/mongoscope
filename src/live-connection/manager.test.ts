@@ -194,7 +194,12 @@ describe('createLiveConnectionManager', () => {
     const stats = await local.command({ collStats: 'oplog.rs' })
     expect(stats).toMatchObject({ size: 1_048_576, maxSize: 10_485_760 })
 
-    const first = await local.collection('oplog.rs').find({}).sort({ $natural: 1 }).limit(1).toArray()
+    const first = await local
+      .collection('oplog.rs')
+      .find({})
+      .sort({ $natural: 1 })
+      .limit(1)
+      .toArray()
     expect(first).toHaveLength(1)
     expect(first[0]).toMatchObject({ ts: { t: 1_700_000_000, i: 1 } })
   })

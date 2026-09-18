@@ -23,7 +23,14 @@ export { LIVE_OPS_FOOTER, LIVE_OPS_KILL_CONFIRM_FOOTER, LIVE_OPS_SHORTCUTS } fro
 export { QUERY_DETAIL_SHORTCUTS, queryDetailFooter } from './query-detail'
 export { REPLICATION_FOOTER, REPLICATION_SHORTCUTS } from './replication'
 export { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS } from './slow-queries'
-export { toBindings, toFooter, toHelpSection, type HelpBinding, type HelpSection, type Shortcut } from './types'
+export {
+  toBindings,
+  toFooter,
+  toHelpSection,
+  type HelpBinding,
+  type HelpSection,
+  type Shortcut,
+} from './types'
 export { WELCOME_PARSING_FOOTER, WELCOME_SHORTCUTS } from './welcome'
 
 export const HELP_SECTIONS: HelpSection[] = [

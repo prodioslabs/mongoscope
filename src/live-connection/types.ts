@@ -1,9 +1,4 @@
-export type LiveConnectionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'error'
-  | 'disconnected'
+export type LiveConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected'
 
 export type LiveConnectionDisconnectReason = 'user' | 'switch' | 'drop'
 

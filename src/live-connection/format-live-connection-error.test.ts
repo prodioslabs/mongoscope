@@ -4,7 +4,10 @@ import { formatLiveConnectionError } from './format-live-connection-error'
 
 describe('formatLiveConnectionError', () => {
   it('returns LiveConnectionError messages as-is', () => {
-    const error = new LiveConnectionError('auth', 'Authentication failed. Check username and password.')
+    const error = new LiveConnectionError(
+      'auth',
+      'Authentication failed. Check username and password.',
+    )
     expect(formatLiveConnectionError(error)).toBe(error.message)
   })
 

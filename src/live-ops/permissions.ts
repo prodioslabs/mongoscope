@@ -25,7 +25,7 @@ export function isTopUnavailableOnMongos(error: unknown): boolean {
   }
   const message =
     typeof (error as { message?: unknown }).message === 'string'
-      ? ((error as { message: string }).message).toLowerCase()
+      ? (error as { message: string }).message.toLowerCase()
       : ''
   return (
     message.includes('mongos') ||

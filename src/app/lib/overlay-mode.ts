@@ -6,7 +6,6 @@ export type OverlayModeKeymap = {
 
 let nextOwnerId = 0
 
-
 export function createOverlayOwnerId(prefix: string): string {
   nextOwnerId += 1
   return `${prefix}-${nextOwnerId}`

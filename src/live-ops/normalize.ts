@@ -120,8 +120,7 @@ export function buildLockNote(ops: CurrentOpRow[]): string {
   const longestHolder = holders[0]
 
   if (longestWaiter != null && longestHolder != null) {
-    const lockLabel =
-      longestWaiter.waitingFor !== EMPTY_CELL ? longestWaiter.waitingFor : 'lock'
+    const lockLabel = longestWaiter.waitingFor !== EMPTY_CELL ? longestWaiter.waitingFor : 'lock'
     return `op ${longestWaiter.opid} is blocked waiting on ${lockLabel} lock held by op ${longestHolder.opid}`
   }
 

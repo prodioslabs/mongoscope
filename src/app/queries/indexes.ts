@@ -6,11 +6,8 @@ import { useSession } from '../stores/session'
 
 export const indexesKeys = {
   all: ['indexes'] as const,
-  snapshot: (
-    connectionId: string | null,
-    generation: number,
-    selectedDatabase: string | null,
-  ) => [...indexesKeys.all, 'snapshot', connectionId, generation, selectedDatabase] as const,
+  snapshot: (connectionId: string | null, generation: number, selectedDatabase: string | null) =>
+    [...indexesKeys.all, 'snapshot', connectionId, generation, selectedDatabase] as const,
 }
 
 export function useIndexesSnapshot(enabled: boolean) {

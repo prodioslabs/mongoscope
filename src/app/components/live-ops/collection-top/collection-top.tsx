@@ -121,7 +121,14 @@ type CollectionTopLegendProps = {
 
 function CollectionTopLegend({ theme }: CollectionTopLegendProps) {
   return (
-    <box flexDirection="row" gap={2} flexShrink={0} paddingBottom={0} height={1} alignItems="center">
+    <box
+      flexDirection="row"
+      gap={2}
+      flexShrink={0}
+      paddingBottom={0}
+      height={1}
+      alignItems="center"
+    >
       <box flexDirection="row" gap={1} flexShrink={0} height={1} alignItems="center">
         <LegendDot color={theme.success} />
         <text content="read time" fg={theme.textMuted} wrapMode="none" flexShrink={0} />

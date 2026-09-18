@@ -114,11 +114,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
     selectedCollectionIndex >= 0
       ? (sortedCollections[selectedCollectionIndex] ?? null)
       : (sortedCollections[0] ?? null)
-  const indexRows = sortIndexRows(
-    focusedCollection?.indexes ?? [],
-    indexSortBy,
-    indexSortDirection,
-  )
+  const indexRows = sortIndexRows(focusedCollection?.indexes ?? [], indexSortBy, indexSortDirection)
 
   const databasesRef = useRef(databases)
   const sortedCollectionsRef = useRef(sortedCollections)
@@ -176,16 +172,13 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
     [pendingIndexesNav, consumePendingIndexesNav, setSelectedDatabase],
   )
 
-  useEffect(
-    function cleanupStatusTimer() {
-      return function disposeStatusTimer() {
-        if (statusTimerRef.current != null) {
-          clearTimeout(statusTimerRef.current)
-        }
+  useEffect(function cleanupStatusTimer() {
+    return function disposeStatusTimer() {
+      if (statusTimerRef.current != null) {
+        clearTimeout(statusTimerRef.current)
       }
-    },
-    [],
-  )
+    }
+  }, [])
 
   useEffect(
     function resolvePendingIndexesJump() {
@@ -250,10 +243,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
       )
       if (targetIndex >= 0) {
         const maxOffset = Math.max(0, sortedCollections.length - capacity)
-        const nextOffset = Math.min(
-          Math.max(0, targetIndex - Math.floor(capacity / 2)),
-          maxOffset,
-        )
+        const nextOffset = Math.min(Math.max(0, targetIndex - Math.floor(capacity / 2)), maxOffset)
         setCollectionScrollOffset(nextOffset)
       }
 
@@ -329,9 +319,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
       if (selectedCollectionName == null) {
         return
       }
-      if (
-        selectedCollectionName.toLowerCase() !== indexesSuggestion.collection.toLowerCase()
-      ) {
+      if (selectedCollectionName.toLowerCase() !== indexesSuggestion.collection.toLowerCase()) {
         clearIndexesSuggestion()
       }
     },
@@ -347,11 +335,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
         return
       }
 
-      const rows = sortIndexRows(
-        focusedCollection.indexes,
-        indexSortBy,
-        indexSortDirection,
-      )
+      const rows = sortIndexRows(focusedCollection.indexes, indexSortBy, indexSortDirection)
       const match = findIndexMatchingSuggestion(rows, indexesSuggestion.keyLabel)
       if (match == null) {
         return
@@ -449,7 +433,9 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
           return
         }
 
-        let prev = list.findIndex((collection) => collection.name === selectedCollectionNameRef.current)
+        let prev = list.findIndex(
+          (collection) => collection.name === selectedCollectionNameRef.current,
+        )
         if (prev < 0) {
           prev = delta > 0 ? -1 : length
         }
@@ -610,9 +596,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
       : -1
 
   const resolvedIndex =
-    selectedIndexName == null
-      ? -1
-      : indexRows.findIndex((row) => row.name === selectedIndexName)
+    selectedIndexName == null ? -1 : indexRows.findIndex((row) => row.name === selectedIndexName)
   const visibleIndexes = indexRows.slice(indexScrollOffset, indexScrollOffset + capacity)
   const relativeSelectedIndex =
     resolvedIndex >= indexScrollOffset && resolvedIndex < indexScrollOffset + capacity
@@ -637,7 +621,14 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
   )
 
   return (
-    <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1} gap={1}>
+    <box
+      flexGrow={1}
+      flexShrink={1}
+      flexDirection="column"
+      paddingLeft={1}
+      paddingRight={1}
+      gap={1}
+    >
       <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
         <text
           content="indexes — inventory & usage"
@@ -720,10 +711,7 @@ export function IndexesDashboard({ snapshot, isPending }: IndexesDashboardProps)
               <text content={displayText(focusedCollection.error.message)} fg={theme.error} />
             ) : null}
             {focusedCollection?.usageUnavailable ? (
-              <text
-                content="usage n/a (needs indexStats / clusterMonitor)"
-                fg={theme.textMuted}
-              />
+              <text content="usage n/a (needs indexStats / clusterMonitor)" fg={theme.textMuted} />
             ) : null}
             <DataTextTable content={indexesTableContent} theme={theme} />
             {focusedCollection != null &&
@@ -804,9 +792,7 @@ function SuggestionBannerView({ banner, indexes, theme }: SuggestionBannerViewPr
       {banner.keyLabel != null ? (
         match != null ? (
           <text
-            content={displayText(
-              `covering index found: ${match.name} (${match.keyLabel})`,
-            )}
+            content={displayText(`covering index found: ${match.name} (${match.keyLabel})`)}
             fg={theme.success}
             wrapMode="word"
           />
@@ -887,10 +873,7 @@ function sortableHeaderCell(
   if (!active) {
     return [bold(fg(theme.textMuted)(base))]
   }
-  return [
-    bold(fg(theme.textMuted)(base)),
-    bold(fg(theme.primary)(` ${sortArrow(sortDirection)}`)),
-  ]
+  return [bold(fg(theme.textMuted)(base)), bold(fg(theme.primary)(` ${sortArrow(sortDirection)}`))]
 }
 
 function buildCollectionsTableContent(
@@ -913,9 +896,7 @@ function buildCollectionsTableContent(
     const selected = i === selectedIndex
     const nameLabel = truncateIndexCell(collection.name, 22)
     tableRows.push([
-      selected
-        ? tableCell(`${nameLabel} ●`, theme.primary)
-        : tableCell(nameLabel, theme.text),
+      selected ? tableCell(`${nameLabel} ●`, theme.primary) : tableCell(nameLabel, theme.text),
       tableCell(String(collection.indexes.length), theme.textMuted),
     ])
   }

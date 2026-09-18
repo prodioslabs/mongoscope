@@ -105,8 +105,7 @@ function extractBuildTargets(
         ? cmd.createIndexes
         : null
     const database =
-      parsedNs?.database ??
-      (typeof cmd.$db === 'string' && cmd.$db.trim() !== '' ? cmd.$db : null)
+      parsedNs?.database ?? (typeof cmd.$db === 'string' && cmd.$db.trim() !== '' ? cmd.$db : null)
     const collection = collectionFromCommand ?? parsedNs?.collection ?? null
 
     if (database != null && collection != null && Array.isArray(cmd.indexes)) {
@@ -130,9 +129,7 @@ function extractBuildTargets(
     return []
   }
 
-  const indexName = parseIndexNameFromMessage(
-    typeof record.msg === 'string' ? record.msg : '',
-  )
+  const indexName = parseIndexNameFromMessage(typeof record.msg === 'string' ? record.msg : '')
   if (indexName == null) {
     return []
   }

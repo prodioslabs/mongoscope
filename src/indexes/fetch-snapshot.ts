@@ -8,10 +8,7 @@ import {
   parseListDatabasesResult,
 } from './normalize'
 import { panelErrorFromUnknown } from './panel-error'
-import {
-  parseIndexBuildOps,
-  type IndexBuildProgressByKey,
-} from './parse-index-builds'
+import { parseIndexBuildOps, type IndexBuildProgressByKey } from './parse-index-builds'
 import type { CollectionIndexes, IndexesSnapshot } from './types'
 
 export type IndexesClient = Pick<MongoClientLike, 'db'>

@@ -38,11 +38,13 @@ export {
   type RawReplSetConfig,
   type RawReplSetStatus,
 } from './normalize'
-export { buildOplogWindow, oplogTimestampSeconds, type OplogEdgeDoc, type OplogStatsInput } from './oplog'
 export {
-  normalizeRecentReplicationEvents,
-  RECENT_EVENTS_LIMIT,
-} from './recent-events'
+  buildOplogWindow,
+  oplogTimestampSeconds,
+  type OplogEdgeDoc,
+  type OplogStatsInput,
+} from './oplog'
+export { normalizeRecentReplicationEvents, RECENT_EVENTS_LIMIT } from './recent-events'
 export { formatDefaultWriteConcern, normalizeWriteConcern } from './write-concern'
 export type {
   HeartbeatEdge,

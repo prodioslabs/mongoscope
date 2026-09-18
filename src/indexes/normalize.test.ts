@@ -146,12 +146,11 @@ describe('normalizeIndexSpecs', () => {
         },
       ],
     ])
-    const rows = normalizeIndexSpecs(
-      [{ name: 'a_1', key: { a: 1 } }],
-      { a_1: 200 },
-      null,
-      { database: 'shop', collection: 'orders', buildsByKey: builds },
-    )
+    const rows = normalizeIndexSpecs([{ name: 'a_1', key: { a: 1 } }], { a_1: 200 }, null, {
+      database: 'shop',
+      collection: 'orders',
+      buildsByKey: builds,
+    })
     expect(rows[0]).toMatchObject({
       building: true,
       buildPercent: 42,
