@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { CollectionLike, MongoClientLike } from './client-factory'
+import type { CollectionLike, FindCursorLike, MongoClientLike, MongoDbLike } from './client-factory'
 import { LiveConnectionError } from './errors'
 import { createLiveConnectionManager } from './manager'
 
@@ -15,12 +15,45 @@ type FakeClient = MongoClientLike & {
     pipeline: Record<string, unknown>[],
   ) => Promise<unknown[]>
   closed: boolean
+  /** Per-db command handlers keyed by db name (default: ping). */
+  dbCommandImpl: (dbName: string, command: Record<string, unknown>) => Promise<unknown>
+  /** Per-collection find results keyed by `dbName.collectionName`. */
+  findResults: Map<string, unknown[]>
+}
+
+function createFindCursor(docs: unknown[]): FindCursorLike {
+  let sorted = docs
+  let limited = docs
+  const cursor: FindCursorLike = {
+    sort() {
+      return cursor
+    },
+    limit(n) {
+      limited = sorted.slice(0, Math.max(0, n))
+      return cursor
+    },
+    async toArray() {
+      return limited
+    },
+  }
+  // Allow sort to still see original docs before limit is applied.
+  cursor.sort = function sortDocs() {
+    sorted = docs
+    limited = docs
+    return cursor
+  }
+  cursor.limit = function limitDocs(n) {
+    limited = sorted.slice(0, Math.max(0, n))
+    return cursor
+  }
+  return cursor
 }
 
 function createFakeClient(overrides?: {
   connectImpl?: () => Promise<void>
   pingImpl?: () => Promise<unknown>
   dbCommandImpl?: (dbName: string, command: Record<string, unknown>) => Promise<unknown>
+  findResults?: Map<string, unknown[]>
   collectionIndexesImpl?: (dbName: string, collectionName: string) => Promise<unknown[]>
   collectionAggregateImpl?: (
     dbName: string,
@@ -42,6 +75,7 @@ function createFakeClient(overrides?: {
         }
         return { ok: 1 }
       }),
+    findResults: overrides?.findResults ?? new Map(),
     collectionIndexesImpl: overrides?.collectionIndexesImpl ?? (async () => []),
     collectionAggregateImpl: overrides?.collectionAggregateImpl ?? (async () => []),
     async connect() {
@@ -54,7 +88,7 @@ function createFakeClient(overrides?: {
       }
     },
     db(dbName = 'test') {
-      return {
+      const db: MongoDbLike = {
         admin() {
           return {
             command: async (command) => {
@@ -74,6 +108,15 @@ function createFakeClient(overrides?: {
           }
         },
         collection(name) {
+          const key = `${dbName}.${name}`
+          const collection: CollectionLike = {
+            find() {
+              return createFindCursor(client.findResults.get(key) ?? [])
+            },
+          }
+          return collection
+        },
+        collection(name) {
           const collection: CollectionLike = {
             async indexes() {
               return client.collectionIndexesImpl(dbName, name)
@@ -89,6 +132,7 @@ function createFakeClient(overrides?: {
           return collection
         },
       }
+      return db
     },
     on(_event, listener) {
       closeListeners.add(listener)
@@ -117,6 +161,42 @@ describe('createLiveConnectionManager', () => {
       errorMessage: '',
     })
     expect(manager.getActiveClient()).toBe(client)
+  })
+
+  it('exposes db.command and collection.find through the client seam', async () => {
+    const findResults = new Map<string, unknown[]>([
+      [
+        'local.oplog.rs',
+        [
+          { ts: { t: 1_700_000_000, i: 1 }, op: 'n' },
+          { ts: { t: 1_700_003_600, i: 1 }, op: 'n' },
+        ],
+      ],
+    ])
+    const client = createFakeClient({
+      findResults,
+      dbCommandImpl: async (dbName, command) => {
+        if (dbName === 'local' && command.collStats === 'oplog.rs') {
+          return { size: 1_048_576, maxSize: 10_485_760, ok: 1 }
+        }
+        return { ok: 1 }
+      },
+    })
+    const manager = createLiveConnectionManager({
+      createClient: () => client,
+    })
+
+    await manager.connect('id-1', 'mongodb://127.0.0.1:27017')
+    const active = manager.getActiveClient()
+    expect(active).not.toBeNull()
+
+    const local = active!.db('local')
+    const stats = await local.command({ collStats: 'oplog.rs' })
+    expect(stats).toMatchObject({ size: 1_048_576, maxSize: 10_485_760 })
+
+    const first = await local.collection('oplog.rs').find({}).sort({ $natural: 1 }).limit(1).toArray()
+    expect(first).toHaveLength(1)
+    expect(first[0]).toMatchObject({ ts: { t: 1_700_000_000, i: 1 } })
   })
 
   it('maps connect failures to error without retaining a client', async () => {

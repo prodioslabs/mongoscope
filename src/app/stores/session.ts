@@ -66,7 +66,7 @@ export function tabFromKey(key: string): AppTab | null {
 type SessionState = {
   screen: AppScreen
   activeTab: AppTab
-  /** Selected connection for Live Ops / Indexes (session-only; not persisted). */
+  /** Selected connection for Live Ops / Replication / Indexes (session-only; not persisted). */
   activeConnectionId: string | null
   /** Selected MongoDB database for Indexes (session-only; cleared on connection change). */
   selectedDatabase: string | null

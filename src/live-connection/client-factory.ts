@@ -11,7 +11,14 @@ export type AggregateCursorLike = {
   toArray(): Promise<unknown[]>
 }
 
+export type FindCursorLike = {
+  sort(sort: Record<string, unknown>): FindCursorLike
+  limit(n: number): FindCursorLike
+  toArray(): Promise<unknown[]>
+}
+
 export type CollectionLike = {
+  find(filter?: Record<string, unknown>): FindCursorLike
   /** Index inventory (`listIndexes` under the hood). */
   indexes(): Promise<unknown[]>
   /** Collection-scoped aggregate (e.g. `[{ $indexStats: {} }]`). */
@@ -22,8 +29,9 @@ export type MongoDbLike = {
   admin(): {
     command(command: Record<string, unknown>): Promise<unknown>
   }
-  /** Database-scoped command (e.g. `{ listCollections: 1 }`, `{ collStats: 'orders' }`). */
+  /** Database-scoped command (e.g. `{ listCollections: 1 }`, `{ collStats: 'orders' }`, `{ collStats: 'oplog.rs' }` on `local`). */
   command(command: Record<string, unknown>): Promise<unknown>
+
   aggregate(pipeline: Record<string, unknown>[]): AggregateCursorLike
   collection(name: string): CollectionLike
 }

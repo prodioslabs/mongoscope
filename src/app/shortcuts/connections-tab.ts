@@ -1,6 +1,6 @@
 import { type FooterChip, type Shortcut } from './types'
 
-/** Open connections dialog from Live Ops / Indexes when saved connections exist. */
+/** Open connections dialog from Live Ops / Replication / Indexes when saved connections exist. */
 export const CONNECTIONS_TAB_SHORTCUTS: readonly Shortcut[] = [
   {
     keys: 'c',

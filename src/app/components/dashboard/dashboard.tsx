@@ -5,6 +5,7 @@ import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { IndexesTab } from '../indexes/indexes-tab'
 import { LiveOpsTab } from '../live-ops/live-ops-tab'
+import { ReplicationTab } from '../replication/replication-tab'
 import { SlowQueriesTab } from '../slow-queries/slow-queries-tab'
 import { TabBar } from '../tab-bar'
 
@@ -23,7 +24,7 @@ export function Dashboard() {
   const content = match(activeTab)
     .with('slow-queries', () => <SlowQueriesTab />)
     .with('live-ops', () => <LiveOpsTab />)
-    .with('replication', () => <TabPlaceholder name="Replication" />)
+    .with('replication', () => <ReplicationTab />)
     .with('indexes', () => <IndexesTab />)
     .with('logs', () => <TabPlaceholder name="Logs" />)
     .exhaustive()

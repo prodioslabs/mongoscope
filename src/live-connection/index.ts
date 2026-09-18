@@ -5,6 +5,7 @@ export {
   type AggregateCursorLike,
   type CollectionLike,
   type CreateMongoClient,
+  type FindCursorLike,
   type MongoClientLike,
   type MongoDbLike,
 } from './client-factory'
