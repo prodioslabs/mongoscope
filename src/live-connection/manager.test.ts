@@ -7,6 +7,7 @@ type FakeClient = MongoClientLike & {
   closeListeners: Set<() => void>
   connectImpl: () => Promise<void>
   pingImpl: () => Promise<unknown>
+  /** Per-db command handlers keyed by db name (default: ping). */
   dbCommandImpl: (dbName: string, command: Record<string, unknown>) => Promise<unknown>
   collectionIndexesImpl: (dbName: string, collectionName: string) => Promise<unknown[]>
   collectionAggregateImpl: (
@@ -15,8 +16,6 @@ type FakeClient = MongoClientLike & {
     pipeline: Record<string, unknown>[],
   ) => Promise<unknown[]>
   closed: boolean
-  /** Per-db command handlers keyed by db name (default: ping). */
-  dbCommandImpl: (dbName: string, command: Record<string, unknown>) => Promise<unknown>
   /** Per-collection find results keyed by `dbName.collectionName`. */
   findResults: Map<string, unknown[]>
 }
@@ -113,11 +112,6 @@ function createFakeClient(overrides?: {
             find() {
               return createFindCursor(client.findResults.get(key) ?? [])
             },
-          }
-          return collection
-        },
-        collection(name) {
-          const collection: CollectionLike = {
             async indexes() {
               return client.collectionIndexesImpl(dbName, name)
             },

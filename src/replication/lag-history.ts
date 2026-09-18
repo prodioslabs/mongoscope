@@ -136,7 +136,7 @@ export function poolLagSamples(values: readonly number[], barCount: number): num
     return Array.from({ length: count }, () => 0)
   }
 
-  const pooled = new Array<number>(count).fill(0)
+  const pooled = Array.from({ length: count }, () => 0)
   for (let i = 0; i < values.length; i++) {
     const bucket = Math.min(count - 1, Math.floor((i / values.length) * count))
     const value = values[i] ?? 0
