@@ -10,9 +10,12 @@ export type AddConnectionInput = {
   tags?: string[]
 }
 
+export type UpdateConnectionInput = AddConnectionInput
+
 export type ConnectionStore = {
   list(): Promise<ConnectionProfile[]>
   add(input: AddConnectionInput): Promise<ConnectionProfile>
+  update(id: string, input: UpdateConnectionInput): Promise<ConnectionProfile>
   remove(id: string): Promise<void>
   /** Resolve the stored URI for a profile (for a future live-connect path). */
   getUri(id: string): Promise<string | null>
@@ -62,6 +65,36 @@ export function createConnectionStore(deps: ConnectionStoreDeps = {}): Connectio
       return toConnectionProfile(connection)
     },
 
+    async update(id, input) {
+      const trimmedId = requireTrimmed(id, 'id')
+      const name = requireTrimmed(input.name, 'name')
+      const uri = requireTrimmed(input.uri, 'uri')
+      const tags = normalizeTags(input.tags)
+      const hostLabel = hostLabelFromUri(uri)
+
+      const blob = await secrets.load()
+      const index = blob.connections.findIndex((connection) => connection.id === trimmedId)
+      if (index < 0) {
+        throw new Error(`Connection not found: ${trimmedId}`)
+      }
+
+      assertNameAvailable(blob, name, trimmedId)
+
+      const previous = blob.connections[index]!
+      const connection: StoredConnection = {
+        ...previous,
+        name,
+        hostLabel,
+        tags,
+        uri,
+      }
+
+      const connections = blob.connections.slice()
+      connections[index] = connection
+      await secrets.save({ version: 1, connections })
+      return toConnectionProfile(connection)
+    },
+
     async remove(id) {
       const trimmedId = requireTrimmed(id, 'id')
       const blob = await secrets.load()
@@ -97,13 +130,29 @@ export async function add(input: AddConnectionInput): Promise<ConnectionProfile>
   return connectionStore.add(input)
 }
 
+export async function update(
+  id: string,
+  input: UpdateConnectionInput,
+): Promise<ConnectionProfile> {
+  return connectionStore.update(id, input)
+}
+
 export async function remove(id: string): Promise<void> {
   return connectionStore.remove(id)
 }
 
-function assertNameAvailable(blob: ConnectionsBlob, name: string): void {
+function assertNameAvailable(
+  blob: ConnectionsBlob,
+  name: string,
+  exceptId?: string,
+): void {
   const normalizedName = name.toLowerCase()
-  if (blob.connections.some((connection) => connection.name.toLowerCase() === normalizedName)) {
+  if (
+    blob.connections.some(
+      (connection) =>
+        connection.name.toLowerCase() === normalizedName && connection.id !== exceptId,
+    )
+  ) {
     throw new Error(`A connection named "${name}" already exists`)
   }
 }

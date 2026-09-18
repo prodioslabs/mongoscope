@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { connectionStore, type AddConnectionInput } from '../../connections'
+import {
+  connectionStore,
+  type AddConnectionInput,
+  type UpdateConnectionInput,
+} from '../../connections'
 
 export const connectionKeys = {
   all: ['connections'] as const,
@@ -18,6 +22,22 @@ export function useAddConnection() {
 
   return useMutation({
     mutationFn: (input: AddConnectionInput) => connectionStore.add(input),
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: connectionKeys.list() })
+    },
+  })
+}
+
+export function useUpdateConnection() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { id: string } & UpdateConnectionInput) =>
+      connectionStore.update(input.id, {
+        name: input.name,
+        uri: input.uri,
+        tags: input.tags,
+      }),
     onSuccess() {
       void queryClient.invalidateQueries({ queryKey: connectionKeys.list() })
     },

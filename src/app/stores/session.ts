@@ -45,7 +45,7 @@ export function tabFromKey(key: string): AppTab | null {
 type SessionState = {
   screen: AppScreen
   activeTab: AppTab
-  /** Selected connection for Live Ops / Indexes (session-only; not persisted). */
+  /** Selected connection for Live Ops / Replication / Indexes (session-only; not persisted). */
   activeConnectionId: string | null
   /** Consumed once when Slow Queries tab mounts after cross-tab navigation. */
   pendingSlowQueriesNav: SlowQueriesPendingNavigation | null

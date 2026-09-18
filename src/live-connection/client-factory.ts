@@ -11,11 +11,24 @@ export type AggregateCursorLike = {
   toArray(): Promise<unknown[]>
 }
 
+export type FindCursorLike = {
+  sort(sort: Record<string, unknown>): FindCursorLike
+  limit(n: number): FindCursorLike
+  toArray(): Promise<unknown[]>
+}
+
+export type CollectionLike = {
+  find(filter?: Record<string, unknown>): FindCursorLike
+}
+
 export type MongoDbLike = {
   admin(): {
     command(command: Record<string, unknown>): Promise<unknown>
   }
+  /** Database-scoped command (e.g. `{ collStats: 'oplog.rs' }` on `local`). */
+  command(command: Record<string, unknown>): Promise<unknown>
   aggregate(pipeline: Record<string, unknown>[]): AggregateCursorLike
+  collection(name: string): CollectionLike
 }
 
 export type MongoClientLike = {
@@ -30,7 +43,8 @@ export type MongoClientLike = {
 export type CreateMongoClient = (uri: string, options: MongoClientOptions) => MongoClientLike
 
 export function defaultCreateMongoClient(uri: string, options: MongoClientOptions): MongoClientLike {
-  return new MongoClient(uri, options)
+  // Driver Db/Collection APIs are wider than our seam; cast at the boundary.
+  return new MongoClient(uri, options) as unknown as MongoClientLike
 }
 
 export function buildConnectOptions(connectTimeoutMs: number): MongoClientOptions {

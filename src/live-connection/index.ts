@@ -3,7 +3,9 @@ export {
   DEFAULT_CONNECT_TIMEOUT_MS,
   defaultCreateMongoClient,
   type AggregateCursorLike,
+  type CollectionLike,
   type CreateMongoClient,
+  type FindCursorLike,
   type MongoClientLike,
   type MongoDbLike,
 } from './client-factory'
