@@ -3,6 +3,7 @@ import { match } from 'ts-pattern'
 import { create } from 'zustand'
 import { LogStore, parseLogFile } from '../../parser'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
+import { useLogTailStore } from './log-tail'
 
 export type AppScreen = 'welcome' | 'dashboard'
 
@@ -226,6 +227,8 @@ export const useSession = create<SessionState>((set, get) => ({
       return
     }
 
+    useLogTailStore.getState().teardown()
+
     set({
       logPath: path,
       logStore: null,
@@ -273,6 +276,7 @@ export const useSession = create<SessionState>((set, get) => ({
   },
 
   resetToWelcome() {
+    useLogTailStore.getState().teardown()
     set({
       screen: 'welcome',
       activeTab: 'slow-queries',
