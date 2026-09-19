@@ -3,8 +3,8 @@ import { type FooterChip, type Shortcut, toFooter } from './types'
 export const LOGS_SHORTCUTS: readonly Shortcut[] = [
   {
     keys: '↑/↓ / j/k',
-    helpLabel: 'Scroll the log list',
-    footerLabel: 'scroll',
+    helpLabel: 'Navigate rows',
+    footerLabel: 'navigate',
     footerKeys: '↑↓/jk',
     bindings: [
       { key: 'up', cmd: 'logs.move-up' },

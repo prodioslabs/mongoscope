@@ -1,5 +1,5 @@
 import { basename } from 'node:path'
-import { fg, InputRenderable, StyledText, TextAttributes } from '@opentui/core'
+import { InputRenderable, TextAttributes, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -11,15 +11,23 @@ import {
 } from '../../../../log-tail'
 import { displayText } from '../../../../lib/display-text'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
+import {
+  computeTableCapacity,
+  headerCell,
+  padTableRows,
+  tableCell,
+} from '../../../lib/text-table-content'
 import { whenNotEditing } from '../../../lib/when-not-editing'
 import { LOGS_FOOTER, LOGS_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useLogTailStore } from '../../../stores/log-tail'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
+import { DataTextTable } from '../../data-text-table'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 
-const CHROME_ROWS = 12
+/** Tab bar, title, pills, optional filter input, parser status, app footer. */
+const LOGS_CHROME_ROWS = 14
 
 export function LogsTab() {
   const logPath = useSession((s) => s.logPath)
@@ -105,8 +113,11 @@ function LogsView({ logPath }: LogsViewProps) {
     [filtered],
   )
 
-  const capacity = Math.max(1, terminalHeight - CHROME_ROWS)
+  const capacity = computeTableCapacity(LOGS_CHROME_ROWS, terminalHeight)
+  const [selectedIndex, setSelectedIndex] = useState(0)
   const [scrollOffset, setScrollOffset] = useState(0)
+
+  const selectedIndexRef = useRef(0)
   const scrollOffsetRef = useRef(0)
   const capacityRef = useRef(capacity)
   const displayLenRef = useRef(displayLines.length)
@@ -116,6 +127,7 @@ function LogsView({ logPath }: LogsViewProps) {
   const setSearchEditingRef = useRef(setSearchEditing)
   const setFilterEditingRef = useRef(setFilterEditing)
 
+  selectedIndexRef.current = selectedIndex
   scrollOffsetRef.current = scrollOffset
   capacityRef.current = capacity
   displayLenRef.current = displayLines.length
@@ -126,8 +138,9 @@ function LogsView({ logPath }: LogsViewProps) {
   setFilterEditingRef.current = setFilterEditing
 
   useEffect(
-    function pinScrollWhenFollowing() {
+    function pinSelectionWhenFollowing() {
       if (following) {
+        setSelectedIndex(0)
         setScrollOffset(0)
       }
     },
@@ -135,13 +148,18 @@ function LogsView({ logPath }: LogsViewProps) {
   )
 
   useEffect(
-    function clampScrollOffset() {
-      const maxOffset = Math.max(0, displayLines.length - capacity)
-      if (scrollOffset > maxOffset) {
-        setScrollOffset(maxOffset)
+    function clampSelectionAndScroll() {
+      const length = displayLines.length
+      if (length === 0) {
+        setSelectedIndex(0)
+        setScrollOffset(0)
+        return
       }
+      setSelectedIndex((prev) => Math.min(prev, length - 1))
+      const maxOffset = Math.max(0, length - capacity)
+      setScrollOffset((prev) => Math.min(prev, maxOffset))
     },
-    [displayLines.length, capacity, scrollOffset],
+    [displayLines.length, capacity],
   )
 
   const searchInputRef = useRef<InputRenderable | null>(null)
@@ -173,12 +191,29 @@ function LogsView({ logPath }: LogsViewProps) {
 
   useBindings(
     function createLogsLayer() {
-      function moveScroll(delta: number) {
+      function moveSelection(delta: number) {
+        const length = displayLenRef.current
+        if (length === 0) {
+          return
+        }
         if (followingRef.current) {
           setFollowingRef.current(false)
         }
-        const maxOffset = Math.max(0, displayLenRef.current - capacityRef.current)
-        setScrollOffset((prev) => Math.max(0, Math.min(maxOffset, prev + delta)))
+
+        const prev = selectedIndexRef.current
+        const next = Math.max(0, Math.min(length - 1, prev + delta))
+        if (next === prev) {
+          return
+        }
+        setSelectedIndex(next)
+
+        const cap = capacityRef.current
+        const offset = scrollOffsetRef.current
+        if (next < offset) {
+          setScrollOffset(next)
+        } else if (next >= offset + cap) {
+          setScrollOffset(next - cap + 1)
+        }
       }
 
       return {
@@ -190,13 +225,13 @@ function LogsView({ logPath }: LogsViewProps) {
           {
             name: 'logs.move-up',
             run() {
-              moveScroll(-1)
+              moveSelection(-1)
             },
           },
           {
             name: 'logs.move-down',
             run() {
-              moveScroll(1)
+              moveSelection(1)
             },
           },
           {
@@ -205,6 +240,7 @@ function LogsView({ logPath }: LogsViewProps) {
               const next = !followingRef.current
               setFollowingRef.current(next)
               if (next) {
+                setSelectedIndex(0)
                 setScrollOffset(0)
               }
             },
@@ -259,6 +295,16 @@ function LogsView({ logPath }: LogsViewProps) {
   )
 
   const visible = displayLines.slice(scrollOffset, scrollOffset + capacity)
+  const relativeSelectedIndex =
+    selectedIndex >= scrollOffset && selectedIndex < scrollOffset + capacity
+      ? selectedIndex - scrollOffset
+      : -1
+
+  const content =
+    displayLines.length > 0
+      ? buildLogsTableContent(visible, relativeSelectedIndex, theme, capacity, search)
+      : null
+
   const fileName = basename(logPath)
 
   return (
@@ -268,7 +314,7 @@ function LogsView({ logPath }: LogsViewProps) {
         <text content={statusLabel} fg={theme.textMuted} />
       </box>
 
-      <box flexDirection="row" gap={1} flexShrink={0} flexWrap="wrap" paddingTop={1}>
+      <box flexDirection="row" gap={1} flexShrink={0} flexWrap="wrap" paddingTop={1} paddingBottom={1}>
         {LOG_CATEGORY_COMPONENTS.map((component) => (
           <CategoryPill
             key={component}
@@ -317,7 +363,7 @@ function LogsView({ logPath }: LogsViewProps) {
       </box>
 
       {filterEditing ? (
-        <box flexDirection="row" gap={1} paddingTop={1} flexShrink={0}>
+        <box flexDirection="row" gap={1} paddingBottom={1} flexShrink={0}>
           <text content="filter:" fg={theme.textMuted} />
           <input
             ref={filterInputRef}
@@ -338,19 +384,13 @@ function LogsView({ logPath }: LogsViewProps) {
         </box>
       ) : null}
 
-      <box flexGrow={1} flexShrink={1} flexDirection="column" paddingTop={1} overflow="hidden">
-        {visible.length === 0 ? (
+      {content == null ? (
+        <box flexGrow={1} flexShrink={1}>
           <text content="no matching log lines" fg={theme.textMuted} />
-        ) : (
-          visible.map((line, index) => (
-            <text
-              key={`${scrollOffset + index}-${line.timestamp}-${line.id}-${line.msg}`}
-              content={buildLogLineContent(line, search, theme)}
-              wrapMode="none"
-            />
-          ))
-        )}
-      </box>
+        </box>
+      ) : (
+        <DataTextTable content={content} theme={theme} />
+      )}
 
       <box
         flexShrink={0}
@@ -392,113 +432,70 @@ function CategoryPill({ component, active, theme }: CategoryPillProps) {
   )
 }
 
-function buildLogLineContent(line: TailLogLine, search: string, theme: Theme): StyledText {
-  const chunks = []
-  const time = formatLogTimestamp(line.timestamp)
-  chunks.push(fg(theme.textMuted)(`${time} `))
+function buildLogsTableContent(
+  lines: TailLogLine[],
+  selectedIndex: number,
+  theme: Theme,
+  rowCapacity: number,
+  search: string,
+): TextTableContent {
+  const header: TextChunk[][] = [
+    headerCell('TIME', theme),
+    headerCell('S', theme),
+    headerCell('COMPONENT', theme),
+    headerCell('MSG', theme),
+    headerCell('NAMESPACE', theme),
+    headerCell('DURATION', theme),
+    headerCell('PLAN', theme),
+  ]
 
+  const rows: TextTableContent = [header]
+  for (let i = 0; i < lines.length; i++) {
+    rows.push(buildLogRow(lines[i]!, i === selectedIndex, theme, search))
+  }
+
+  return padTableRows(rows, rowCapacity)
+}
+
+function buildLogRow(
+  line: TailLogLine,
+  selected: boolean,
+  theme: Theme,
+  search: string,
+): TextChunk[][] {
   const sev = line.severityLabel || '?'
-  chunks.push(fg(severityFg(sev, theme))(`${sev} `))
+  const sevColor = severityFg(sev, theme)
+  const needle = search.trim().toLowerCase()
 
-  const component = (line.component || 'RAW').padEnd(8)
-  chunks.push(fg(severityFg(sev, theme))(`${component} `))
+  const msg = truncateLogCell(line.msg, 36)
+  const msgMatches = needle.length > 0 && line.msg.toLowerCase().includes(needle)
+  const msgLabel = selected ? `${msg} ●` : msg
+  const msgColor = selected ? theme.primary : msgMatches ? theme.warning : theme.text
 
-  const body = buildBodyText(line)
-  chunks.push(...colorizeBody(body, line, search, theme))
+  const namespace = line.namespace ?? '—'
+  const nsLabel = truncateLogCell(namespace, 20)
+  const nsMatches =
+    needle.length > 0 && line.namespace != null && line.namespace.toLowerCase().includes(needle)
+  const nsColor =
+    namespace === '—' ? theme.textMuted : nsMatches ? theme.warning : theme.text
 
-  return new StyledText(chunks)
-}
+  const duration =
+    line.durationMillis != null ? `${Math.round(line.durationMillis)}ms` : '—'
+  const durationColor =
+    line.durationMillis == null ? theme.textMuted : theme.error
 
-function buildBodyText(line: TailLogLine): string {
-  if (line.kind === 'raw') {
-    return line.msg
-  }
-  const parts: string[] = [line.msg]
-  if (line.namespace != null) {
-    parts.push(`ns=${line.namespace}`)
-  }
-  if (line.planSummary != null) {
-    parts.push(`planSummary: ${line.planSummary}`)
-  }
-  if (line.durationMillis != null) {
-    parts.push(`durationMillis: ${line.durationMillis}`)
-  }
-  return parts.join(' ')
-}
+  const plan = line.planSummary != null ? truncateLogCell(line.planSummary, 16) : '—'
+  const planColor = line.planSummary == null ? theme.textMuted : theme.accent
 
-function colorizeBody(body: string, line: TailLogLine, search: string, theme: Theme) {
-  const highlights: Array<{ start: number; end: number; color: Theme['text'] }> = []
-
-  function addValue(value: string | null | number, color: Theme['text']): void {
-    if (value == null) {
-      return
-    }
-    const text = String(value)
-    if (text.length === 0) {
-      return
-    }
-    let from = 0
-    while (from < body.length) {
-      const idx = body.indexOf(text, from)
-      if (idx < 0) {
-        break
-      }
-      highlights.push({ start: idx, end: idx + text.length, color })
-      from = idx + text.length
-    }
-  }
-
-  addValue(line.namespace, theme.warning)
-  addValue(line.planSummary, theme.accent)
-  if (line.durationMillis != null) {
-    addValue(String(line.durationMillis), theme.error)
-  }
-
-  const needle = search.trim()
-  if (needle.length > 0) {
-    const lowerBody = body.toLowerCase()
-    const lowerNeedle = needle.toLowerCase()
-    let from = 0
-    while (from < body.length) {
-      const idx = lowerBody.indexOf(lowerNeedle, from)
-      if (idx < 0) {
-        break
-      }
-      highlights.push({ start: idx, end: idx + needle.length, color: theme.warning })
-      from = idx + needle.length
-    }
-  }
-
-  if (highlights.length === 0) {
-    return [fg(theme.text)(body)]
-  }
-
-  highlights.sort((a, b) => a.start - b.start || b.end - a.end)
-  const merged: typeof highlights = []
-  for (const h of highlights) {
-    const last = merged[merged.length - 1]
-    if (last && h.start < last.end) {
-      if (h.end > last.end) {
-        last.end = h.end
-      }
-      continue
-    }
-    merged.push({ ...h })
-  }
-
-  const out = []
-  let cursor = 0
-  for (const h of merged) {
-    if (h.start > cursor) {
-      out.push(fg(theme.text)(body.slice(cursor, h.start)))
-    }
-    out.push(fg(h.color)(body.slice(h.start, h.end)))
-    cursor = h.end
-  }
-  if (cursor < body.length) {
-    out.push(fg(theme.text)(body.slice(cursor)))
-  }
-  return out
+  return [
+    tableCell(formatLogTimestamp(line.timestamp), theme.textMuted),
+    tableCell(sev, sevColor),
+    tableCell(truncateLogCell(line.component || 'RAW', 10), sevColor),
+    tableCell(msgLabel, msgColor),
+    tableCell(nsLabel, nsColor),
+    tableCell(duration, durationColor),
+    tableCell(plan, planColor),
+  ]
 }
 
 function severityFg(sev: string, theme: Theme): Theme['text'] {
@@ -525,4 +522,14 @@ function formatLogTimestamp(ms: number): string {
   const ss = String(d.getSeconds()).padStart(2, '0')
   const mss = String(d.getMilliseconds()).padStart(3, '0')
   return `${hh}:${mm}:${ss}.${mss}`
+}
+
+function truncateLogCell(value: string, maxLen: number): string {
+  if (value.length <= maxLen) {
+    return value
+  }
+  if (maxLen <= 1) {
+    return '…'
+  }
+  return `${value.slice(0, maxLen - 1)}…`
 }
