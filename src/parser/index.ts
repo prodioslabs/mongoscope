@@ -2,6 +2,7 @@ import {
   parseLogFile,
   readLineAt,
   scanBytes,
+  scanBuffer,
   scanHotFields,
   parseIsoTimestampBytes,
   DEFAULT_BATCH_SIZE,
@@ -40,6 +41,7 @@ export type {
 export {
   parseLogFile,
   scanBytes,
+  scanBuffer,
   scanHotFields,
   parseIsoTimestampBytes,
   getEntry,

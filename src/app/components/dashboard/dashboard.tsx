@@ -2,9 +2,9 @@ import { match } from 'ts-pattern'
 import { DASHBOARD_SHORTCUTS, toFooter } from '../../shortcuts'
 import { FooterKeybindingScope } from '../footer-keybindings'
 import { useSession } from '../../stores/session'
-import { useTheme } from '../../stores/theme'
 import { IndexesTab } from '../indexes/indexes-tab'
 import { LiveOpsTab } from '../live-ops/live-ops-tab'
+import { LogsTab } from '../logs/logs-tab'
 import { ReplicationTab } from '../replication/replication-tab'
 import { SlowQueriesTab } from '../slow-queries/slow-queries-tab'
 import { TabBar } from '../tab-bar'
@@ -26,7 +26,7 @@ export function Dashboard() {
     .with('live-ops', () => <LiveOpsTab />)
     .with('replication', () => <ReplicationTab />)
     .with('indexes', () => <IndexesTab />)
-    .with('logs', () => <TabPlaceholder name="Logs" />)
+    .with('logs', () => <LogsTab />)
     .exhaustive()
 
   return (
@@ -40,23 +40,14 @@ export function Dashboard() {
 }
 
 function formatParseDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
+  if (ms < 1000) {
+    return `${ms}ms`
+  }
   const seconds = ms / 1000
-  if (seconds < 60) return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`
+  if (seconds < 60) {
+    return `${seconds.toFixed(seconds < 10 ? 1 : 0)}s`
+  }
   const minutes = Math.floor(seconds / 60)
   const rem = Math.round(seconds % 60)
   return `${minutes}m ${rem}s`
-}
-
-type TabPlaceholderProps = {
-  name: string
-}
-
-function TabPlaceholder({ name }: TabPlaceholderProps) {
-  const theme = useTheme((s) => s.theme)
-  return (
-    <box flexGrow={1} paddingLeft={1} paddingTop={1}>
-      <text content={name} fg={theme.textMuted} />
-    </box>
-  )
 }
