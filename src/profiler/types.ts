@@ -1,7 +1,13 @@
 import type { QueryPattern } from '../query-patterns'
 
 export const DEFAULT_SLOWMS = 100
+/** Fallback when a caller does not pass an explicit sample limit. */
 export const PROFILE_FETCH_LIMIT = 1000
+export const PROFILE_FETCH_LIMIT_PRESETS = [10_000, 25_000, 50_000, 100_000, 250_000] as const
+export type ProfileFetchLimitPreset = (typeof PROFILE_FETCH_LIMIT_PRESETS)[number]
+export const DEFAULT_PROFILE_FETCH_LIMIT: ProfileFetchLimitPreset = 100_000
+export const MIN_PROFILE_FETCH_LIMIT = 1
+export const MAX_PROFILE_FETCH_LIMIT = 1_000_000
 
 export type ProfilerPanelErrorKind = 'permission' | 'unavailable' | 'unknown'
 

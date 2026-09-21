@@ -16,7 +16,16 @@ export const slowQueriesKeys = {
     connectionId: string | null,
     generation: number,
     selectedDatabase: string | null,
-  ) => [...slowQueriesKeys.all, 'snapshot', connectionId, generation, selectedDatabase] as const,
+    profilerFetchLimit: number,
+  ) =>
+    [
+      ...slowQueriesKeys.all,
+      'snapshot',
+      connectionId,
+      generation,
+      selectedDatabase,
+      profilerFetchLimit,
+    ] as const,
 }
 
 export function useProfilerSlowQueriesSnapshot(enabled: boolean) {
@@ -25,6 +34,7 @@ export function useProfilerSlowQueriesSnapshot(enabled: boolean) {
   const liveStatus = useLiveConnection((s) => s.status)
   const activeTab = useSession((s) => s.activeTab)
   const selectedDatabase = useSession((s) => s.selectedDatabase)
+  const profilerFetchLimit = useSession((s) => s.profilerFetchLimit)
   const setSnapshot = useProfilerPatternsStore((s) => s.setSnapshot)
   const clearPatterns = useProfilerPatternsStore((s) => s.clear)
 
@@ -35,7 +45,12 @@ export function useProfilerSlowQueriesSnapshot(enabled: boolean) {
     connectionId != null
 
   const query = useQuery({
-    queryKey: slowQueriesKeys.snapshot(connectionId, generation, selectedDatabase),
+    queryKey: slowQueriesKeys.snapshot(
+      connectionId,
+      generation,
+      selectedDatabase,
+      profilerFetchLimit,
+    ),
     enabled: pollingEnabled,
     refetchInterval: 2000,
     refetchIntervalInBackground: false,
@@ -48,7 +63,9 @@ export function useProfilerSlowQueriesSnapshot(enabled: boolean) {
         throw new Error('Not connected')
       }
 
-      const { snapshot } = await fetchProfilerSlowQueriesSnapshot(client, selectedDatabase)
+      const { snapshot } = await fetchProfilerSlowQueriesSnapshot(client, selectedDatabase, {
+        limit: profilerFetchLimit,
+      })
 
       const snapshotAfter = liveConnectionManager.getSnapshot()
       if (

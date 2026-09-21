@@ -5,7 +5,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { QueryPattern } from '../../../../query-patterns'
 import { displayText } from '../../../../lib/display-text'
 import { formatLogTailPreset } from '../../../../parser'
-import { DEFAULT_SLOWMS, type ProfilerSlowQueriesSnapshot } from '../../../../profiler'
+import {
+  DEFAULT_SLOWMS,
+  MAX_PROFILE_FETCH_LIMIT,
+  PROFILE_FETCH_LIMIT_PRESETS,
+  type ProfilerSlowQueriesSnapshot,
+} from '../../../../profiler'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import {
   useEnableProfiling,
@@ -153,7 +158,6 @@ function StaticSlowQueriesPanel() {
   const queryPatterns = useSession((s) => s.queryPatterns)
   const logStore = useSession((s) => s.logStore)
   const logTailLines = useSession((s) => s.logTailLines)
-  const setLogTailLines = useSession((s) => s.setLogTailLines)
   const parseProgress = useSession((s) => s.parseProgress)
   const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
   const { height: terminalHeight } = useTerminalDimensions()
@@ -163,7 +167,6 @@ function StaticSlowQueriesPanel() {
   const [scrollOffset, setScrollOffset] = useState(0)
   const [sortBy, setSortBy] = useState<SortBy>('count')
   const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
-  const [tailDialogOpen, setTailDialogOpen] = useState(false)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [transientStatus, setTransientStatus] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -340,7 +343,7 @@ function StaticSlowQueriesPanel() {
 
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: detailPatternId == null && !tailDialogOpen,
+        enabled: detailPatternId == null,
         commands: [
           {
             name: 'slow-queries.sort-count',
@@ -382,29 +385,19 @@ function StaticSlowQueriesPanel() {
               setDetailPatternId(pattern.id)
             },
           },
-          {
-            name: 'slow-queries.open-tail',
-            run() {
-              if (parseProgress != null) {
-                return
-              }
-              setTailDialogOpen(true)
-            },
-          },
         ],
         bindings: toBindings(
           SLOW_QUERIES_SHORTCUTS.filter(function keepStaticBindings(shortcut) {
             return (
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.move')) ||
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.sort')) ||
-              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-details') ||
-              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-tail')
+              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-details')
             )
           }),
         ),
       }
     },
-    [detailPatternId, parseProgress, tailDialogOpen],
+    [detailPatternId],
   )
 
   const visible = sortedPatterns.slice(scrollOffset, scrollOffset + capacity)
@@ -424,7 +417,9 @@ function StaticSlowQueriesPanel() {
     <box flexGrow={1} flexShrink={1} flexDirection="column">
       <box paddingLeft={1} paddingRight={1} flexShrink={0}>
         <text
-          content={displayText(`tail ${formatLogTailPreset(logTailLines)} · press T to change`)}
+          content={displayText(
+            `parsed last ${formatLogTailPreset(logTailLines)} lines · ${windowLabel}`,
+          )}
           fg={theme.textMuted}
         />
       </box>
@@ -480,18 +475,6 @@ function StaticSlowQueriesPanel() {
         queryPatterns={queryPatterns}
         onClose={() => setDetailPatternId(null)}
       />
-      <LogTailDialog
-        open={tailDialogOpen}
-        currentLines={logTailLines}
-        isPending={parseProgress != null}
-        onApply={function applyLogTailLines(lines) {
-          setTailDialogOpen(false)
-          void setLogTailLines(lines)
-        }}
-        onCancel={function cancelLogTailDialog() {
-          setTailDialogOpen(false)
-        }}
-      />
     </box>
   )
 }
@@ -505,6 +488,8 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const theme = useTheme((s) => s.theme)
   const selectedDatabase = useSession((s) => s.selectedDatabase)
   const setSelectedDatabase = useSession((s) => s.setSelectedDatabase)
+  const profilerFetchLimit = useSession((s) => s.profilerFetchLimit)
+  const setProfilerFetchLimit = useSession((s) => s.setProfilerFetchLimit)
   const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
   const { height: terminalHeight } = useTerminalDimensions()
   const enableMutation = useEnableProfiling()
@@ -521,6 +506,7 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [enableDialogOpen, setEnableDialogOpen] = useState(false)
+  const [sampleLimitDialogOpen, setSampleLimitDialogOpen] = useState(false)
   const [enableErrorMessage, setEnableErrorMessage] = useState('')
   const [transientStatus, setTransientStatus] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -537,6 +523,7 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const profilingRef = useRef(profiling)
   const databaseRef = useRef(database)
   const enableDialogOpenRef = useRef(enableDialogOpen)
+  const sampleLimitDialogOpenRef = useRef(sampleLimitDialogOpen)
   const detailOpenRef = useRef(false)
 
   const stats = useMemo(() => computeSlowQueryStats(patterns), [patterns])
@@ -557,7 +544,9 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const proposedSlowms = profiling?.slowms ?? DEFAULT_SLOWMS
 
   const statusLabel = transientStatus ?? formatProfilerStatusLabel(snapshot, isPending)
-  useFooterKeybindings(enableDialogOpen ? [] : SLOW_QUERIES_LIVE_FOOTER)
+  useFooterKeybindings(
+    enableDialogOpen || sampleLimitDialogOpen ? [] : SLOW_QUERIES_LIVE_FOOTER,
+  )
   useFooterStatus(statusLabel)
 
   const showTransientStatus = useCallback(function showTransientStatus(message: string) {
@@ -699,9 +688,10 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   useEffect(
     function syncEnableDialogOpenRef() {
       enableDialogOpenRef.current = enableDialogOpen
+      sampleLimitDialogOpenRef.current = sampleLimitDialogOpen
       detailOpenRef.current = detailPatternId != null
     },
-    [enableDialogOpen, detailPatternId],
+    [detailPatternId, enableDialogOpen, sampleLimitDialogOpen],
   )
 
   const cycleDatabase = useCallback(
@@ -794,7 +784,11 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
       }
 
       function openEnableConfirm() {
-        if (enableDialogOpenRef.current || detailOpenRef.current) {
+        if (
+          enableDialogOpenRef.current ||
+          detailOpenRef.current ||
+          sampleLimitDialogOpenRef.current
+        ) {
           return
         }
         const status = profilingRef.current
@@ -813,7 +807,11 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
       return {
         appMode: 'base' satisfies AppKeymapMode,
         enabled: function slowQueriesBaseEnabled() {
-          return !enableDialogOpenRef.current && !detailOpenRef.current
+          return (
+            !enableDialogOpenRef.current &&
+            !detailOpenRef.current &&
+            !sampleLimitDialogOpenRef.current
+          )
         },
         commands: [
           {
@@ -859,6 +857,19 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
             },
           },
           {
+            name: 'slow-queries.open-tail',
+            run() {
+              if (
+                enableDialogOpenRef.current ||
+                detailOpenRef.current ||
+                sampleLimitDialogOpenRef.current
+              ) {
+                return
+              }
+              setSampleLimitDialogOpen(true)
+            },
+          },
+          {
             name: 'slow-queries.prev-database',
             run() {
               cycleDatabase(-1)
@@ -897,7 +908,7 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
       <box paddingLeft={1} paddingRight={1} flexShrink={0} gap={0}>
         <text
           content={displayText(
-            `db ${database || '—'} · ${formatProfilingChip(profiling)} · [] cycle db`,
+            `db ${database || '—'} · ${formatProfilingChip(profiling)} · samples ${formatLogTailPreset(profilerFetchLimit)} · T change · [] cycle db`,
           )}
           fg={theme.textMuted}
         />
@@ -980,6 +991,23 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
         onCancel={() => {
           setEnableDialogOpen(false)
           setEnableErrorMessage('')
+        }}
+      />
+      <LogTailDialog
+        open={sampleLimitDialogOpen}
+        title="Profiler sample window"
+        subtitle="Newest system.profile docs to load each poll"
+        currentLines={profilerFetchLimit}
+        presets={PROFILE_FETCH_LIMIT_PRESETS}
+        maxLines={MAX_PROFILE_FETCH_LIMIT}
+        isPending={false}
+        onApply={function applyProfilerFetchLimit(limit) {
+          setSampleLimitDialogOpen(false)
+          setProfilerFetchLimit(limit)
+          showTransientStatus(`sample window ${formatLogTailPreset(limit)}`)
+        }}
+        onCancel={function cancelSampleLimitDialog() {
+          setSampleLimitDialogOpen(false)
         }}
       />
     </box>

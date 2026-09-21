@@ -7,6 +7,11 @@ import {
   clampLogTailLines,
   parseLogFileTail,
 } from '../../parser'
+import {
+  DEFAULT_PROFILE_FETCH_LIMIT,
+  MAX_PROFILE_FETCH_LIMIT,
+  MIN_PROFILE_FETCH_LIMIT,
+} from '../../profiler'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
 import { useLogTailStore } from './log-tail'
 
@@ -87,8 +92,10 @@ type SessionState = {
   logPath: string | null
   logStore: LogStore | null
   queryPatterns: QueryPatternStore | null
-  /** Last-N-lines window for static Slow Queries parse. */
+  /** Last-N-lines window for static Slow Queries parse (welcome / reparse). */
   logTailLines: number
+  /** How many newest system.profile docs to fetch in live Slow Queries. */
+  profilerFetchLimit: number
   /** Static file vs live profiler; live only meaningful when a connection is selected. */
   slowQueriesSource: DataSourceMode
   /** Static file tail vs getLog; live only meaningful when a connection is selected. */
@@ -111,6 +118,7 @@ type SessionState = {
   setSlowQueriesSource: (source: DataSourceMode) => void
   setLogsSource: (source: DataSourceMode) => void
   setLogTailLines: (lines: number) => Promise<void>
+  setProfilerFetchLimit: (limit: number) => void
   goToWelcome: () => void
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
@@ -199,6 +207,7 @@ export const useSession = create<SessionState>((set, get) => ({
   logStore: null,
   queryPatterns: null,
   logTailLines: DEFAULT_LOG_TAIL_LINES,
+  profilerFetchLimit: DEFAULT_PROFILE_FETCH_LIMIT,
   slowQueriesSource: 'static',
   logsSource: 'static',
   parseProgress: null,
@@ -323,6 +332,17 @@ export const useSession = create<SessionState>((set, get) => ({
     await runTailParse(path, next, set)
   },
 
+  setProfilerFetchLimit(limit) {
+    const next = Math.min(
+      MAX_PROFILE_FETCH_LIMIT,
+      Math.max(MIN_PROFILE_FETCH_LIMIT, Math.floor(limit)),
+    )
+    if (!Number.isFinite(next) || next === get().profilerFetchLimit) {
+      return
+    }
+    set({ profilerFetchLimit: next })
+  },
+
   goToWelcome() {
     set({ screen: 'welcome' })
   },
@@ -353,6 +373,7 @@ export const useSession = create<SessionState>((set, get) => ({
       logStore: null,
       queryPatterns: null,
       logTailLines: DEFAULT_LOG_TAIL_LINES,
+      profilerFetchLimit: DEFAULT_PROFILE_FETCH_LIMIT,
       slowQueriesSource: 'static',
       logsSource: 'static',
       parseProgress: null,

@@ -2,12 +2,7 @@ import { InputRenderable, TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
 import { useEffect, useRef, useState } from 'react'
-import {
-  LOG_TAIL_LINE_PRESETS,
-  MAX_LOG_TAIL_LINES,
-  formatLogTailPreset,
-  parseLogTailLinesInput,
-} from '../../../../parser'
+import { formatLogTailPreset, parseLogTailLinesInput } from '../../../../parser'
 import { displayText } from '../../../../lib/display-text'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { whenNotEditing } from '../../../lib/when-not-editing'
@@ -16,11 +11,13 @@ import { useFooter } from '../../../stores/footer'
 import { useTheme } from '../../../stores/theme'
 import { Dialog } from '../../ui/dialog'
 
-const CUSTOM_ROW_INDEX = LOG_TAIL_LINE_PRESETS.length
-
 type LogTailDialogProps = {
   open: boolean
+  title: string
+  subtitle: string
   currentLines: number
+  presets: readonly number[]
+  maxLines: number
   isPending: boolean
   onApply: (lines: number) => void
   onCancel: () => void
@@ -28,7 +25,11 @@ type LogTailDialogProps = {
 
 export function LogTailDialog({
   open,
+  title,
+  subtitle,
   currentLines,
+  presets,
+  maxLines,
   isPending,
   onApply,
   onCancel,
@@ -39,11 +40,10 @@ export function LogTailDialog({
   const popOverlayKeybindings = useFooter((s) => s.popOverlayKeybindings)
   const notEditing = whenNotEditing(renderer)
 
-  const presetIndex = LOG_TAIL_LINE_PRESETS.indexOf(
-    currentLines as (typeof LOG_TAIL_LINE_PRESETS)[number],
-  )
+  const customRowIndex = presets.length
+  const presetIndex = presets.indexOf(currentLines)
   const [selectedIndex, setSelectedIndex] = useState(
-    presetIndex >= 0 ? presetIndex : CUSTOM_ROW_INDEX,
+    presetIndex >= 0 ? presetIndex : customRowIndex,
   )
   const [customText, setCustomText] = useState(presetIndex >= 0 ? '' : String(currentLines))
   const [customError, setCustomError] = useState<string | null>(null)
@@ -53,25 +53,27 @@ export function LogTailDialog({
   const inputRef = useRef<InputRenderable | null>(null)
   const onApplyRef = useRef(onApply)
   const onCancelRef = useRef(onCancel)
+  const presetsRef = useRef(presets)
+  const customRowIndexRef = useRef(customRowIndex)
 
   selectedIndexRef.current = selectedIndex
   customTextRef.current = customText
   onApplyRef.current = onApply
   onCancelRef.current = onCancel
+  presetsRef.current = presets
+  customRowIndexRef.current = customRowIndex
 
   useEffect(
     function resetDialogStateWhenOpened() {
       if (!open) {
         return
       }
-      const index = LOG_TAIL_LINE_PRESETS.indexOf(
-        currentLines as (typeof LOG_TAIL_LINE_PRESETS)[number],
-      )
-      setSelectedIndex(index >= 0 ? index : CUSTOM_ROW_INDEX)
+      const index = presets.indexOf(currentLines)
+      setSelectedIndex(index >= 0 ? index : customRowIndex)
       setCustomText(index >= 0 ? '' : String(currentLines))
       setCustomError(null)
     },
-    [currentLines, open],
+    [currentLines, customRowIndex, open, presets],
   )
 
   useEffect(
@@ -91,11 +93,11 @@ export function LogTailDialog({
     function createLogTailDialogLayer() {
       function applyCustomOrShowError(): boolean {
         const parsed = parseLogTailLinesInput(customTextRef.current)
-        if (parsed == null) {
+        if (parsed == null || parsed > maxLines) {
           setCustomError(
-            `enter 1–${formatLogTailPreset(MAX_LOG_TAIL_LINES)} lines (e.g. 75000 or 75k)`,
+            `enter 1–${formatLogTailPreset(maxLines)} (e.g. 75000 or 75k)`,
           )
-          setSelectedIndex(CUSTOM_ROW_INDEX)
+          setSelectedIndex(customRowIndexRef.current)
           inputRef.current?.focus()
           return false
         }
@@ -109,8 +111,9 @@ export function LogTailDialog({
           return
         }
         const index = selectedIndexRef.current
-        if (index < LOG_TAIL_LINE_PRESETS.length) {
-          onApplyRef.current(LOG_TAIL_LINE_PRESETS[index]!)
+        const currentPresets = presetsRef.current
+        if (index < currentPresets.length) {
+          onApplyRef.current(currentPresets[index]!)
           return
         }
         applyCustomOrShowError()
@@ -133,14 +136,14 @@ export function LogTailDialog({
           {
             name: 'slow-queries.tail-move-down',
             run() {
-              setSelectedIndex((prev) => Math.min(CUSTOM_ROW_INDEX, prev + 1))
+              setSelectedIndex((prev) => Math.min(customRowIndexRef.current, prev + 1))
               setCustomError(null)
             },
           },
           {
             name: 'slow-queries.tail-edit-custom',
             run() {
-              setSelectedIndex(CUSTOM_ROW_INDEX)
+              setSelectedIndex(customRowIndexRef.current)
               setCustomError(null)
               inputRef.current?.focus()
             },
@@ -170,7 +173,7 @@ export function LogTailDialog({
         ],
       }
     },
-    [isPending, notEditing, open],
+    [isPending, maxLines, notEditing, open],
   )
 
   useBindings(
@@ -204,21 +207,22 @@ export function LogTailDialog({
   }
 
   return (
-    <Dialog open onClose={onCancel} width={48}>
+    <Dialog open onClose={onCancel} width={52}>
       <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-        <text content="Log tail window" fg={theme.text} attributes={TextAttributes.BOLD} />
+        <text content={title} fg={theme.text} attributes={TextAttributes.BOLD} />
+        <text content={displayText(subtitle)} fg={theme.textMuted} />
         <text
-          content={displayText(`current: ${formatLogTailPreset(currentLines)} lines`)}
+          content={displayText(`current: ${formatLogTailPreset(currentLines)}`)}
           fg={theme.textMuted}
         />
 
-        {LOG_TAIL_LINE_PRESETS.map((preset, index) => {
+        {presets.map((preset, index) => {
           const selected = selectedIndex === index
           return (
             <text
               key={preset}
               content={displayText(
-                `${selected ? '●' : '○'} ${formatLogTailPreset(preset)} lines`,
+                `${selected ? '●' : '○'} ${formatLogTailPreset(preset)} docs`,
               )}
               fg={selected ? theme.primary : theme.text}
             />
@@ -227,8 +231,8 @@ export function LogTailDialog({
 
         <box flexDirection="row" gap={1} alignItems="center">
           <text
-            content={displayText(`${selectedIndex === CUSTOM_ROW_INDEX ? '●' : '○'} Custom:`)}
-            fg={selectedIndex === CUSTOM_ROW_INDEX ? theme.primary : theme.text}
+            content={displayText(`${selectedIndex === customRowIndex ? '●' : '○'} Custom:`)}
+            fg={selectedIndex === customRowIndex ? theme.primary : theme.text}
           />
           <input
             ref={inputRef}
@@ -244,13 +248,13 @@ export function LogTailDialog({
             onInput={function onCustomTailInput(value: string) {
               setCustomText(value)
               setCustomError(null)
-              setSelectedIndex(CUSTOM_ROW_INDEX)
+              setSelectedIndex(customRowIndex)
             }}
             onSubmit={function submitCustomTail() {
               const parsed = parseLogTailLinesInput(customTextRef.current)
-              if (parsed == null) {
+              if (parsed == null || parsed > maxLines) {
                 setCustomError(
-                  `enter 1–${formatLogTailPreset(MAX_LOG_TAIL_LINES)} lines (e.g. 75000 or 75k)`,
+                  `enter 1–${formatLogTailPreset(maxLines)} (e.g. 75000 or 75k)`,
                 )
                 return
               }
@@ -264,7 +268,7 @@ export function LogTailDialog({
         <text
           content={
             isPending
-              ? 'reparsing…'
+              ? 'updating…'
               : '↑↓ navigate · enter apply · i custom · esc cancel'
           }
           fg={theme.textMuted}

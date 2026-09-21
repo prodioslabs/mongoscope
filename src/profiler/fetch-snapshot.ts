@@ -31,7 +31,12 @@ export type FetchProfilerSnapshotResult = {
 export async function fetchProfilerSlowQueriesSnapshot(
   client: ProfilerClient,
   selectedDatabase: string | null,
+  options?: { limit?: number },
 ): Promise<FetchProfilerSnapshotResult> {
+  const fetchLimit = Math.max(
+    1,
+    Math.floor(options?.limit ?? PROFILE_FETCH_LIMIT),
+  )
   const databasesResult = await settle(async function loadDatabases() {
     return client.db('admin').admin().command({ listDatabases: 1, nameOnly: true })
   })
@@ -70,7 +75,7 @@ export async function fetchProfilerSlowQueriesSnapshot(
         .collection('system.profile')
         .find({})
         .sort({ ts: -1 })
-        .limit(PROFILE_FETCH_LIMIT)
+        .limit(fetchLimit)
         .toArray()
     }),
   ])

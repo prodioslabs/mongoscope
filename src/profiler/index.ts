@@ -5,7 +5,14 @@ export type {
   ProfilerSlowQueriesSnapshot,
   ProfilingStatus,
 } from './types'
-export { DEFAULT_SLOWMS, PROFILE_FETCH_LIMIT } from './types'
+export {
+  DEFAULT_SLOWMS,
+  DEFAULT_PROFILE_FETCH_LIMIT,
+  MAX_PROFILE_FETCH_LIMIT,
+  MIN_PROFILE_FETCH_LIMIT,
+  PROFILE_FETCH_LIMIT,
+  PROFILE_FETCH_LIMIT_PRESETS,
+} from './types'
 export {
   profileDocToAttr,
   profileDocTimestampMs,

@@ -44,8 +44,9 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'shift+t',
-    helpLabel: 'Open log tail window dialog (10k / 25k / 50k / 100k / 250k / custom)',
-    footerLabel: 'tail',
+    helpLabel:
+      'Open profiler sample-window dialog in live mode (10k / 25k / 50k / 100k / 250k / custom)',
+    footerLabel: 'samples',
     footerKeys: 'T',
     bindings: [{ key: 'shift+t', cmd: 'slow-queries.open-tail' }],
   },
@@ -77,7 +78,6 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
 export const SLOW_QUERIES_STATIC_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   { keys: 'c/a/p', label: 'sort count/avg/plan' },
-  { keys: 'T', label: 'tail' },
 ]
 
 /** Footer for live profiler mode. */
@@ -86,6 +86,7 @@ export const SLOW_QUERIES_LIVE_FOOTER: FooterChip[] = [
   { keys: 'c/a/p', label: 'sort count/avg/plan' },
   { keys: '[]', label: 'db' },
   { keys: 'e', label: 'enable' },
+  { keys: 'T', label: 'samples' },
   { keys: 'l', label: 'source' },
 ]
 
