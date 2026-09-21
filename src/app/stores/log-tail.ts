@@ -1,17 +1,17 @@
 import { create } from 'zustand'
 import {
-  createLogTailer,
+  createGetLogPoller,
   filterTailLines,
   parseCustomFilterExpression,
   DEFAULT_ENABLED_CATEGORIES,
-  LOG_CATEGORY_COMPONENTS,
   LOG_TAIL_UI_COALESCE_MS,
   type CustomFilterExpression,
+  type GetLogPoller,
   type LogCategoryComponent,
-  type LogTailer,
   type LogTailStats,
   type TailLogLine,
 } from '../../log-tail'
+import { liveConnectionManager } from '../../live-connection'
 
 const EMPTY_STATS: LogTailStats = {
   format: 'raw/legacy',
@@ -21,7 +21,8 @@ const EMPTY_STATS: LogTailStats = {
 }
 
 type LogTailState = {
-  path: string | null
+  /** Connection key currently driving the poller (`id:generation`), or null. */
+  connectionKey: string | null
   lines: TailLogLine[]
   stats: LogTailStats
   error: string | null
@@ -33,11 +34,11 @@ type LogTailState = {
   search: string
   searchEditing: boolean
   filterEditing: boolean
-  /** Start or resume polling for path; keeps buffer across pause. */
-  activate: (path: string) => void
-  /** Stop polling; retain buffer + offset. */
+  /** Start or resume getLog polling for this connection generation. */
+  activate: (connectionKey: string) => void
+  /** Stop polling; retain buffer. */
   deactivate: () => void
-  /** Full teardown (path change / resetToWelcome). */
+  /** Full teardown (disconnect / resetToWelcome). */
   teardown: () => void
   setFollowing: (following: boolean) => void
   toggleCategory: (component: LogCategoryComponent) => void
@@ -49,10 +50,10 @@ type LogTailState = {
   setFilterEditing: (editing: boolean) => void
 }
 
-let tailer: LogTailer | null = null
-let unsubscribeTailer: (() => void) | null = null
+let poller: GetLogPoller | null = null
+let unsubscribePoller: (() => void) | null = null
 let coalesceTimer: ReturnType<typeof setTimeout> | null = null
-let activePath: string | null = null
+let activeConnectionKey: string | null = null
 
 function clearCoalesceTimer(): void {
   if (coalesceTimer != null) {
@@ -63,10 +64,10 @@ function clearCoalesceTimer(): void {
 
 function flushSnapshot(set: (partial: Partial<LogTailState>) => void): void {
   clearCoalesceTimer()
-  if (tailer == null) {
+  if (poller == null) {
     return
   }
-  const snap = tailer.getSnapshot()
+  const snap = poller.getSnapshot()
   set({
     lines: snap.lines,
     stats: snap.stats,
@@ -78,26 +79,39 @@ function scheduleFlush(set: (partial: Partial<LogTailState>) => void): void {
   if (coalesceTimer != null) {
     return
   }
-  coalesceTimer = setTimeout(function flushCoalescedTailSnapshot() {
+  coalesceTimer = setTimeout(function flushCoalescedGetLogSnapshot() {
     coalesceTimer = null
     flushSnapshot(set)
   }, LOG_TAIL_UI_COALESCE_MS)
 }
 
-function detachTailer(): void {
+function detachPoller(): void {
   clearCoalesceTimer()
-  if (unsubscribeTailer != null) {
-    unsubscribeTailer()
-    unsubscribeTailer = null
+  if (unsubscribePoller != null) {
+    unsubscribePoller()
+    unsubscribePoller = null
   }
-  if (tailer != null) {
-    tailer.stop()
-    tailer = null
+  if (poller != null) {
+    poller.stop()
+    poller = null
   }
 }
 
+function createLiveGetLogPoller(): GetLogPoller {
+  return createGetLogPoller({
+    async fetchLog() {
+      const snapshot = liveConnectionManager.getSnapshot()
+      const client = liveConnectionManager.getActiveClient()
+      if (client == null || snapshot.status !== 'connected') {
+        throw new Error('Not connected')
+      }
+      return client.db('admin').admin().command({ getLog: 'global' })
+    },
+  })
+}
+
 export const useLogTailStore = create<LogTailState>((set, get) => ({
-  path: null,
+  connectionKey: null,
   lines: [],
   stats: EMPTY_STATS,
   error: null,
@@ -110,63 +124,62 @@ export const useLogTailStore = create<LogTailState>((set, get) => ({
   searchEditing: false,
   filterEditing: false,
 
-  activate(path) {
-    if (activePath !== path) {
-      detachTailer()
-      activePath = path
+  activate(connectionKey) {
+    if (activeConnectionKey !== connectionKey) {
+      detachPoller()
+      activeConnectionKey = connectionKey
       set({
-        path,
+        connectionKey,
         lines: [],
         stats: EMPTY_STATS,
         error: null,
         following: true,
       })
-      const next = createLogTailer({ path })
-      tailer = next
-      unsubscribeTailer = next.subscribe(function onTailerEmit() {
+      const next = createLiveGetLogPoller()
+      poller = next
+      unsubscribePoller = next.subscribe(function onGetLogEmit() {
         scheduleFlush(set)
       })
-      void next.start().then(function afterTailerStart() {
+      void next.start().then(function afterGetLogStart() {
         flushSnapshot(set)
       })
       return
     }
 
-    if (tailer == null) {
-      activePath = path
-      const next = createLogTailer({ path })
-      tailer = next
-      unsubscribeTailer = next.subscribe(function onTailerEmit() {
+    if (poller == null) {
+      activeConnectionKey = connectionKey
+      const next = createLiveGetLogPoller()
+      poller = next
+      unsubscribePoller = next.subscribe(function onGetLogEmit() {
         scheduleFlush(set)
       })
-      void next.start().then(function afterTailerStart() {
+      void next.start().then(function afterGetLogStart() {
         flushSnapshot(set)
       })
-      set({ path, following: get().following })
+      set({ connectionKey, following: get().following })
       return
     }
 
-    // Same path: resume polling if stopped (tab re-entered).
-    if (!tailer.getSnapshot().running) {
-      void tailer.start().then(function afterResume() {
+    if (!poller.getSnapshot().running) {
+      void poller.start().then(function afterResume() {
         flushSnapshot(set)
       })
     }
   },
 
   deactivate() {
-    if (tailer != null) {
+    if (poller != null) {
       flushSnapshot(set)
-      tailer.stop()
+      poller.stop()
     }
     clearCoalesceTimer()
   },
 
   teardown() {
-    detachTailer()
-    activePath = null
+    detachPoller()
+    activeConnectionKey = null
     set({
-      path: null,
+      connectionKey: null,
       lines: [],
       stats: EMPTY_STATS,
       error: null,

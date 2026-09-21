@@ -1,8 +1,7 @@
-import { basename } from 'node:path'
 import { InputRenderable, TextAttributes, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   filterTailLines,
   LOG_CATEGORY_COMPONENTS,
@@ -18,56 +17,100 @@ import {
   tableCell,
 } from '../../../lib/text-table-content'
 import { whenNotEditing } from '../../../lib/when-not-editing'
+import { useConnectionsList } from '../../../queries/connection'
 import { LOGS_FOOTER, LOGS_SHORTCUTS, toBindings } from '../../../shortcuts'
+import { useLiveConnection } from '../../../stores/live-connection'
 import { useLogTailStore } from '../../../stores/log-tail'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 import { DataTextTable } from '../../data-text-table'
+import { DbSelector } from '../../db-selector'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 
-/** Tab bar, title, pills, optional filter input, parser status, app footer. */
-const LOGS_CHROME_ROWS = 14
+/** Tab bar, db selector, title, pills, optional filter input, status, app footer. */
+const LOGS_CHROME_ROWS = 16
+
+const GET_LOG_FIDELITY_NOTE = 'getLog RAM buffer (~1024 events) — not a durable on-disk log'
 
 export function LogsTab() {
-  const logPath = useSession((s) => s.logPath)
+  const theme = useTheme((s) => s.theme)
+  const liveStatus = useLiveConnection((s) => s.status)
+  const liveErrorMessage = useLiveConnection((s) => s.errorMessage)
+  const connectionId = useLiveConnection((s) => s.connectionId)
+  const generation = useLiveConnection((s) => s.generation)
+  const activeConnectionId = useSession((s) => s.activeConnectionId)
+  const { data: profilesData } = useConnectionsList()
+  const profiles = profilesData ?? []
+
   const activate = useLogTailStore((s) => s.activate)
   const deactivate = useLogTailStore((s) => s.deactivate)
+  const teardown = useLogTailStore((s) => s.teardown)
 
   useEffect(
-    function syncLogTailLifecycle() {
-      if (logPath == null) {
+    function syncGetLogLifecycle() {
+      if (liveStatus !== 'connected' || connectionId == null) {
+        if (liveStatus === 'idle' || liveStatus === 'disconnected' || liveStatus === 'error') {
+          teardown()
+        } else {
+          deactivate()
+        }
         return
       }
-      activate(logPath)
-      return function pauseLogTailOnLeave() {
+      const key = `${connectionId}:${generation}`
+      activate(key)
+      return function pauseGetLogOnLeave() {
         deactivate()
       }
     },
-    [logPath, activate, deactivate],
+    [liveStatus, connectionId, generation, activate, deactivate, teardown],
   )
 
-  if (logPath == null) {
-    return <LogsEmptyState />
+  let body: ReactNode
+  if (profiles.length === 0) {
+    body = null
+  } else if (activeConnectionId == null || liveStatus === 'idle') {
+    body = (
+      <box paddingLeft={1} paddingTop={1}>
+        <text content="No connection selected. Press c to choose one." fg={theme.textMuted} />
+      </box>
+    )
+  } else if (liveStatus === 'connecting') {
+    body = (
+      <box paddingLeft={1} paddingTop={1}>
+        <text content="connecting…" fg={theme.textMuted} />
+      </box>
+    )
+  } else if (liveStatus === 'error') {
+    body = (
+      <box paddingLeft={1} paddingTop={1}>
+        <text content={displayText(liveErrorMessage || 'Connection failed.')} fg={theme.error} />
+      </box>
+    )
+  } else if (liveStatus === 'disconnected') {
+    body = (
+      <box paddingLeft={1} paddingTop={1}>
+        <text
+          content="Connection lost. Press c and reselect a connection to retry."
+          fg={theme.warning}
+        />
+      </box>
+    )
+  } else if (liveStatus === 'connected') {
+    body = <LogsView />
+  } else {
+    body = null
   }
 
-  return <LogsView logPath={logPath} />
-}
-
-function LogsEmptyState() {
-  const theme = useTheme((s) => s.theme)
   return (
-    <box flexGrow={1} paddingLeft={1} paddingTop={1}>
-      <text content="No log file selected." fg={theme.textMuted} />
+    <box flexGrow={1} flexShrink={1} flexDirection="column">
+      <DbSelector />
+      {body}
     </box>
   )
 }
 
-type LogsViewProps = {
-  logPath: string
-}
-
-function LogsView({ logPath }: LogsViewProps) {
+function LogsView() {
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const { height: terminalHeight } = useTerminalDimensions()
@@ -184,7 +227,7 @@ function LogsView({ logPath }: LogsViewProps) {
   )
 
   const statusLabel = following
-    ? `tailing · ${stats.bufferedCount} lines buffered`
+    ? `polling getLog · ${stats.bufferedCount} lines buffered`
     : `paused · ${stats.bufferedCount} lines buffered`
   useFooterStatus(error != null ? error : statusLabel)
   useFooterKeybindings(LOGS_FOOTER)
@@ -305,13 +348,14 @@ function LogsView({ logPath }: LogsViewProps) {
       ? buildLogsTableContent(visible, relativeSelectedIndex, theme, capacity, search)
       : null
 
-  const fileName = basename(logPath)
-
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1}>
-      <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
-        <text content={displayText(fileName)} fg={theme.text} attributes={TextAttributes.BOLD} />
-        <text content={statusLabel} fg={theme.textMuted} />
+      <box flexDirection="column" flexShrink={0} gap={0}>
+        <box flexDirection="row" justifyContent="space-between">
+          <text content="server log (getLog)" fg={theme.text} attributes={TextAttributes.BOLD} />
+          <text content={statusLabel} fg={theme.textMuted} />
+        </box>
+        <text content={GET_LOG_FIDELITY_NOTE} fg={theme.warning} />
       </box>
 
       <box flexDirection="row" gap={1} flexShrink={0} flexWrap="wrap" paddingTop={1} paddingBottom={1}>
@@ -402,9 +446,9 @@ function LogsView({ logPath }: LogsViewProps) {
         flexDirection="row"
         justifyContent="space-between"
       >
-        <text content={`parser status  format: ${stats.format}`} fg={theme.textMuted} />
+        <text content={`format: ${stats.format}`} fg={theme.textMuted} />
         <text content={`lines/sec: ~${stats.linesPerSec}`} fg={theme.textMuted} />
-        <text content={`restarts detected: ${stats.restartsDetected}`} fg={theme.textMuted} />
+        <text content={`RAM ring wraps: ${stats.restartsDetected}`} fg={theme.textMuted} />
       </box>
     </box>
   )
@@ -476,13 +520,10 @@ function buildLogRow(
   const nsLabel = truncateLogCell(namespace, 20)
   const nsMatches =
     needle.length > 0 && line.namespace != null && line.namespace.toLowerCase().includes(needle)
-  const nsColor =
-    namespace === '—' ? theme.textMuted : nsMatches ? theme.warning : theme.text
+  const nsColor = namespace === '—' ? theme.textMuted : nsMatches ? theme.warning : theme.text
 
-  const duration =
-    line.durationMillis != null ? `${Math.round(line.durationMillis)}ms` : '—'
-  const durationColor =
-    line.durationMillis == null ? theme.textMuted : theme.error
+  const duration = line.durationMillis != null ? `${Math.round(line.durationMillis)}ms` : '—'
+  const durationColor = line.durationMillis == null ? theme.textMuted : theme.error
 
   const plan = line.planSummary != null ? truncateLogCell(line.planSummary, 16) : '—'
   const planColor = line.planSummary == null ? theme.textMuted : theme.accent

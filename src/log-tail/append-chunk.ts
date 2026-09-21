@@ -1,12 +1,5 @@
-import {
-  encodeSeverity,
-  scanHotFields,
-  severityLabel,
-  SEVERITY_RAW,
-} from '../parser'
-import { extractLogLineAttrFields } from './attr-fields'
+import { parseTailLogLineFromText } from './parse-tail-line'
 import type { LogLineRingBuffer } from './ring-buffer'
-import type { TailLogLine } from './types'
 
 const TEXT_DECODER = new TextDecoder('utf-8')
 const CHAR_LF = 0x0a
@@ -49,7 +42,13 @@ export function appendTailChunk(
     if (lineEnd > lineStart && buf[lineEnd - 1] === CHAR_CR) {
       lineEnd--
     }
-    ring.push(parseCompleteLine(buf, lineStart, lineEnd))
+    let text: string
+    try {
+      text = TEXT_DECODER.decode(buf.subarray(lineStart, lineEnd))
+    } catch {
+      text = '[invalid utf-8]'
+    }
+    ring.push(parseTailLogLineFromText(text))
     linesAdded++
     lineStart = i + 1
   }
@@ -86,110 +85,4 @@ export function skipPartialLeadingLine(buf: Uint8Array): {
     }
   }
   return { bytes: new Uint8Array(0), skipped: buf.length }
-}
-
-function parseCompleteLine(buf: Uint8Array, start: number, end: number): TailLogLine {
-  const length = end - start
-  if (length === 0) {
-    return rawLine('', Number.NaN)
-  }
-
-  const hot = scanHotFields(buf, start, end)
-  let text: string
-  try {
-    text = TEXT_DECODER.decode(buf.subarray(start, end))
-  } catch {
-    return rawLine('[invalid utf-8]', Number.NaN)
-  }
-
-  if (hot != null) {
-    const attr = tryExtractAttr(text)
-    return {
-      timestamp: hot.timestamp,
-      severity: hot.severity,
-      severityLabel: severityLabel(hot.severity),
-      component: hot.component,
-      id: hot.id,
-      ctx: hot.ctx,
-      msg: hot.msg,
-      namespace: attr.namespace,
-      durationMillis: attr.durationMillis,
-      planSummary: attr.planSummary,
-      kind: 'json',
-    }
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(text)
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const obj = parsed as Record<string, unknown>
-      if (typeof obj.s === 'string' && typeof obj.c === 'string' && typeof obj.msg === 'string') {
-        const attr = extractLogLineAttrFields(obj.attr)
-        const severity = encodeSeverity(obj.s)
-        return {
-          timestamp: parseTimestampLoose(obj.t),
-          severity,
-          severityLabel: severityLabel(severity),
-          component: obj.c,
-          id: typeof obj.id === 'number' ? obj.id >>> 0 : 0,
-          ctx: typeof obj.ctx === 'string' ? obj.ctx : '',
-          msg: obj.msg,
-          namespace: attr.namespace,
-          durationMillis: attr.durationMillis,
-          planSummary: attr.planSummary,
-          kind: 'json',
-        }
-      }
-    }
-  } catch {
-    // fall through to raw
-  }
-
-  return rawLine(text, Number.NaN)
-}
-
-function tryExtractAttr(text: string): ReturnType<typeof extractLogLineAttrFields> {
-  try {
-    const parsed: unknown = JSON.parse(text)
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && 'attr' in parsed) {
-      return extractLogLineAttrFields((parsed as { attr?: unknown }).attr)
-    }
-  } catch {
-    // ignore
-  }
-  return { namespace: null, durationMillis: null, planSummary: null }
-}
-
-function rawLine(text: string, timestamp: number): TailLogLine {
-  return {
-    timestamp,
-    severity: SEVERITY_RAW,
-    severityLabel: '',
-    component: '',
-    id: 0,
-    ctx: '',
-    msg: text,
-    namespace: null,
-    durationMillis: null,
-    planSummary: null,
-    kind: 'raw',
-  }
-}
-
-function parseTimestampLoose(t: unknown): number {
-  if (t == null) {
-    return Number.NaN
-  }
-  if (typeof t === 'string') {
-    const ms = Date.parse(t)
-    return Number.isNaN(ms) ? Number.NaN : ms
-  }
-  if (typeof t === 'object' && t !== null && '$date' in t) {
-    const raw = (t as { $date: unknown }).$date
-    if (typeof raw === 'string' || typeof raw === 'number') {
-      const ms = new Date(raw).getTime()
-      return Number.isFinite(ms) ? ms : Number.NaN
-    }
-  }
-  return Number.NaN
 }

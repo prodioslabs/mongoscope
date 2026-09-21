@@ -15,7 +15,7 @@ export const LOGS_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'space',
-    helpLabel: 'Toggle live follow (auto-scroll to newest)',
+    helpLabel: 'Toggle follow (pin to newest getLog lines)',
     footerLabel: 'follow',
     bindings: [{ key: 'space', cmd: 'logs.toggle-follow' }],
   },
