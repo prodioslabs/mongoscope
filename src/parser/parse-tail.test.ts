@@ -3,11 +3,14 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
+  clampLogTailLines,
   formatLogTailPreset,
   nextLogTailPreset,
   parseLogFileTail,
+  parseLogTailLinesInput,
   DEFAULT_LOG_TAIL_LINES,
   LOG_TAIL_LINE_PRESETS,
+  MAX_LOG_TAIL_LINES,
 } from './parse-tail'
 
 const dirs: string[] = []
@@ -48,23 +51,32 @@ describe('parseLogFileTail', () => {
 })
 
 describe('logTailLine presets', () => {
-  test('default is 100k and cycle visits every preset', () => {
+  test('default is 100k across the dialog presets', () => {
     expect(DEFAULT_LOG_TAIL_LINES).toBe(100_000)
-    expect(LOG_TAIL_LINE_PRESETS).toEqual([50_000, 100_000, 250_000, 500_000])
-
-    let current: number = DEFAULT_LOG_TAIL_LINES
-    const seen = new Set<number>()
-    for (let i = 0; i < LOG_TAIL_LINE_PRESETS.length; i++) {
-      current = nextLogTailPreset(current)
-      seen.add(current)
-    }
-    expect(seen.size).toBe(LOG_TAIL_LINE_PRESETS.length)
+    expect(LOG_TAIL_LINE_PRESETS).toEqual([10_000, 25_000, 50_000, 100_000, 250_000])
+    expect(nextLogTailPreset(100_000)).toBe(250_000)
     expect(nextLogTailPreset(999)).toBe(DEFAULT_LOG_TAIL_LINES)
   })
 
-  test('formatLogTailPreset uses k suffix', () => {
-    expect(formatLogTailPreset(50_000)).toBe('50k')
+  test('formatLogTailPreset uses exact k suffix for round thousands', () => {
+    expect(formatLogTailPreset(10_000)).toBe('10k')
+    expect(formatLogTailPreset(25_000)).toBe('25k')
     expect(formatLogTailPreset(100_000)).toBe('100k')
     expect(formatLogTailPreset(500)).toBe('500')
+  })
+
+  test('parseLogTailLinesInput accepts digits and k suffix', () => {
+    expect(parseLogTailLinesInput('75000')).toBe(75_000)
+    expect(parseLogTailLinesInput('75k')).toBe(75_000)
+    expect(parseLogTailLinesInput(' 10,000 ')).toBe(10_000)
+    expect(parseLogTailLinesInput('0')).toBeNull()
+    expect(parseLogTailLinesInput('abc')).toBeNull()
+    expect(parseLogTailLinesInput(String(MAX_LOG_TAIL_LINES + 1))).toBeNull()
+  })
+
+  test('clampLogTailLines bounds values', () => {
+    expect(clampLogTailLines(0)).toBe(1)
+    expect(clampLogTailLines(MAX_LOG_TAIL_LINES + 5)).toBe(MAX_LOG_TAIL_LINES)
+    expect(clampLogTailLines(12_345.9)).toBe(12_345)
   })
 })

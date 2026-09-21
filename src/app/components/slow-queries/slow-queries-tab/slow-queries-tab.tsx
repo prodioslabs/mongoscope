@@ -25,6 +25,7 @@ import '../../../lib/opentui-text-table'
 import { DbSelector } from '../../db-selector'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 import { EnableProfilingDialog } from '../enable-profiling-dialog'
+import { LogTailDialog } from '../log-tail-dialog'
 import {
   avgMsSeverity,
   examinedSeverity,
@@ -152,7 +153,7 @@ function StaticSlowQueriesPanel() {
   const queryPatterns = useSession((s) => s.queryPatterns)
   const logStore = useSession((s) => s.logStore)
   const logTailLines = useSession((s) => s.logTailLines)
-  const cycleLogTailLines = useSession((s) => s.cycleLogTailLines)
+  const setLogTailLines = useSession((s) => s.setLogTailLines)
   const parseProgress = useSession((s) => s.parseProgress)
   const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
   const { height: terminalHeight } = useTerminalDimensions()
@@ -162,6 +163,7 @@ function StaticSlowQueriesPanel() {
   const [scrollOffset, setScrollOffset] = useState(0)
   const [sortBy, setSortBy] = useState<SortBy>('count')
   const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
+  const [tailDialogOpen, setTailDialogOpen] = useState(false)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [transientStatus, setTransientStatus] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -338,7 +340,7 @@ function StaticSlowQueriesPanel() {
 
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: detailPatternId == null,
+        enabled: detailPatternId == null && !tailDialogOpen,
         commands: [
           {
             name: 'slow-queries.sort-count',
@@ -381,9 +383,12 @@ function StaticSlowQueriesPanel() {
             },
           },
           {
-            name: 'slow-queries.cycle-tail',
+            name: 'slow-queries.open-tail',
             run() {
-              void cycleLogTailLines()
+              if (parseProgress != null) {
+                return
+              }
+              setTailDialogOpen(true)
             },
           },
         ],
@@ -393,13 +398,13 @@ function StaticSlowQueriesPanel() {
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.move')) ||
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.sort')) ||
               shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-details') ||
-              shortcut.bindings.some((b) => b.cmd === 'slow-queries.cycle-tail')
+              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-tail')
             )
           }),
         ),
       }
     },
-    [cycleLogTailLines, detailPatternId],
+    [detailPatternId, parseProgress, tailDialogOpen],
   )
 
   const visible = sortedPatterns.slice(scrollOffset, scrollOffset + capacity)
@@ -419,7 +424,7 @@ function StaticSlowQueriesPanel() {
     <box flexGrow={1} flexShrink={1} flexDirection="column">
       <box paddingLeft={1} paddingRight={1} flexShrink={0}>
         <text
-          content={displayText(`tail ${formatLogTailPreset(logTailLines)} · press T to cycle`)}
+          content={displayText(`tail ${formatLogTailPreset(logTailLines)} · press T to change`)}
           fg={theme.textMuted}
         />
       </box>
@@ -474,6 +479,18 @@ function StaticSlowQueriesPanel() {
         logStore={logStore}
         queryPatterns={queryPatterns}
         onClose={() => setDetailPatternId(null)}
+      />
+      <LogTailDialog
+        open={tailDialogOpen}
+        currentLines={logTailLines}
+        isPending={parseProgress != null}
+        onApply={function applyLogTailLines(lines) {
+          setTailDialogOpen(false)
+          void setLogTailLines(lines)
+        }}
+        onCancel={function cancelLogTailDialog() {
+          setTailDialogOpen(false)
+        }}
       />
     </box>
   )

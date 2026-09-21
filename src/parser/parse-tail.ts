@@ -12,9 +12,11 @@ export type ParseLogFileTailOptions = {
   onProgress?: (progress: { bytesRead: number; rowCount: number }) => void
 }
 
-export const LOG_TAIL_LINE_PRESETS = [50_000, 100_000, 250_000, 500_000] as const
+export const LOG_TAIL_LINE_PRESETS = [10_000, 25_000, 50_000, 100_000, 250_000] as const
 export type LogTailLinePreset = (typeof LOG_TAIL_LINE_PRESETS)[number]
 export const DEFAULT_LOG_TAIL_LINES: LogTailLinePreset = 100_000
+export const MIN_LOG_TAIL_LINES = 1
+export const MAX_LOG_TAIL_LINES = 1_000_000
 
 /**
  * Index only the last `maxLines` lines of a log file (EOF-relative).
@@ -126,8 +128,40 @@ export function nextLogTailPreset(current: number): LogTailLinePreset {
 }
 
 export function formatLogTailPreset(lines: number): string {
+  if (lines >= 1000 && lines % 1000 === 0) {
+    return `${lines / 1000}k`
+  }
   if (lines >= 1000) {
     return `${Math.round(lines / 1000)}k`
   }
   return String(lines)
+}
+
+/** Parse a custom tail size from dialog input (digits, optional `k` / `K` suffix). */
+export function parseLogTailLinesInput(text: string): number | null {
+  const trimmed = text.trim().replace(/,/g, '').toLowerCase()
+  if (trimmed.length === 0) {
+    return null
+  }
+
+  let value: number
+  if (/^\d+k$/.test(trimmed)) {
+    value = Number(trimmed.slice(0, -1)) * 1000
+  } else if (/^\d+$/.test(trimmed)) {
+    value = Number(trimmed)
+  } else {
+    return null
+  }
+
+  if (!Number.isFinite(value) || value < MIN_LOG_TAIL_LINES || value > MAX_LOG_TAIL_LINES) {
+    return null
+  }
+  return Math.floor(value)
+}
+
+export function clampLogTailLines(lines: number): number {
+  if (!Number.isFinite(lines)) {
+    return DEFAULT_LOG_TAIL_LINES
+  }
+  return Math.min(MAX_LOG_TAIL_LINES, Math.max(MIN_LOG_TAIL_LINES, Math.floor(lines)))
 }

@@ -4,9 +4,8 @@ import { create } from 'zustand'
 import {
   DEFAULT_LOG_TAIL_LINES,
   LogStore,
-  nextLogTailPreset,
+  clampLogTailLines,
   parseLogFileTail,
-  type LogTailLinePreset,
 } from '../../parser'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
 import { useLogTailStore } from './log-tail'
@@ -89,7 +88,7 @@ type SessionState = {
   logStore: LogStore | null
   queryPatterns: QueryPatternStore | null
   /** Last-N-lines window for static Slow Queries parse. */
-  logTailLines: LogTailLinePreset
+  logTailLines: number
   /** Static file vs live profiler; live only meaningful when a connection is selected. */
   slowQueriesSource: DataSourceMode
   /** Static file tail vs getLog; live only meaningful when a connection is selected. */
@@ -111,7 +110,7 @@ type SessionState = {
   setSelectedDatabase: (database: string | null) => void
   setSlowQueriesSource: (source: DataSourceMode) => void
   setLogsSource: (source: DataSourceMode) => void
-  cycleLogTailLines: () => Promise<void>
+  setLogTailLines: (lines: number) => Promise<void>
   goToWelcome: () => void
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
@@ -307,11 +306,14 @@ export const useSession = create<SessionState>((set, get) => ({
     set({ logsSource: source })
   },
 
-  async cycleLogTailLines() {
+  async setLogTailLines(lines) {
     if (get().parseProgress !== null) {
       return
     }
-    const next = nextLogTailPreset(get().logTailLines)
+    const next = clampLogTailLines(lines)
+    if (next === get().logTailLines && get().logStore != null) {
+      return
+    }
     set({ logTailLines: next })
     const path = get().logPath
     if (path == null) {

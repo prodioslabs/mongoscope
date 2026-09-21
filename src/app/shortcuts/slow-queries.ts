@@ -44,10 +44,10 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'shift+t',
-    helpLabel: 'Cycle static log tail window (50k / 100k / 250k / 500k)',
+    helpLabel: 'Open log tail window dialog (10k / 25k / 50k / 100k / 250k / custom)',
     footerLabel: 'tail',
     footerKeys: 'T',
-    bindings: [{ key: 'shift+t', cmd: 'slow-queries.cycle-tail' }],
+    bindings: [{ key: 'shift+t', cmd: 'slow-queries.open-tail' }],
   },
   {
     keys: 'l',
@@ -94,5 +94,12 @@ export const SLOW_QUERIES_FOOTER: FooterChip[] = SLOW_QUERIES_STATIC_FOOTER
 
 export const SLOW_QUERIES_ENABLE_CONFIRM_FOOTER: FooterChip[] = [
   { keys: 'enter', label: 'confirm' },
+  { keys: 'esc', label: 'cancel' },
+]
+
+export const SLOW_QUERIES_TAIL_DIALOG_FOOTER: FooterChip[] = [
+  { keys: '↑↓/jk', label: 'navigate' },
+  { keys: 'enter', label: 'apply' },
+  { keys: 'i', label: 'custom' },
   { keys: 'esc', label: 'cancel' },
 ]
