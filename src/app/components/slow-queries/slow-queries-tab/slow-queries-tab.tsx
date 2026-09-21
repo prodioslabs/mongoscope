@@ -4,14 +4,19 @@ import { useTerminalDimensions } from '@opentui/react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { QueryPattern } from '../../../../query-patterns'
 import { displayText } from '../../../../lib/display-text'
+import { formatLogTailPreset } from '../../../../parser'
 import { DEFAULT_SLOWMS, type ProfilerSlowQueriesSnapshot } from '../../../../profiler'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import {
   useEnableProfiling,
   useProfilerSlowQueriesSnapshot,
 } from '../../../queries/slow-queries'
-import { useConnectionsList } from '../../../queries/connection'
-import { SLOW_QUERIES_FOOTER, SLOW_QUERIES_SHORTCUTS, toBindings } from '../../../shortcuts'
+import {
+  SLOW_QUERIES_LIVE_FOOTER,
+  SLOW_QUERIES_SHORTCUTS,
+  SLOW_QUERIES_STATIC_FOOTER,
+  toBindings,
+} from '../../../shortcuts'
 import { useLiveConnection } from '../../../stores/live-connection'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
@@ -47,77 +52,439 @@ type SlowQueryStats = {
   collscanSeverity: Severity
 }
 
-/**
- * Non-data lines: tab bar, footer, db selector, stats, status, borders.
- */
-const CHROME_ROWS = 12
-
-/** Approximate height of one data row (content line + inner border). */
+const CHROME_ROWS_STATIC = 10
+const CHROME_ROWS_LIVE = 12
 const ROW_STRIDE = 2
-
 const COLUMN_COUNT = 7
 
 export function SlowQueriesTab() {
   const theme = useTheme((s) => s.theme)
+  const activeConnectionId = useSession((s) => s.activeConnectionId)
+  const slowQueriesSource = useSession((s) => s.slowQueriesSource)
+  const setSlowQueriesSource = useSession((s) => s.setSlowQueriesSource)
   const liveStatus = useLiveConnection((s) => s.status)
   const liveErrorMessage = useLiveConnection((s) => s.errorMessage)
-  const activeConnectionId = useSession((s) => s.activeConnectionId)
-  const { data: profilesData } = useConnectionsList()
-  const profiles = profilesData ?? []
 
-  const dashboardEnabled = liveStatus === 'connected'
+  const useLive =
+    slowQueriesSource === 'live' && activeConnectionId != null && liveStatus === 'connected'
+  const showSourceToggle = activeConnectionId != null
+
+  const dashboardEnabled = useLive
   const { data: snapshot, isPending } = useProfilerSlowQueriesSnapshot(dashboardEnabled)
 
+  useBindings(
+    function createSlowQueriesSourceLayer() {
+      return {
+        appMode: 'base' satisfies AppKeymapMode,
+        enabled: showSourceToggle,
+        priority: 5,
+        commands: [
+          {
+            name: 'slow-queries.toggle-source',
+            run() {
+              setSlowQueriesSource(slowQueriesSource === 'live' ? 'static' : 'live')
+            },
+          },
+        ],
+        bindings: [{ key: 'l', cmd: 'slow-queries.toggle-source' }],
+      }
+    },
+    [setSlowQueriesSource, showSourceToggle, slowQueriesSource],
+  )
+
   let body: ReactNode
-  if (profiles.length === 0) {
-    body = null
-  } else if (activeConnectionId == null || liveStatus === 'idle') {
+  if (useLive) {
     body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text content="No connection selected. Press c to choose one." fg={theme.textMuted} />
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
+        <DbSelector />
+        <LiveSlowQueriesDashboard snapshot={snapshot} isPending={isPending} />
       </box>
     )
-  } else if (liveStatus === 'connecting') {
+  } else if (slowQueriesSource === 'live' && activeConnectionId != null) {
     body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text content="connecting…" fg={theme.textMuted} />
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
+        <DbSelector />
+        <box paddingLeft={1} paddingTop={1}>
+          {liveStatus === 'connecting' ? (
+            <text content="connecting…" fg={theme.textMuted} />
+          ) : liveStatus === 'error' ? (
+            <text
+              content={displayText(liveErrorMessage || 'Connection failed.')}
+              fg={theme.error}
+            />
+          ) : liveStatus === 'disconnected' ? (
+            <text
+              content="Connection lost. Press c and reselect a connection to retry."
+              fg={theme.warning}
+            />
+          ) : (
+            <text content="connecting…" fg={theme.textMuted} />
+          )}
+        </box>
       </box>
     )
-  } else if (liveStatus === 'error') {
-    body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text content={displayText(liveErrorMessage || 'Connection failed.')} fg={theme.error} />
-      </box>
-    )
-  } else if (liveStatus === 'disconnected') {
-    body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text
-          content="Connection lost. Press c and reselect a connection to retry."
-          fg={theme.warning}
-        />
-      </box>
-    )
-  } else if (liveStatus === 'connected') {
-    body = <SlowQueriesDashboard snapshot={snapshot} isPending={isPending} />
   } else {
-    body = null
+    body = <StaticSlowQueriesPanel />
   }
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column">
-      <DbSelector />
+      {showSourceToggle ? (
+        <box paddingLeft={1} paddingRight={1} flexShrink={0} flexDirection="row" gap={2}>
+          <text
+            content={slowQueriesSource === 'static' ? '● Static log' : '○ Static log'}
+            fg={slowQueriesSource === 'static' ? theme.primary : theme.textMuted}
+          />
+          <text
+            content={slowQueriesSource === 'live' ? '● Live profiler' : '○ Live profiler'}
+            fg={slowQueriesSource === 'live' ? theme.primary : theme.textMuted}
+          />
+          <text content="l toggle" fg={theme.textMuted} />
+        </box>
+      ) : null}
       {body}
     </box>
   )
 }
 
-type SlowQueriesDashboardProps = {
+function StaticSlowQueriesPanel() {
+  const theme = useTheme((s) => s.theme)
+  const queryPatterns = useSession((s) => s.queryPatterns)
+  const logStore = useSession((s) => s.logStore)
+  const logTailLines = useSession((s) => s.logTailLines)
+  const cycleLogTailLines = useSession((s) => s.cycleLogTailLines)
+  const parseProgress = useSession((s) => s.parseProgress)
+  const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
+  const { height: terminalHeight } = useTerminalDimensions()
+
+  const patterns = queryPatterns?.patterns ?? []
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [scrollOffset, setScrollOffset] = useState(0)
+  const [sortBy, setSortBy] = useState<SortBy>('count')
+  const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [transientStatus, setTransientStatus] = useState<string | null>(null)
+  const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const selectedIndexRef = useRef(0)
+  const scrollOffsetRef = useRef(0)
+  const capacityRef = useRef(1)
+  const sortedLengthRef = useRef(0)
+  const sortedPatternsRef = useRef<QueryPattern[]>([])
+  const sortByRef = useRef(sortBy)
+  const sortDirectionRef = useRef(sortDirection)
+
+  const stats = useMemo(() => computeSlowQueryStats(patterns), [patterns])
+  const sortedPatterns = useMemo(
+    () => sortPatterns(patterns, sortBy, sortDirection),
+    [patterns, sortBy, sortDirection],
+  )
+  const detailPattern =
+    detailPatternId == null
+      ? null
+      : (sortedPatterns.find((pattern) => pattern.id === detailPatternId) ?? null)
+
+  const capacity = Math.max(1, Math.floor((terminalHeight - CHROME_ROWS_STATIC) / ROW_STRIDE))
+  const windowLabel =
+    queryPatterns != null
+      ? formatWindowLabel(queryPatterns.windowStartMs, queryPatterns.windowEndMs)
+      : 'no log'
+  const statusLabel =
+    transientStatus ??
+    (parseProgress != null
+      ? `parsing… ${parseProgress}%`
+      : `tail ${formatLogTailPreset(logTailLines)} · ${windowLabel}`)
+
+  useFooterKeybindings(SLOW_QUERIES_STATIC_FOOTER)
+  useFooterStatus(statusLabel)
+
+  const showTransientStatus = useCallback(function showTransientStatus(message: string) {
+    setTransientStatus(message)
+    if (statusTimerRef.current != null) {
+      clearTimeout(statusTimerRef.current)
+    }
+    statusTimerRef.current = setTimeout(function clearTransientStatus() {
+      setTransientStatus(null)
+      statusTimerRef.current = null
+    }, 4000)
+  }, [])
+
+  useEffect(function cleanupStatusTimer() {
+    return function disposeStatusTimer() {
+      if (statusTimerRef.current != null) {
+        clearTimeout(statusTimerRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(
+    function applyPendingSlowQueriesNav() {
+      const pending = consumePendingSlowQueriesNav()
+      if (pending == null) {
+        return
+      }
+      if (pending.statusMessage) {
+        showTransientStatus(pending.statusMessage)
+      }
+      if (pending.patternId != null) {
+        setDetailPatternId(pending.openDetail ? pending.patternId : null)
+        const index = sortedPatternsRef.current.findIndex((p) => p.id === pending.patternId)
+        if (index >= 0) {
+          setSelectedIndex(index)
+          setScrollOffset(Math.max(0, index - Math.floor(capacityRef.current / 2)))
+        }
+      }
+    },
+    [consumePendingSlowQueriesNav, showTransientStatus],
+  )
+
+  useEffect(
+    function clampSlowQueriesSelection() {
+      setSelectedIndex((index) => {
+        if (sortedPatterns.length === 0) {
+          return 0
+        }
+        return Math.min(index, sortedPatterns.length - 1)
+      })
+      setScrollOffset((offset) => {
+        if (sortedPatterns.length === 0) {
+          return 0
+        }
+        const maxOffset = Math.max(0, sortedPatterns.length - capacity)
+        return Math.min(offset, maxOffset)
+      })
+    },
+    [sortedPatterns.length, capacity],
+  )
+
+  useEffect(
+    function syncSelectedIndexRef() {
+      selectedIndexRef.current = selectedIndex
+    },
+    [selectedIndex],
+  )
+  useEffect(
+    function syncScrollOffsetRef() {
+      scrollOffsetRef.current = scrollOffset
+    },
+    [scrollOffset],
+  )
+  useEffect(
+    function syncCapacityRef() {
+      capacityRef.current = capacity
+    },
+    [capacity],
+  )
+  useEffect(
+    function syncSortedLengthRef() {
+      sortedLengthRef.current = sortedPatterns.length
+    },
+    [sortedPatterns.length],
+  )
+  useEffect(
+    function syncSortedPatternsRef() {
+      sortedPatternsRef.current = sortedPatterns
+    },
+    [sortedPatterns],
+  )
+  useEffect(
+    function syncSortByRef() {
+      sortByRef.current = sortBy
+    },
+    [sortBy],
+  )
+  useEffect(
+    function syncSortDirectionRef() {
+      sortDirectionRef.current = sortDirection
+    },
+    [sortDirection],
+  )
+
+  useBindings(
+    function createStaticSlowQueriesLayer() {
+      function moveSelection(delta: number) {
+        const length = sortedLengthRef.current
+        if (length === 0) {
+          return
+        }
+        const prev = selectedIndexRef.current
+        const next = Math.max(0, Math.min(length - 1, prev + delta))
+        if (next === prev) {
+          return
+        }
+        setSelectedIndex(next)
+        const cap = capacityRef.current
+        const offset = scrollOffsetRef.current
+        if (next < offset) {
+          setScrollOffset(next)
+        } else if (next >= offset + cap) {
+          setScrollOffset(next - cap + 1)
+        }
+      }
+
+      function applySort(next: SortBy) {
+        if (sortedLengthRef.current === 0) {
+          return
+        }
+        if (sortByRef.current === next) {
+          setSortDirection((direction) => (direction === 'desc' ? 'asc' : 'desc'))
+        } else {
+          setSortBy(next)
+          setSortDirection('desc')
+        }
+        setSelectedIndex(0)
+        setScrollOffset(0)
+      }
+
+      return {
+        appMode: 'base' satisfies AppKeymapMode,
+        enabled: detailPatternId == null,
+        commands: [
+          {
+            name: 'slow-queries.sort-count',
+            run() {
+              applySort('count')
+            },
+          },
+          {
+            name: 'slow-queries.sort-avg',
+            run() {
+              applySort('avgMs')
+            },
+          },
+          {
+            name: 'slow-queries.sort-plan',
+            run() {
+              applySort('plan')
+            },
+          },
+          {
+            name: 'slow-queries.move-up',
+            run() {
+              moveSelection(-1)
+            },
+          },
+          {
+            name: 'slow-queries.move-down',
+            run() {
+              moveSelection(1)
+            },
+          },
+          {
+            name: 'slow-queries.open-details',
+            run() {
+              const pattern = sortedPatternsRef.current[selectedIndexRef.current]
+              if (pattern == null) {
+                return
+              }
+              setDetailPatternId(pattern.id)
+            },
+          },
+          {
+            name: 'slow-queries.cycle-tail',
+            run() {
+              void cycleLogTailLines()
+            },
+          },
+        ],
+        bindings: toBindings(
+          SLOW_QUERIES_SHORTCUTS.filter(function keepStaticBindings(shortcut) {
+            return (
+              shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.move')) ||
+              shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.sort')) ||
+              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-details') ||
+              shortcut.bindings.some((b) => b.cmd === 'slow-queries.cycle-tail')
+            )
+          }),
+        ),
+      }
+    },
+    [cycleLogTailLines, detailPatternId],
+  )
+
+  const visible = sortedPatterns.slice(scrollOffset, scrollOffset + capacity)
+  const content =
+    sortedPatterns.length > 0
+      ? buildTableContent(
+          visible,
+          selectedIndex - scrollOffset,
+          theme,
+          capacity,
+          sortBy,
+          sortDirection,
+        )
+      : null
+
+  return (
+    <box flexGrow={1} flexShrink={1} flexDirection="column">
+      <box paddingLeft={1} paddingRight={1} flexShrink={0}>
+        <text
+          content={displayText(`tail ${formatLogTailPreset(logTailLines)} · press t to cycle`)}
+          fg={theme.textMuted}
+        />
+      </box>
+      <box
+        flexDirection="row"
+        flexShrink={0}
+        gap={1}
+        paddingLeft={1}
+        paddingRight={1}
+        paddingBottom={0}
+      >
+        <StatsCard icon="◈" label="patterns" value={stats.patternCount} />
+        <StatsCard icon="≡" label="queries" value={stats.queryCount} />
+        <StatsCard
+          icon="◷"
+          label="slowest"
+          value={stats.slowest}
+          valueColor={severityColor(theme, stats.slowestSeverity)}
+        />
+        <StatsCard
+          icon="⚠"
+          label="collscan"
+          value={stats.collscanShare}
+          valueColor={severityColor(theme, stats.collscanSeverity)}
+        />
+      </box>
+      {content == null ? (
+        <box flexGrow={1} flexShrink={1} paddingLeft={1}>
+          <text
+            content={parseProgress != null ? 'parsing log…' : 'no slow queries'}
+            fg={theme.textMuted}
+          />
+        </box>
+      ) : (
+        <textTable
+          content={content}
+          flexGrow={1}
+          border
+          outerBorder
+          borderStyle="single"
+          borderColor={theme.border}
+          wrapMode="none"
+          cellPaddingX={0}
+          selectable={false}
+          height="100%"
+          width="100%"
+        />
+      )}
+      <QueryDetailDialog
+        open={detailPatternId != null}
+        pattern={detailPattern}
+        logStore={logStore}
+        queryPatterns={queryPatterns}
+        onClose={() => setDetailPatternId(null)}
+      />
+    </box>
+  )
+}
+
+type LiveSlowQueriesDashboardProps = {
   snapshot: ProfilerSlowQueriesSnapshot | undefined
   isPending: boolean
 }
 
-function SlowQueriesDashboard({ snapshot, isPending }: SlowQueriesDashboardProps) {
+function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashboardProps) {
   const theme = useTheme((s) => s.theme)
   const selectedDatabase = useSession((s) => s.selectedDatabase)
   const setSelectedDatabase = useSession((s) => s.setSelectedDatabase)
@@ -167,13 +534,13 @@ function SlowQueriesDashboard({ snapshot, isPending }: SlowQueriesDashboardProps
   const detailSampleDoc =
     detailPattern != null ? (samples[detailPattern.sampleRow] ?? null) : null
 
-  const capacity = Math.max(1, Math.floor((terminalHeight - CHROME_ROWS) / ROW_STRIDE))
+  const capacity = Math.max(1, Math.floor((terminalHeight - CHROME_ROWS_LIVE) / ROW_STRIDE))
   const level = profiling?.level ?? null
   const canEnable = level === 0 && snapshot?.errors.topology == null
   const proposedSlowms = profiling?.slowms ?? DEFAULT_SLOWMS
 
   const statusLabel = transientStatus ?? formatProfilerStatusLabel(snapshot, isPending)
-  useFooterKeybindings(enableDialogOpen ? [] : SLOW_QUERIES_FOOTER)
+  useFooterKeybindings(enableDialogOpen ? [] : SLOW_QUERIES_LIVE_FOOTER)
   useFooterStatus(statusLabel)
 
   const showTransientStatus = useCallback(function showTransientStatus(message: string) {

@@ -42,6 +42,13 @@ export const LOGS_SHORTCUTS: readonly Shortcut[] = [
       { key: 's', cmd: 'logs.toggle-STORAGE' },
     ],
   },
+  {
+    keys: 'l',
+    helpLabel: 'Toggle Static log / Live getLog (when a connection is selected)',
+    footerLabel: 'source',
+    // Bound in LogsTab source layer (priority), not LogsView.
+    bindings: [],
+  },
 ]
 
 export const LOGS_FOOTER: FooterChip[] = [

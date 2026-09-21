@@ -1,3 +1,4 @@
+import { basename } from 'node:path'
 import { InputRenderable, TextAttributes, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
@@ -17,7 +18,6 @@ import {
   tableCell,
 } from '../../../lib/text-table-content'
 import { whenNotEditing } from '../../../lib/when-not-editing'
-import { useConnectionsList } from '../../../queries/connection'
 import { LOGS_FOOTER, LOGS_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useLiveConnection } from '../../../stores/live-connection'
 import { useLogTailStore } from '../../../stores/log-tail'
@@ -28,89 +28,169 @@ import { DataTextTable } from '../../data-text-table'
 import { DbSelector } from '../../db-selector'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 
-/** Tab bar, db selector, title, pills, optional filter input, status, app footer. */
-const LOGS_CHROME_ROWS = 16
+/** Tab bar, title, pills, optional filter input, parser status, app footer. */
+const LOGS_CHROME_ROWS_STATIC = 14
+/** Extra rows for fidelity note + db selector chrome. */
+const LOGS_CHROME_ROWS_LIVE = 16
 
 const GET_LOG_FIDELITY_NOTE = 'getLog RAM buffer (~1024 events) — not a durable on-disk log'
 
 export function LogsTab() {
   const theme = useTheme((s) => s.theme)
+  const logPath = useSession((s) => s.logPath)
+  const activeConnectionId = useSession((s) => s.activeConnectionId)
+  const logsSource = useSession((s) => s.logsSource)
+  const setLogsSource = useSession((s) => s.setLogsSource)
+
   const liveStatus = useLiveConnection((s) => s.status)
   const liveErrorMessage = useLiveConnection((s) => s.errorMessage)
   const connectionId = useLiveConnection((s) => s.connectionId)
   const generation = useLiveConnection((s) => s.generation)
-  const activeConnectionId = useSession((s) => s.activeConnectionId)
-  const { data: profilesData } = useConnectionsList()
-  const profiles = profilesData ?? []
 
-  const activate = useLogTailStore((s) => s.activate)
+  const activateFile = useLogTailStore((s) => s.activateFile)
+  const activateLive = useLogTailStore((s) => s.activateLive)
   const deactivate = useLogTailStore((s) => s.deactivate)
   const teardown = useLogTailStore((s) => s.teardown)
 
-  useEffect(
-    function syncGetLogLifecycle() {
-      if (liveStatus !== 'connected' || connectionId == null) {
-        if (liveStatus === 'idle' || liveStatus === 'disconnected' || liveStatus === 'error') {
-          teardown()
-        } else {
-          deactivate()
-        }
-        return
-      }
-      const key = `${connectionId}:${generation}`
-      activate(key)
-      return function pauseGetLogOnLeave() {
-        deactivate()
+  const useLive = logsSource === 'live' && activeConnectionId != null && liveStatus === 'connected'
+  const showSourceToggle = activeConnectionId != null
+
+  useBindings(
+    function createLogsSourceLayer() {
+      return {
+        appMode: 'base' satisfies AppKeymapMode,
+        enabled: showSourceToggle,
+        priority: 5,
+        commands: [
+          {
+            name: 'logs.toggle-source',
+            run() {
+              setLogsSource(logsSource === 'live' ? 'static' : 'live')
+            },
+          },
+        ],
+        bindings: [{ key: 'l', cmd: 'logs.toggle-source' }],
       }
     },
-    [liveStatus, connectionId, generation, activate, deactivate, teardown],
+    [logsSource, setLogsSource, showSourceToggle],
+  )
+
+  useEffect(
+    function syncLogIngestLifecycle() {
+      if (logsSource === 'live') {
+        if (useLive && connectionId != null) {
+          const key = `${connectionId}:${generation}`
+          activateLive(key)
+          return function pauseLiveOnLeave() {
+            deactivate()
+          }
+        }
+
+        if (liveStatus === 'idle' || liveStatus === 'disconnected' || liveStatus === 'error') {
+          teardown()
+          return
+        }
+
+        deactivate()
+        return
+      }
+
+      if (logPath != null) {
+        activateFile(logPath)
+        return function pauseFileOnLeave() {
+          deactivate()
+        }
+      }
+
+      deactivate()
+      return undefined
+    },
+    [
+      activateFile,
+      activateLive,
+      connectionId,
+      deactivate,
+      generation,
+      liveStatus,
+      logPath,
+      logsSource,
+      teardown,
+      useLive,
+    ],
   )
 
   let body: ReactNode
-  if (profiles.length === 0) {
-    body = null
-  } else if (activeConnectionId == null || liveStatus === 'idle') {
+  if (useLive) {
     body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text content="No connection selected. Press c to choose one." fg={theme.textMuted} />
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
+        <DbSelector />
+        <LogsView mode="live" title="server log (getLog)" />
       </box>
     )
-  } else if (liveStatus === 'connecting') {
+  } else if (logsSource === 'live' && activeConnectionId != null) {
     body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text content="connecting…" fg={theme.textMuted} />
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
+        <DbSelector />
+        <box paddingLeft={1} paddingTop={1}>
+          {liveStatus === 'connecting' ? (
+            <text content="connecting…" fg={theme.textMuted} />
+          ) : liveStatus === 'error' ? (
+            <text
+              content={displayText(liveErrorMessage || 'Connection failed.')}
+              fg={theme.error}
+            />
+          ) : liveStatus === 'disconnected' ? (
+            <text
+              content="Connection lost. Press c and reselect a connection to retry."
+              fg={theme.warning}
+            />
+          ) : (
+            <text content="connecting…" fg={theme.textMuted} />
+          )}
+        </box>
       </box>
     )
-  } else if (liveStatus === 'error') {
-    body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text content={displayText(liveErrorMessage || 'Connection failed.')} fg={theme.error} />
-      </box>
-    )
-  } else if (liveStatus === 'disconnected') {
-    body = (
-      <box paddingLeft={1} paddingTop={1}>
-        <text
-          content="Connection lost. Press c and reselect a connection to retry."
-          fg={theme.warning}
-        />
-      </box>
-    )
-  } else if (liveStatus === 'connected') {
-    body = <LogsView />
+  } else if (logPath == null) {
+    body = <LogsEmptyState />
   } else {
-    body = null
+    body = <LogsView mode="static" title={basename(logPath)} />
   }
 
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column">
-      <DbSelector />
+      {showSourceToggle ? (
+        <box paddingLeft={1} paddingRight={1} flexShrink={0} flexDirection="row" gap={2}>
+          <text
+            content={logsSource === 'static' ? '● Static log' : '○ Static log'}
+            fg={logsSource === 'static' ? theme.primary : theme.textMuted}
+          />
+          <text
+            content={logsSource === 'live' ? '● Live getLog' : '○ Live getLog'}
+            fg={logsSource === 'live' ? theme.primary : theme.textMuted}
+          />
+          <text content="l toggle" fg={theme.textMuted} />
+        </box>
+      ) : null}
       {body}
     </box>
   )
 }
 
-function LogsView() {
+function LogsEmptyState() {
+  const theme = useTheme((s) => s.theme)
+  return (
+    <box flexGrow={1} paddingLeft={1} paddingTop={1}>
+      <text content="No log file selected." fg={theme.textMuted} />
+    </box>
+  )
+}
+
+type LogsViewProps = {
+  mode: 'static' | 'live'
+  title: string
+}
+
+function LogsView({ mode, title }: LogsViewProps) {
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const { height: terminalHeight } = useTerminalDimensions()
@@ -156,7 +236,8 @@ function LogsView() {
     [filtered],
   )
 
-  const capacity = computeTableCapacity(LOGS_CHROME_ROWS, terminalHeight)
+  const chromeRows = mode === 'live' ? LOGS_CHROME_ROWS_LIVE : LOGS_CHROME_ROWS_STATIC
+  const capacity = computeTableCapacity(chromeRows, terminalHeight)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [scrollOffset, setScrollOffset] = useState(0)
 
@@ -226,9 +307,15 @@ function LogsView() {
     [filterEditing],
   )
 
-  const statusLabel = following
-    ? `polling getLog · ${stats.bufferedCount} lines buffered`
-    : `paused · ${stats.bufferedCount} lines buffered`
+  const statusLabel =
+    mode === 'live'
+      ? following
+        ? `polling getLog · ${stats.bufferedCount} lines buffered`
+        : `paused · ${stats.bufferedCount} lines buffered`
+      : following
+        ? `tailing · ${stats.bufferedCount} lines buffered`
+        : `paused · ${stats.bufferedCount} lines buffered`
+
   useFooterStatus(error != null ? error : statusLabel)
   useFooterKeybindings(LOGS_FOOTER)
 
@@ -352,10 +439,10 @@ function LogsView() {
     <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1}>
       <box flexDirection="column" flexShrink={0} gap={0}>
         <box flexDirection="row" justifyContent="space-between">
-          <text content="server log (getLog)" fg={theme.text} attributes={TextAttributes.BOLD} />
+          <text content={displayText(title)} fg={theme.text} attributes={TextAttributes.BOLD} />
           <text content={statusLabel} fg={theme.textMuted} />
         </box>
-        <text content={GET_LOG_FIDELITY_NOTE} fg={theme.warning} />
+        {mode === 'live' ? <text content={GET_LOG_FIDELITY_NOTE} fg={theme.warning} /> : null}
       </box>
 
       <box flexDirection="row" gap={1} flexShrink={0} flexWrap="wrap" paddingTop={1} paddingBottom={1}>
@@ -446,9 +533,19 @@ function LogsView() {
         flexDirection="row"
         justifyContent="space-between"
       >
-        <text content={`format: ${stats.format}`} fg={theme.textMuted} />
-        <text content={`lines/sec: ~${stats.linesPerSec}`} fg={theme.textMuted} />
-        <text content={`RAM ring wraps: ${stats.restartsDetected}`} fg={theme.textMuted} />
+        {mode === 'live' ? (
+          <>
+            <text content={`format: ${stats.format}`} fg={theme.textMuted} />
+            <text content={`lines/sec: ~${stats.linesPerSec}`} fg={theme.textMuted} />
+            <text content={`RAM ring wraps: ${stats.restartsDetected}`} fg={theme.textMuted} />
+          </>
+        ) : (
+          <>
+            <text content={`parser status  format: ${stats.format}`} fg={theme.textMuted} />
+            <text content={`lines/sec: ~${stats.linesPerSec}`} fg={theme.textMuted} />
+            <text content={`restarts detected: ${stats.restartsDetected}`} fg={theme.textMuted} />
+          </>
+        )}
       </box>
     </box>
   )

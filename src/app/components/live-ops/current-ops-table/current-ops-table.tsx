@@ -61,6 +61,10 @@ export function CurrentOpsTable({
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const profilerPatterns = useProfilerPatternsStore((s) => s.patterns)
+  const staticPatterns = useSession((s) => s.queryPatterns?.patterns ?? [])
+  const slowQueriesSource = useSession((s) => s.slowQueriesSource)
+  const setSlowQueriesSource = useSession((s) => s.setSlowQueriesSource)
+  const activeConnectionId = useSession((s) => s.activeConnectionId)
   const navigateToTab = useSession((s) => s.navigateToTab)
   const { height: terminalHeight } = useTerminalDimensions()
   const killMutation = useKillCurrentOp()
@@ -229,32 +233,66 @@ export function CurrentOpsTable({
           return
         }
 
-        if (profilerPatterns.length === 0) {
-          showTransientStatus('no profiler patterns yet — open Slow Queries and enable profiling')
-          return
-        }
-
-        const match = findBestMatchingPattern(profilerPatterns, {
+        const criteria = {
           namespace: row.namespace,
           op: row.op,
           plan: row.plan,
-        })
+        }
 
-        if (match != null) {
+        const liveMatch =
+          profilerPatterns.length > 0 ? findBestMatchingPattern(profilerPatterns, criteria) : null
+        const staticMatch =
+          staticPatterns.length > 0 ? findBestMatchingPattern(staticPatterns, criteria) : null
+
+        if (slowQueriesSource === 'live' && liveMatch != null) {
           navigateToTab('slow-queries', {
             slowQueries: {
-              patternId: match.id,
+              patternId: liveMatch.id,
               openDetail: true,
               statusMessage: `opened explain for ${row.namespace} ${row.op}`,
             },
           })
-        } else {
+          return
+        }
+
+        if (staticMatch != null) {
+          if (slowQueriesSource === 'live') {
+            setSlowQueriesSource('static')
+          }
           navigateToTab('slow-queries', {
             slowQueries: {
-              statusMessage: `no matching slow query pattern for ${row.namespace} ${row.op}`,
+              patternId: staticMatch.id,
+              openDetail: true,
+              statusMessage: `opened explain for ${row.namespace} ${row.op}`,
             },
           })
+          return
         }
+
+        if (activeConnectionId != null && liveMatch != null) {
+          setSlowQueriesSource('live')
+          navigateToTab('slow-queries', {
+            slowQueries: {
+              patternId: liveMatch.id,
+              openDetail: true,
+              statusMessage: `opened explain for ${row.namespace} ${row.op}`,
+            },
+          })
+          return
+        }
+
+        if (profilerPatterns.length === 0 && staticPatterns.length === 0) {
+          showTransientStatus(
+            'no slow query patterns yet — parse a log or enable profiling in Slow Queries',
+          )
+          return
+        }
+
+        navigateToTab('slow-queries', {
+          slowQueries: {
+            statusMessage: `no matching slow query pattern for ${row.namespace} ${row.op}`,
+          },
+        })
       }
 
       return {
@@ -291,7 +329,17 @@ export function CurrentOpsTable({
         bindings: toBindings(LIVE_OPS_SHORTCUTS),
       }
     },
-    [killConfirmOpen, navigateToTab, notEditing, profilerPatterns, showTransientStatus],
+    [
+      activeConnectionId,
+      killConfirmOpen,
+      navigateToTab,
+      notEditing,
+      profilerPatterns,
+      setSlowQueriesSource,
+      showTransientStatus,
+      slowQueriesSource,
+      staticPatterns,
+    ],
   )
 
   const handleKillConfirm = useCallback(

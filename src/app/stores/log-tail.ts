@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   createGetLogPoller,
+  createLogTailer,
   filterTailLines,
   parseCustomFilterExpression,
   DEFAULT_ENABLED_CATEGORIES,
@@ -8,6 +9,7 @@ import {
   type CustomFilterExpression,
   type GetLogPoller,
   type LogCategoryComponent,
+  type LogTailer,
   type LogTailStats,
   type TailLogLine,
 } from '../../log-tail'
@@ -20,8 +22,10 @@ const EMPTY_STATS: LogTailStats = {
   bufferedCount: 0,
 }
 
+type IngestMode = 'file' | 'live' | null
+
 type LogTailState = {
-  /** Connection key currently driving the poller (`id:generation`), or null. */
+  path: string | null
   connectionKey: string | null
   lines: TailLogLine[]
   stats: LogTailStats
@@ -34,11 +38,11 @@ type LogTailState = {
   search: string
   searchEditing: boolean
   filterEditing: boolean
-  /** Start or resume getLog polling for this connection generation. */
-  activate: (connectionKey: string) => void
-  /** Stop polling; retain buffer. */
+  /** Start or resume file tailing for path. */
+  activateFile: (path: string) => void
+  /** Start or resume getLog polling for connectionKey (`id:generation`). */
+  activateLive: (connectionKey: string) => void
   deactivate: () => void
-  /** Full teardown (disconnect / resetToWelcome). */
   teardown: () => void
   setFollowing: (following: boolean) => void
   toggleCategory: (component: LogCategoryComponent) => void
@@ -50,10 +54,13 @@ type LogTailState = {
   setFilterEditing: (editing: boolean) => void
 }
 
-let poller: GetLogPoller | null = null
-let unsubscribePoller: (() => void) | null = null
+let fileTailer: LogTailer | null = null
+let livePoller: GetLogPoller | null = null
+let unsubscribe: (() => void) | null = null
 let coalesceTimer: ReturnType<typeof setTimeout> | null = null
+let activePath: string | null = null
 let activeConnectionKey: string | null = null
+let ingestMode: IngestMode = null
 
 function clearCoalesceTimer(): void {
   if (coalesceTimer != null) {
@@ -64,37 +71,50 @@ function clearCoalesceTimer(): void {
 
 function flushSnapshot(set: (partial: Partial<LogTailState>) => void): void {
   clearCoalesceTimer()
-  if (poller == null) {
+  if (ingestMode === 'file' && fileTailer != null) {
+    const snap = fileTailer.getSnapshot()
+    set({
+      lines: snap.lines,
+      stats: snap.stats,
+      error: snap.error,
+    })
     return
   }
-  const snap = poller.getSnapshot()
-  set({
-    lines: snap.lines,
-    stats: snap.stats,
-    error: snap.error,
-  })
+  if (ingestMode === 'live' && livePoller != null) {
+    const snap = livePoller.getSnapshot()
+    set({
+      lines: snap.lines,
+      stats: snap.stats,
+      error: snap.error,
+    })
+  }
 }
 
 function scheduleFlush(set: (partial: Partial<LogTailState>) => void): void {
   if (coalesceTimer != null) {
     return
   }
-  coalesceTimer = setTimeout(function flushCoalescedGetLogSnapshot() {
+  coalesceTimer = setTimeout(function flushCoalescedLogSnapshot() {
     coalesceTimer = null
     flushSnapshot(set)
   }, LOG_TAIL_UI_COALESCE_MS)
 }
 
-function detachPoller(): void {
+function detachAll(): void {
   clearCoalesceTimer()
-  if (unsubscribePoller != null) {
-    unsubscribePoller()
-    unsubscribePoller = null
+  if (unsubscribe != null) {
+    unsubscribe()
+    unsubscribe = null
   }
-  if (poller != null) {
-    poller.stop()
-    poller = null
+  if (fileTailer != null) {
+    fileTailer.stop()
+    fileTailer = null
   }
+  if (livePoller != null) {
+    livePoller.stop()
+    livePoller = null
+  }
+  ingestMode = null
 }
 
 function createLiveGetLogPoller(): GetLogPoller {
@@ -111,6 +131,7 @@ function createLiveGetLogPoller(): GetLogPoller {
 }
 
 export const useLogTailStore = create<LogTailState>((set, get) => ({
+  path: null,
   connectionKey: null,
   lines: [],
   stats: EMPTY_STATS,
@@ -124,11 +145,55 @@ export const useLogTailStore = create<LogTailState>((set, get) => ({
   searchEditing: false,
   filterEditing: false,
 
-  activate(connectionKey) {
-    if (activeConnectionKey !== connectionKey) {
-      detachPoller()
-      activeConnectionKey = connectionKey
+  activateFile(path) {
+    if (ingestMode === 'live') {
+      detachAll()
+      activeConnectionKey = null
+    }
+
+    if (activePath !== path || fileTailer == null) {
+      detachAll()
+      activePath = path
+      ingestMode = 'file'
       set({
+        path,
+        connectionKey: null,
+        lines: [],
+        stats: EMPTY_STATS,
+        error: null,
+        following: true,
+      })
+      const next = createLogTailer({ path })
+      fileTailer = next
+      unsubscribe = next.subscribe(function onFileTailEmit() {
+        scheduleFlush(set)
+      })
+      void next.start().then(function afterFileTailStart() {
+        flushSnapshot(set)
+      })
+      return
+    }
+
+    if (!fileTailer.getSnapshot().running) {
+      void fileTailer.start().then(function afterResume() {
+        flushSnapshot(set)
+      })
+    }
+    set({ path, connectionKey: null, following: get().following })
+  },
+
+  activateLive(connectionKey) {
+    if (ingestMode === 'file') {
+      detachAll()
+      activePath = null
+    }
+
+    if (activeConnectionKey !== connectionKey || livePoller == null) {
+      detachAll()
+      activeConnectionKey = connectionKey
+      ingestMode = 'live'
+      set({
+        path: null,
         connectionKey,
         lines: [],
         stats: EMPTY_STATS,
@@ -136,8 +201,8 @@ export const useLogTailStore = create<LogTailState>((set, get) => ({
         following: true,
       })
       const next = createLiveGetLogPoller()
-      poller = next
-      unsubscribePoller = next.subscribe(function onGetLogEmit() {
+      livePoller = next
+      unsubscribe = next.subscribe(function onGetLogEmit() {
         scheduleFlush(set)
       })
       void next.start().then(function afterGetLogStart() {
@@ -146,39 +211,32 @@ export const useLogTailStore = create<LogTailState>((set, get) => ({
       return
     }
 
-    if (poller == null) {
-      activeConnectionKey = connectionKey
-      const next = createLiveGetLogPoller()
-      poller = next
-      unsubscribePoller = next.subscribe(function onGetLogEmit() {
-        scheduleFlush(set)
-      })
-      void next.start().then(function afterGetLogStart() {
-        flushSnapshot(set)
-      })
-      set({ connectionKey, following: get().following })
-      return
-    }
-
-    if (!poller.getSnapshot().running) {
-      void poller.start().then(function afterResume() {
+    if (!livePoller.getSnapshot().running) {
+      void livePoller.start().then(function afterResume() {
         flushSnapshot(set)
       })
     }
+    set({ connectionKey, path: null, following: get().following })
   },
 
   deactivate() {
-    if (poller != null) {
+    if (fileTailer != null) {
       flushSnapshot(set)
-      poller.stop()
+      fileTailer.stop()
+    }
+    if (livePoller != null) {
+      flushSnapshot(set)
+      livePoller.stop()
     }
     clearCoalesceTimer()
   },
 
   teardown() {
-    detachPoller()
+    detachAll()
+    activePath = null
     activeConnectionKey = null
     set({
+      path: null,
       connectionKey: null,
       lines: [],
       stats: EMPTY_STATS,
