@@ -42,10 +42,33 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
     helpLabel: 'Sort by plan',
     bindings: [{ key: 'p', cmd: 'slow-queries.sort-plan' }],
   },
+  {
+    keys: 'e',
+    helpLabel: 'Enable profiler for selected database (confirm)',
+    footerLabel: 'enable',
+    bindings: [{ key: 'e', cmd: 'slow-queries.enable-open' }],
+  },
+  {
+    keys: '[ / ]',
+    helpLabel: 'Previous / next database',
+    footerLabel: 'db',
+    footerKeys: '[]',
+    bindings: [
+      { key: '[', cmd: 'slow-queries.prev-database' },
+      { key: ']', cmd: 'slow-queries.next-database' },
+    ],
+  },
 ]
 
 /** Footer collapses the three sort keys into one chip. Enter is help-only so chips stay readable. */
 export const SLOW_QUERIES_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   { keys: 'c/a/p', label: 'sort count/avg/plan' },
+  { keys: '[]', label: 'db' },
+  { keys: 'e', label: 'enable' },
+]
+
+export const SLOW_QUERIES_ENABLE_CONFIRM_FOOTER: FooterChip[] = [
+  { keys: 'enter', label: 'confirm' },
+  { keys: 'esc', label: 'cancel' },
 ]

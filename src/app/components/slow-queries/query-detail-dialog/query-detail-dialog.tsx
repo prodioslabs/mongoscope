@@ -10,6 +10,7 @@ import {
   type QueryPatternStore,
 } from '../../../../query-patterns'
 import type { LogStore } from '../../../../parser'
+import { getPatternExplainFromSample } from '../../../../profiler'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { overlayMode } from '../../../lib/overlay-mode'
 import { QUERY_DETAIL_SHORTCUTS, queryDetailFooter, toBindings } from '../../../shortcuts'
@@ -31,16 +32,19 @@ import {
 type QueryDetailDialogProps = {
   open: boolean
   pattern: QueryPattern | null
-  logStore: LogStore | null
-  queryPatterns: QueryPatternStore | null
+  /** Raw system.profile sample for live explain; preferred over logStore path. */
+  sampleDoc?: unknown | null
+  logStore?: LogStore | null
+  queryPatterns?: QueryPatternStore | null
   onClose: () => void
 }
 
 export function QueryDetailDialog({
   open,
   pattern,
-  logStore,
-  queryPatterns,
+  sampleDoc = null,
+  logStore = null,
+  queryPatterns = null,
   onClose,
 }: QueryDetailDialogProps) {
   const theme = useTheme((s) => s.theme)
@@ -100,7 +104,7 @@ export function QueryDetailDialog({
 
   useEffect(
     function loadPatternExplain() {
-      if (!open || pattern == null || logStore == null || queryPatterns == null) {
+      if (!open || pattern == null) {
         setExplain(null)
         setLoadError(null)
         return
@@ -110,13 +114,38 @@ export function QueryDetailDialog({
       setExplain(null)
       setLoadError(null)
 
+      if (sampleDoc != null) {
+        try {
+          const next = getPatternExplainFromSample(pattern, sampleDoc)
+          if (!cancelled) {
+            setExplain(next)
+          }
+        } catch (error: unknown) {
+          if (!cancelled) {
+            setLoadError(error instanceof Error ? error.message : String(error))
+          }
+        }
+        return function cancelLoadPatternExplain() {
+          cancelled = true
+        }
+      }
+
+      if (logStore == null || queryPatterns == null) {
+        setLoadError('Explain unavailable (no profiler sample)')
+        return
+      }
+
       void getPatternExplain(logStore, queryPatterns, pattern.id)
         .then(function applyExplain(next) {
-          if (cancelled) return
+          if (cancelled) {
+            return
+          }
           setExplain(next)
         })
         .catch(function applyExplainError(error: unknown) {
-          if (cancelled) return
+          if (cancelled) {
+            return
+          }
           setLoadError(error instanceof Error ? error.message : String(error))
         })
 
@@ -124,7 +153,7 @@ export function QueryDetailDialog({
         cancelled = true
       }
     },
-    [open, pattern, logStore, queryPatterns],
+    [open, pattern, sampleDoc, logStore, queryPatterns],
   )
 
   useBindings(

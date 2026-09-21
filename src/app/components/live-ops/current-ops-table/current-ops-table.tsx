@@ -23,6 +23,7 @@ import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { whenNotEditing } from '../../../lib/when-not-editing'
 import { useKillCurrentOp } from '../../../queries/kill-op'
 import { LIVE_OPS_FOOTER, LIVE_OPS_SHORTCUTS, toBindings } from '../../../shortcuts'
+import { useProfilerPatternsStore } from '../../../stores/profiler-patterns'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
@@ -59,7 +60,7 @@ export function CurrentOpsTable({
 }: CurrentOpsTableProps) {
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
-  const queryPatterns = useSession((s) => s.queryPatterns)
+  const profilerPatterns = useProfilerPatternsStore((s) => s.patterns)
   const navigateToTab = useSession((s) => s.navigateToTab)
   const { height: terminalHeight } = useTerminalDimensions()
   const killMutation = useKillCurrentOp()
@@ -228,13 +229,12 @@ export function CurrentOpsTable({
           return
         }
 
-        const patterns = queryPatterns?.patterns ?? []
-        if (queryPatterns == null) {
-          showTransientStatus('no slow query log loaded')
+        if (profilerPatterns.length === 0) {
+          showTransientStatus('no profiler patterns yet — open Slow Queries and enable profiling')
           return
         }
 
-        const match = findBestMatchingPattern(patterns, {
+        const match = findBestMatchingPattern(profilerPatterns, {
           namespace: row.namespace,
           op: row.op,
           plan: row.plan,
@@ -291,7 +291,7 @@ export function CurrentOpsTable({
         bindings: toBindings(LIVE_OPS_SHORTCUTS),
       }
     },
-    [killConfirmOpen, navigateToTab, notEditing, queryPatterns, showTransientStatus],
+    [killConfirmOpen, navigateToTab, notEditing, profilerPatterns, showTransientStatus],
   )
 
   const handleKillConfirm = useCallback(
