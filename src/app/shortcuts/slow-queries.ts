@@ -43,10 +43,11 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
     bindings: [{ key: 'p', cmd: 'slow-queries.sort-plan' }],
   },
   {
-    keys: 't',
+    keys: 'shift+t',
     helpLabel: 'Cycle static log tail window (50k / 100k / 250k / 500k)',
     footerLabel: 'tail',
-    bindings: [{ key: 't', cmd: 'slow-queries.cycle-tail' }],
+    footerKeys: 'T',
+    bindings: [{ key: 'shift+t', cmd: 'slow-queries.cycle-tail' }],
   },
   {
     keys: 'l',
@@ -76,7 +77,7 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
 export const SLOW_QUERIES_STATIC_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   { keys: 'c/a/p', label: 'sort count/avg/plan' },
-  { keys: 't', label: 'tail' },
+  { keys: 'T', label: 'tail' },
 ]
 
 /** Footer for live profiler mode. */

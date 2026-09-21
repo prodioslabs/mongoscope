@@ -419,7 +419,7 @@ function StaticSlowQueriesPanel() {
     <box flexGrow={1} flexShrink={1} flexDirection="column">
       <box paddingLeft={1} paddingRight={1} flexShrink={0}>
         <text
-          content={displayText(`tail ${formatLogTailPreset(logTailLines)} · press t to cycle`)}
+          content={displayText(`tail ${formatLogTailPreset(logTailLines)} · press T to cycle`)}
           fg={theme.textMuted}
         />
       </box>
