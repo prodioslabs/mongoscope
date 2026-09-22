@@ -1,18 +1,14 @@
-import { isUnauthorizedError } from '../live-ops/permissions'
+import { asDriverErrorLike } from '../lib/driver-error'
+import { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
 import type { ProfilerPanelError } from './types'
 
 export function isProfilerUnavailableOnMongos(error: unknown): boolean {
-  if (error == null || typeof error !== 'object') {
+  const record = asDriverErrorLike(error)
+  if (record == null) {
     return false
   }
-  const message =
-    typeof (error as { message?: unknown }).message === 'string'
-      ? (error as { message: string }).message.toLowerCase()
-      : ''
-  const codeName =
-    typeof (error as { codeName?: unknown }).codeName === 'string'
-      ? (error as { codeName: string }).codeName.toLowerCase()
-      : ''
+  const message = typeof record.message === 'string' ? record.message.toLowerCase() : ''
+  const codeName = typeof record.codeName === 'string' ? record.codeName.toLowerCase() : ''
   return (
     message.includes('mongos') ||
     (message.includes('profiling') && message.includes('not support')) ||
@@ -92,17 +88,13 @@ export function databasesErrorFromUnknown(error: unknown): ProfilerPanelError {
 }
 
 export function isNamespaceMissing(error: unknown): boolean {
-  if (error == null || typeof error !== 'object') {
+  const record = asDriverErrorLike(error)
+  if (record == null) {
     return false
   }
-  const code = (error as { code?: unknown }).code
-  const codeName = (error as { codeName?: unknown }).codeName
-  if (code === 26 || codeName === 'NamespaceNotFound') {
+  if (record.code === 26 || record.codeName === 'NamespaceNotFound') {
     return true
   }
-  const message =
-    typeof (error as { message?: unknown }).message === 'string'
-      ? (error as { message: string }).message.toLowerCase()
-      : ''
+  const message = typeof record.message === 'string' ? record.message.toLowerCase() : ''
   return message.includes('ns does not exist') || message.includes('namespace not found')
 }

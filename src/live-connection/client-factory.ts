@@ -19,9 +19,7 @@ export type FindCursorLike = {
 
 export type CollectionLike = {
   find(filter?: Record<string, unknown>): FindCursorLike
-  /** Index inventory (`listIndexes` under the hood). */
   indexes(): Promise<unknown[]>
-  /** Collection-scoped aggregate (e.g. `[{ $indexStats: {} }]`). */
   aggregate(pipeline: Record<string, unknown>[]): AggregateCursorLike
 }
 
@@ -29,21 +27,22 @@ export type MongoDbLike = {
   admin(): {
     command(command: Record<string, unknown>): Promise<unknown>
   }
-  /** Database-scoped command (e.g. `{ listCollections: 1 }`, `{ collStats: 'orders' }`, `{ collStats: 'oplog.rs' }` on `local`). */
   command(command: Record<string, unknown>): Promise<unknown>
-
   aggregate(pipeline: Record<string, unknown>[]): AggregateCursorLike
   collection(name: string): CollectionLike
 }
 
 export type MongoClientLike = {
-  connect(): Promise<unknown>
+  connect(): Promise<void>
   close(force?: boolean): Promise<void>
   db(dbName?: string): MongoDbLike
-  on?(event: 'close', listener: () => void): unknown
-  off?(event: 'close', listener: () => void): unknown
-  removeListener?(event: 'close', listener: () => void): unknown
+  on?(event: 'close', listener: () => void): void
+  off?(event: 'close', listener: () => void): void
+  removeListener?(event: 'close', listener: () => void): void
 }
+
+/** Client seam that can open databases (`db()`). Shared by feature fetchers. */
+export type MongoDbClient = Pick<MongoClientLike, 'db'>
 
 export type CreateMongoClient = (uri: string, options: MongoClientOptions) => MongoClientLike
 
@@ -51,8 +50,23 @@ export function defaultCreateMongoClient(
   uri: string,
   options: MongoClientOptions,
 ): MongoClientLike {
-  // Driver Db/Collection APIs are wider than our seam; cast at the boundary.
-  return new MongoClient(uri, options) as unknown as MongoClientLike
+  const client = new MongoClient(uri, options)
+  return {
+    connect: async () => {
+      await client.connect()
+    },
+    close: (force) => client.close(force),
+    db: (dbName) => client.db(dbName) as MongoDbLike,
+    on: (event, listener) => {
+      client.on(event, listener)
+    },
+    off: (event, listener) => {
+      client.off(event, listener)
+    },
+    removeListener: (event, listener) => {
+      client.removeListener(event, listener)
+    },
+  }
 }
 
 export function buildConnectOptions(connectTimeoutMs: number): MongoClientOptions {

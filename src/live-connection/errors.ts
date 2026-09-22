@@ -1,3 +1,4 @@
+import { asDriverErrorLike } from '../lib/driver-error'
 import { redactConnectionSecrets } from './redact'
 
 export type LiveConnectionErrorCode =
@@ -38,10 +39,10 @@ function errorText(error: unknown): string {
 }
 
 function hasCode(error: unknown, code: string | number): boolean {
-  if (error == null || typeof error !== 'object') {
+  const record = asDriverErrorLike(error)
+  if (record == null) {
     return false
   }
-  const record = error as { code?: unknown; codeName?: unknown }
   if (record.code === code || record.codeName === code) {
     return true
   }

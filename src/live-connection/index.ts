@@ -7,6 +7,7 @@ export {
   type CreateMongoClient,
   type FindCursorLike,
   type MongoClientLike,
+  type MongoDbClient,
   type MongoDbLike,
 } from './client-factory'
 export { LiveConnectionError, mapConnectFailure, type LiveConnectionErrorCode } from './errors'

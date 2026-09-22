@@ -7,6 +7,7 @@ import type {
   QueuedOpsStats,
 } from '../../../../live-ops'
 import { displayText } from '../../../../lib/display-text'
+import { truncateText } from '../../../../lib/truncate-text'
 import { useTheme } from '../../../stores/theme'
 
 type LiveOpsSidebarProps = {
@@ -120,8 +121,5 @@ function formatStat(value: number | null | undefined): string {
 }
 
 function truncateNs(namespace: string): string {
-  if (namespace.length <= 18) {
-    return namespace
-  }
-  return `${namespace.slice(0, 17)}…`
+  return truncateText(namespace, 18)
 }

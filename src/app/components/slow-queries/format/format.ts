@@ -1,11 +1,12 @@
 import type { Severity } from '../../../lib/text-table-content'
+import { truncateText } from '../../../../lib/truncate-text'
 
 export type { Severity } from '../../../lib/text-table-content'
 
 const SPARK_CHARS = '▁▂▃▄▅▆▇█'
 
 /** Default sparkline width so the TREND column stays narrow in the table. */
-export const SPARKLINE_WIDTH = 12
+const SPARKLINE_WIDTH = 12
 
 export function formatCount(n: number): string {
   return Math.round(n).toLocaleString('en-US')
@@ -16,17 +17,14 @@ export function formatExaminedRet(examined: number, returned: number): string {
 }
 
 /** Max characters shown for the SHAPE column before truncating with an ellipsis. */
-export const CELL_MAX_LEN = 20
+const CELL_MAX_LEN = 20
 
 export function truncateCell(shape: string, maxLen: number = CELL_MAX_LEN): string {
-  if (shape.length <= maxLen) return shape
-  if (maxLen <= 1) return '…'
-  return `${shape.slice(0, maxLen - 1)}…`
+  return truncateText(shape, maxLen)
 }
 
 /**
- * Human-readable window label from the pattern store's time span.
- * Examples: `15m window`, `2h window`, `full log`.
+ * Human-readable pattern window, e.g. `15m window` or `full log`.
  */
 export function formatWindowLabel(startMs: number, endMs: number): string {
   if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
@@ -47,10 +45,7 @@ export function formatWindowLabel(startMs: number, endMs: number): string {
   return `${Math.max(1, Math.round(days))}d window`
 }
 
-/**
- * Render a trend series as block characters, max-pooling into `width` buckets
- * so the TREND column stays a fixed narrow width.
- */
+/** Max-pool a trend series into a fixed-width block sparkline. */
 export function sparkline(trend: Uint16Array, width: number = SPARKLINE_WIDTH): string {
   if (trend.length === 0 || width <= 0) return ''
 
@@ -86,7 +81,6 @@ export function avgMsSeverity(avgMs: number): Severity {
 
 export function examinedSeverity(examined: number, returned: number): Severity {
   const ratio = examined / Math.max(returned, 1)
-  // Tuned to the mock: ~410× (8,200/20) is warning; ~2,400× (96,400/40) is error
   if (ratio >= 500) return 'error'
   if (ratio >= 20) return 'warning'
   return 'success'

@@ -1,9 +1,7 @@
-export type ReplicationPanelErrorKind = 'permission' | 'unavailable' | 'unknown'
+import type { PanelError, PanelErrorKind } from '../lib/panel-error'
 
-export type ReplicationPanelError = {
-  kind: ReplicationPanelErrorKind
-  message: string
-}
+export type ReplicationPanelErrorKind = PanelErrorKind
+export type ReplicationPanelError = PanelError
 
 /** Status-dot severity for a topology member. */
 export type MemberSeverity = 'success' | 'warning' | 'error'

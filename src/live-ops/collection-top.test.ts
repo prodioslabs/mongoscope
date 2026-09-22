@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCollectionTopRows,
-  computeCollectionTopScale,
   formatTopTimeLabel,
   microsToMs,
   parseTopCommandResult,
@@ -189,53 +188,5 @@ describe('buildCollectionTopRows', () => {
     })
     expect(formatTopTimeLabel(form!.totalMs)).toBe('13.9s')
     expect(formatTopTimeLabel(user!.totalMs)).toBe('296ms')
-  })
-})
-
-describe('computeCollectionTopScale', () => {
-  const normalizedRows = [
-    { namespace: 'ucc-production.Form', readMs: 13_864.3, writeMs: 0, totalMs: 13_864.3 },
-    { namespace: 'ucc-production.User', readMs: 296, writeMs: 0, totalMs: 296 },
-    { namespace: 'ucc-production.Service', readMs: 29, writeMs: 0, totalMs: 29 },
-    { namespace: 'local.oplog.rs', readMs: 15, writeMs: 0, totalMs: 15 },
-    { namespace: 'ucc-production.Session', readMs: 14, writeMs: 0, totalMs: 14 },
-    { namespace: 'config.system.sessions', readMs: 6, writeMs: 0, totalMs: 6 },
-  ]
-
-  it('sets maxTotalMs from the busiest row and max row fillPercent is exactly 100', () => {
-    const scale = computeCollectionTopScale(normalizedRows)
-    expect(scale.maxTotalMs).toBe(13_864.3)
-    const maxRows = scale.rows.filter((row) => row.fillPercent === 100)
-    expect(maxRows).toHaveLength(1)
-    expect(maxRows[0]?.namespace).toBe('ucc-production.Form')
-  })
-
-  it('computes fillPercent from the same millisecond unit for every row', () => {
-    const scale = computeCollectionTopScale(normalizedRows)
-    const user = scale.rows.find((row) => row.namespace === 'ucc-production.User')
-    expect(user?.fillPercent).toBeCloseTo((296 / 13_864.3) * 100, 5)
-    expect(user?.readSharePercent).toBe(100)
-  })
-
-  it('gives fillPercent 100 with readSharePercent below 100 for mixed read/write max row', () => {
-    const mixedRows = [
-      { namespace: 'db.coll', readMs: 600, writeMs: 400, totalMs: 1000 },
-      { namespace: 'db.other', readMs: 100, writeMs: 0, totalMs: 100 },
-    ]
-    const scale = computeCollectionTopScale(mixedRows)
-    const maxRow = scale.rows[0]
-    expect(maxRow?.fillPercent).toBe(100)
-    expect(maxRow?.readSharePercent).toBe(60)
-  })
-
-  it('returns empty scale for zero rows', () => {
-    expect(computeCollectionTopScale([])).toEqual({ maxTotalMs: 0, rows: [] })
-  })
-
-  it('returns fillPercent 100 for a single row', () => {
-    const scale = computeCollectionTopScale([
-      { namespace: 'solo', readMs: 50, writeMs: 0, totalMs: 50 },
-    ])
-    expect(scale.rows[0]?.fillPercent).toBe(100)
   })
 })

@@ -1,6 +1,5 @@
 export {
   avgMsSeverity,
-  CELL_MAX_LEN,
   examinedSeverity,
   formatCount,
   formatExaminedRet,
@@ -8,7 +7,6 @@ export {
   planSeverity,
   planSortRank,
   sparkline,
-  SPARKLINE_WIDTH,
   truncateCell,
   type Severity,
 } from './format'

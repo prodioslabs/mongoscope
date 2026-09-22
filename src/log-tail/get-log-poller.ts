@@ -1,3 +1,5 @@
+import { asDriverErrorLike } from '../lib/driver-error'
+import { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
 import { diffGetLogLines } from './diff-get-log'
 import { extractGetLogLines } from './get-log-lines'
 import { parseTailLogLineFromText } from './parse-tail-line'
@@ -10,7 +12,7 @@ import {
 } from './types'
 
 /** Default poll interval for getLog (heavier than file stat polls). */
-export const GET_LOG_POLL_INTERVAL_MS = 1000
+const GET_LOG_POLL_INTERVAL_MS = 1000
 
 export type GetLogSnapshot = {
   lines: TailLogLine[]
@@ -203,16 +205,12 @@ export function createGetLogPoller(options: GetLogPollerOptions): GetLogPoller {
 }
 
 function formatGetLogError(err: unknown): string {
-  if (err == null || typeof err !== 'object') {
-    return err instanceof Error ? err.message : String(err)
-  }
-  const record = err as { code?: unknown; codeName?: unknown; message?: unknown }
-  if (
-    record.code === 13 ||
-    record.codeName === 'Unauthorized' ||
-    (typeof record.message === 'string' && record.message.toLowerCase().includes('not authorized'))
-  ) {
+  if (isUnauthorizedError(err)) {
     return 'insufficient permissions (needs getLog / clusterMonitor)'
+  }
+  const record = asDriverErrorLike(err)
+  if (record == null) {
+    return err instanceof Error ? err.message : String(err)
   }
   if (typeof record.message === 'string' && record.message.trim() !== '') {
     return record.message

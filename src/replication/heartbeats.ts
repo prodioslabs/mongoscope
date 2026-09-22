@@ -1,15 +1,5 @@
+import type { RawReplSetStatus, RawStatusMember } from './normalize'
 import type { HeartbeatEdge, HeartbeatsView } from './types'
-
-type RawStatusMember = {
-  _id?: unknown
-  name?: unknown
-  self?: unknown
-  pingMs?: unknown
-}
-
-type RawReplSetStatus = {
-  members?: RawStatusMember[] | unknown
-}
 
 /**
  * Build heartbeats observed from the member that processed replSetGetStatus.

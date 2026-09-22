@@ -1,8 +1,8 @@
-import type { MongoClientLike } from '../live-connection'
+import type { MongoDbClient } from '../live-connection'
 import { enableErrorFromUnknown } from './permissions'
 import { DEFAULT_SLOWMS, type ProfilerPanelError } from './types'
 
-export type EnableProfilingClient = Pick<MongoClientLike, 'db'>
+export type EnableProfilingClient = MongoDbClient
 
 export type EnableProfilingResult =
   | { ok: true; slowms: number }

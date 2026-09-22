@@ -1,7 +1,6 @@
-export type IndexesPanelError = {
-  kind: 'permission' | 'unavailable' | 'unknown'
-  message: string
-}
+import type { PanelError } from '../lib/panel-error'
+
+export type IndexesPanelError = PanelError
 
 export type IndexOptionFlag =
   | 'unique'

@@ -4,7 +4,7 @@ import { type Theme } from '../theme'
 export type Severity = 'error' | 'warning' | 'success' | 'muted'
 
 /** Approximate height of one data row (content line + inner border). */
-export const TABLE_ROW_STRIDE = 2
+const TABLE_ROW_STRIDE = 2
 
 export function computeTableCapacity(chromeRows: number, terminalHeight: number): number {
   return Math.max(1, Math.floor((terminalHeight - chromeRows) / TABLE_ROW_STRIDE))

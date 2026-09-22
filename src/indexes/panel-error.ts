@@ -1,4 +1,4 @@
-import { isUnauthorizedError } from './permissions'
+import { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
 import type { IndexesPanelError } from './types'
 
 export function panelErrorFromUnknown(
