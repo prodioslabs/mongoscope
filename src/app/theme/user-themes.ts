@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { userThemesDir } from '../../lib/config-paths'
-import { isTheme, resolveTheme, type ThemeJson } from './index'
+import { isTheme, resolveTheme, type ThemeJson } from './default-themes'
 
 const REQUIRED_THEME_COLOR_KEYS = [
   'primary',
@@ -68,24 +68,19 @@ export async function loadUserThemes(
   return { themes, warnings }
 }
 
-export function validateUserThemeJson(value: unknown): ThemeJson {
+function validateUserThemeJson(value: unknown): ThemeJson {
   if (!isTheme(value)) {
     throw new Error('expected an object with a theme object')
   }
 
-  const themeRecord = value.theme as Record<string, unknown>
   for (const key of REQUIRED_THEME_COLOR_KEYS) {
-    if (themeRecord[key] === undefined) {
+    if (value.theme[key] === undefined) {
       throw new Error(`missing required theme color "${key}"`)
     }
   }
 
-  try {
-    resolveTheme(value, 'dark')
-    resolveTheme(value, 'light')
-  } catch (error) {
-    throw new Error(`resolveTheme failed: ${formatError(error)}`)
-  }
+  resolveTheme(value, 'dark')
+  resolveTheme(value, 'light')
 
   return value
 }
@@ -98,10 +93,9 @@ function formatError(error: unknown): string {
 }
 
 function isFileNotFoundError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error != null &&
-    'code' in error &&
-    (error as { code: unknown }).code === 'ENOENT'
-  )
+  return isNodeErrnoException(error) && error.code === 'ENOENT'
+}
+
+function isNodeErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error != null && 'code' in error
 }

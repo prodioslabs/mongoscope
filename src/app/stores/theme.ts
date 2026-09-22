@@ -28,27 +28,11 @@ export function enableThemeConfigPersistence(): void {
   themePersistenceEnabled = true
 }
 
-/** Test helper. */
-export function resetThemePersistenceForTests(): void {
-  themePersistenceEnabled = false
-  if (persistTimer !== undefined) {
-    clearTimeout(persistTimer)
-    persistTimer = undefined
-  }
-}
-
 function resolveActiveTheme(selected: string, mode: ThemeMode) {
   const themes = getThemeCatalog()
-  const active = themes[selected]
-  if (active) {
-    return resolveTheme(active, mode)
-  }
-  const fallback = themes[DEFAULT_THEME_NAME] ?? themes.gruvbox
-  if (fallback) {
-    return resolveTheme(fallback, mode)
-  }
-  // Built-in gruvbox is always present in DEFAULT_THEMES; last-resort via allThemes.
-  return resolveTheme(allThemes().gruvbox!, mode)
+  // Catalog always includes DEFAULT_THEME_NAME (builtins merge base).
+  const active = themes[selected] ?? themes[DEFAULT_THEME_NAME]!
+  return resolveTheme(active, mode)
 }
 
 function schedulePersistThemeSelection(themeName: string): void {
