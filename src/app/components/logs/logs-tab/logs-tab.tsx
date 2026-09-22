@@ -2,7 +2,7 @@ import { basename } from 'node:path'
 import { InputRenderable, TextAttributes, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   filterTailLines,
   LOG_CATEGORY_COMPONENTS,
@@ -19,39 +19,161 @@ import {
 } from '../../../lib/text-table-content'
 import { whenNotEditing } from '../../../lib/when-not-editing'
 import { LOGS_FOOTER, LOGS_SHORTCUTS, toBindings } from '../../../shortcuts'
+import { useLiveConnection } from '../../../stores/live-connection'
 import { useLogTailStore } from '../../../stores/log-tail'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 import { DataTextTable } from '../../data-text-table'
+import { DbSelector } from '../../db-selector'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 
 /** Tab bar, title, pills, optional filter input, parser status, app footer. */
-const LOGS_CHROME_ROWS = 14
+const LOGS_CHROME_ROWS_STATIC = 14
+/** Extra rows for fidelity note + db selector chrome. */
+const LOGS_CHROME_ROWS_LIVE = 16
+
+const GET_LOG_FIDELITY_NOTE = 'getLog RAM buffer (~1024 events) — not a durable on-disk log'
 
 export function LogsTab() {
+  const theme = useTheme((s) => s.theme)
   const logPath = useSession((s) => s.logPath)
-  const activate = useLogTailStore((s) => s.activate)
-  const deactivate = useLogTailStore((s) => s.deactivate)
+  const activeConnectionId = useSession((s) => s.activeConnectionId)
+  const logsSource = useSession((s) => s.logsSource)
+  const setLogsSource = useSession((s) => s.setLogsSource)
 
-  useEffect(
-    function syncLogTailLifecycle() {
-      if (logPath == null) {
-        return
-      }
-      activate(logPath)
-      return function pauseLogTailOnLeave() {
-        deactivate()
+  const liveStatus = useLiveConnection((s) => s.status)
+  const liveErrorMessage = useLiveConnection((s) => s.errorMessage)
+  const connectionId = useLiveConnection((s) => s.connectionId)
+  const generation = useLiveConnection((s) => s.generation)
+
+  const activateFile = useLogTailStore((s) => s.activateFile)
+  const activateLive = useLogTailStore((s) => s.activateLive)
+  const deactivate = useLogTailStore((s) => s.deactivate)
+  const teardown = useLogTailStore((s) => s.teardown)
+
+  const useLive = logsSource === 'live' && activeConnectionId != null && liveStatus === 'connected'
+  const showSourceToggle = activeConnectionId != null
+
+  useBindings(
+    function createLogsSourceLayer() {
+      return {
+        appMode: 'base' satisfies AppKeymapMode,
+        enabled: showSourceToggle,
+        priority: 5,
+        commands: [
+          {
+            name: 'logs.toggle-source',
+            run() {
+              setLogsSource(logsSource === 'live' ? 'static' : 'live')
+            },
+          },
+        ],
+        bindings: [{ key: 'l', cmd: 'logs.toggle-source' }],
       }
     },
-    [logPath, activate, deactivate],
+    [logsSource, setLogsSource, showSourceToggle],
   )
 
-  if (logPath == null) {
-    return <LogsEmptyState />
+  useEffect(
+    function syncLogIngestLifecycle() {
+      if (logsSource === 'live') {
+        if (useLive && connectionId != null) {
+          const key = `${connectionId}:${generation}`
+          activateLive(key)
+          return function pauseLiveOnLeave() {
+            deactivate()
+          }
+        }
+
+        if (liveStatus === 'idle' || liveStatus === 'disconnected' || liveStatus === 'error') {
+          teardown()
+          return
+        }
+
+        deactivate()
+        return
+      }
+
+      if (logPath != null) {
+        activateFile(logPath)
+        return function pauseFileOnLeave() {
+          deactivate()
+        }
+      }
+
+      deactivate()
+      return undefined
+    },
+    [
+      activateFile,
+      activateLive,
+      connectionId,
+      deactivate,
+      generation,
+      liveStatus,
+      logPath,
+      logsSource,
+      teardown,
+      useLive,
+    ],
+  )
+
+  let body: ReactNode
+  if (useLive) {
+    body = (
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
+        <DbSelector />
+        <LogsView mode="live" title="server log (getLog)" />
+      </box>
+    )
+  } else if (logsSource === 'live' && activeConnectionId != null) {
+    body = (
+      <box flexGrow={1} flexShrink={1} flexDirection="column">
+        <DbSelector />
+        <box paddingLeft={1} paddingTop={1}>
+          {liveStatus === 'connecting' ? (
+            <text content="connecting…" fg={theme.textMuted} />
+          ) : liveStatus === 'error' ? (
+            <text
+              content={displayText(liveErrorMessage || 'Connection failed.')}
+              fg={theme.error}
+            />
+          ) : liveStatus === 'disconnected' ? (
+            <text
+              content="Connection lost. Press c and reselect a connection to retry."
+              fg={theme.warning}
+            />
+          ) : (
+            <text content="connecting…" fg={theme.textMuted} />
+          )}
+        </box>
+      </box>
+    )
+  } else if (logPath == null) {
+    body = <LogsEmptyState />
+  } else {
+    body = <LogsView mode="static" title={basename(logPath)} />
   }
 
-  return <LogsView logPath={logPath} />
+  return (
+    <box flexGrow={1} flexShrink={1} flexDirection="column">
+      {showSourceToggle ? (
+        <box paddingLeft={1} paddingRight={1} flexShrink={0} flexDirection="row" gap={2}>
+          <text
+            content={logsSource === 'static' ? '● Static log' : '○ Static log'}
+            fg={logsSource === 'static' ? theme.primary : theme.textMuted}
+          />
+          <text
+            content={logsSource === 'live' ? '● Live getLog' : '○ Live getLog'}
+            fg={logsSource === 'live' ? theme.primary : theme.textMuted}
+          />
+          <text content="l toggle" fg={theme.textMuted} />
+        </box>
+      ) : null}
+      {body}
+    </box>
+  )
 }
 
 function LogsEmptyState() {
@@ -64,10 +186,11 @@ function LogsEmptyState() {
 }
 
 type LogsViewProps = {
-  logPath: string
+  mode: 'static' | 'live'
+  title: string
 }
 
-function LogsView({ logPath }: LogsViewProps) {
+function LogsView({ mode, title }: LogsViewProps) {
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const { height: terminalHeight } = useTerminalDimensions()
@@ -113,7 +236,8 @@ function LogsView({ logPath }: LogsViewProps) {
     [filtered],
   )
 
-  const capacity = computeTableCapacity(LOGS_CHROME_ROWS, terminalHeight)
+  const chromeRows = mode === 'live' ? LOGS_CHROME_ROWS_LIVE : LOGS_CHROME_ROWS_STATIC
+  const capacity = computeTableCapacity(chromeRows, terminalHeight)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [scrollOffset, setScrollOffset] = useState(0)
 
@@ -183,9 +307,15 @@ function LogsView({ logPath }: LogsViewProps) {
     [filterEditing],
   )
 
-  const statusLabel = following
-    ? `tailing · ${stats.bufferedCount} lines buffered`
-    : `paused · ${stats.bufferedCount} lines buffered`
+  const statusLabel =
+    mode === 'live'
+      ? following
+        ? `polling getLog · ${stats.bufferedCount} lines buffered`
+        : `paused · ${stats.bufferedCount} lines buffered`
+      : following
+        ? `tailing · ${stats.bufferedCount} lines buffered`
+        : `paused · ${stats.bufferedCount} lines buffered`
+
   useFooterStatus(error != null ? error : statusLabel)
   useFooterKeybindings(LOGS_FOOTER)
 
@@ -305,13 +435,14 @@ function LogsView({ logPath }: LogsViewProps) {
       ? buildLogsTableContent(visible, relativeSelectedIndex, theme, capacity, search)
       : null
 
-  const fileName = basename(logPath)
-
   return (
     <box flexGrow={1} flexShrink={1} flexDirection="column" paddingLeft={1} paddingRight={1}>
-      <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
-        <text content={displayText(fileName)} fg={theme.text} attributes={TextAttributes.BOLD} />
-        <text content={statusLabel} fg={theme.textMuted} />
+      <box flexDirection="column" flexShrink={0} gap={0}>
+        <box flexDirection="row" justifyContent="space-between">
+          <text content={displayText(title)} fg={theme.text} attributes={TextAttributes.BOLD} />
+          <text content={statusLabel} fg={theme.textMuted} />
+        </box>
+        {mode === 'live' ? <text content={GET_LOG_FIDELITY_NOTE} fg={theme.warning} /> : null}
       </box>
 
       <box flexDirection="row" gap={1} flexShrink={0} flexWrap="wrap" paddingTop={1} paddingBottom={1}>
@@ -402,9 +533,19 @@ function LogsView({ logPath }: LogsViewProps) {
         flexDirection="row"
         justifyContent="space-between"
       >
-        <text content={`parser status  format: ${stats.format}`} fg={theme.textMuted} />
-        <text content={`lines/sec: ~${stats.linesPerSec}`} fg={theme.textMuted} />
-        <text content={`restarts detected: ${stats.restartsDetected}`} fg={theme.textMuted} />
+        {mode === 'live' ? (
+          <>
+            <text content={`format: ${stats.format}`} fg={theme.textMuted} />
+            <text content={`lines/sec: ~${stats.linesPerSec}`} fg={theme.textMuted} />
+            <text content={`RAM ring wraps: ${stats.restartsDetected}`} fg={theme.textMuted} />
+          </>
+        ) : (
+          <>
+            <text content={`parser status  format: ${stats.format}`} fg={theme.textMuted} />
+            <text content={`lines/sec: ~${stats.linesPerSec}`} fg={theme.textMuted} />
+            <text content={`restarts detected: ${stats.restartsDetected}`} fg={theme.textMuted} />
+          </>
+        )}
       </box>
     </box>
   )
@@ -476,13 +617,10 @@ function buildLogRow(
   const nsLabel = truncateLogCell(namespace, 20)
   const nsMatches =
     needle.length > 0 && line.namespace != null && line.namespace.toLowerCase().includes(needle)
-  const nsColor =
-    namespace === '—' ? theme.textMuted : nsMatches ? theme.warning : theme.text
+  const nsColor = namespace === '—' ? theme.textMuted : nsMatches ? theme.warning : theme.text
 
-  const duration =
-    line.durationMillis != null ? `${Math.round(line.durationMillis)}ms` : '—'
-  const durationColor =
-    line.durationMillis == null ? theme.textMuted : theme.error
+  const duration = line.durationMillis != null ? `${Math.round(line.durationMillis)}ms` : '—'
+  const durationColor = line.durationMillis == null ? theme.textMuted : theme.error
 
   const plan = line.planSummary != null ? truncateLogCell(line.planSummary, 16) : '—'
   const planColor = line.planSummary == null ? theme.textMuted : theme.accent

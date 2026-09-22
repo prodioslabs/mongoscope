@@ -1,5 +1,6 @@
 export { extractLogLineAttrFields, type LogLineAttrFields } from './attr-fields'
 export { appendTailChunk, skipPartialLeadingLine } from './append-chunk'
+export { diffGetLogLines, type GetLogDiffResult } from './diff-get-log'
 export {
   evaluateCustomFilter,
   filterTailLines,
@@ -8,6 +9,15 @@ export {
   lineMatchesSearch,
   parseCustomFilterExpression,
 } from './filter'
+export { extractGetLogLines } from './get-log-lines'
+export {
+  createGetLogPoller,
+  GET_LOG_POLL_INTERVAL_MS,
+  type GetLogPoller,
+  type GetLogPollerOptions,
+  type GetLogSnapshot,
+} from './get-log-poller'
+export { parseTailLogLineFromText } from './parse-tail-line'
 export { LogLineRingBuffer } from './ring-buffer'
 export { createLogTailer, type LogTailer, type LogTailerOptions, type LogTailSnapshot } from './tailer'
 export {

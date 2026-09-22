@@ -12,6 +12,19 @@ import {
   type ParseProgress,
 } from './scanner'
 import {
+  DEFAULT_LOG_TAIL_LINES,
+  LOG_TAIL_LINE_PRESETS,
+  MAX_LOG_TAIL_LINES,
+  MIN_LOG_TAIL_LINES,
+  clampLogTailLines,
+  formatLogTailPreset,
+  nextLogTailPreset,
+  parseLogFileTail,
+  parseLogTailLinesInput,
+  type LogTailLinePreset,
+  type ParseLogFileTailOptions,
+} from './parse-tail'
+import {
   getEntry,
   LogStore,
   encodeSeverity,
@@ -31,6 +44,8 @@ export type {
   ParseBatch,
   ParseLogFileOptions,
   ParseProgress,
+  ParseLogFileTailOptions,
+  LogTailLinePreset,
   LogEntry,
   LogEntryDetail,
   LogKind,
@@ -40,6 +55,15 @@ export type {
 
 export {
   parseLogFile,
+  parseLogFileTail,
+  DEFAULT_LOG_TAIL_LINES,
+  LOG_TAIL_LINE_PRESETS,
+  MAX_LOG_TAIL_LINES,
+  MIN_LOG_TAIL_LINES,
+  clampLogTailLines,
+  formatLogTailPreset,
+  nextLogTailPreset,
+  parseLogTailLinesInput,
   scanBytes,
   scanBuffer,
   scanHotFields,

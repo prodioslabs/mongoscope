@@ -42,10 +42,65 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
     helpLabel: 'Sort by plan',
     bindings: [{ key: 'p', cmd: 'slow-queries.sort-plan' }],
   },
+  {
+    keys: 'shift+t',
+    helpLabel:
+      'Open profiler sample-window dialog in live mode (10k / 25k / 50k / 100k / 250k / custom)',
+    footerLabel: 'samples',
+    footerKeys: 'T',
+    bindings: [{ key: 'shift+t', cmd: 'slow-queries.open-tail' }],
+  },
+  {
+    keys: 'l',
+    helpLabel: 'Toggle Static log / Live profiler (when a connection is selected)',
+    footerLabel: 'source',
+    bindings: [{ key: 'l', cmd: 'slow-queries.toggle-source' }],
+  },
+  {
+    keys: 'e',
+    helpLabel: 'Enable profiler for selected database (live mode)',
+    footerLabel: 'enable',
+    bindings: [{ key: 'e', cmd: 'slow-queries.enable-open' }],
+  },
+  {
+    keys: '[ / ]',
+    helpLabel: 'Previous / next database (live mode)',
+    footerLabel: 'db',
+    footerKeys: '[]',
+    bindings: [
+      { key: '[', cmd: 'slow-queries.prev-database' },
+      { key: ']', cmd: 'slow-queries.next-database' },
+    ],
+  },
 ]
 
-/** Footer collapses the three sort keys into one chip. Enter is help-only so chips stay readable. */
-export const SLOW_QUERIES_FOOTER: FooterChip[] = [
+/** Footer for static mode (default). */
+export const SLOW_QUERIES_STATIC_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   { keys: 'c/a/p', label: 'sort count/avg/plan' },
+]
+
+/** Footer for live profiler mode. */
+export const SLOW_QUERIES_LIVE_FOOTER: FooterChip[] = [
+  ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
+  { keys: 'c/a/p', label: 'sort count/avg/plan' },
+  { keys: '[]', label: 'db' },
+  { keys: 'e', label: 'enable' },
+  { keys: 'T', label: 'samples' },
+  { keys: 'l', label: 'source' },
+]
+
+/** @deprecated use SLOW_QUERIES_STATIC_FOOTER / SLOW_QUERIES_LIVE_FOOTER */
+export const SLOW_QUERIES_FOOTER: FooterChip[] = SLOW_QUERIES_STATIC_FOOTER
+
+export const SLOW_QUERIES_ENABLE_CONFIRM_FOOTER: FooterChip[] = [
+  { keys: 'enter', label: 'confirm' },
+  { keys: 'esc', label: 'cancel' },
+]
+
+export const SLOW_QUERIES_TAIL_DIALOG_FOOTER: FooterChip[] = [
+  { keys: '↑↓/jk', label: 'navigate' },
+  { keys: 'enter', label: 'apply' },
+  { keys: 'i', label: 'custom' },
+  { keys: 'esc', label: 'cancel' },
 ]

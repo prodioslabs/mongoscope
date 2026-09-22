@@ -1,13 +1,25 @@
 import { stat } from 'node:fs/promises'
 import { match } from 'ts-pattern'
 import { create } from 'zustand'
-import { LogStore, parseLogFile } from '../../parser'
+import {
+  DEFAULT_LOG_TAIL_LINES,
+  LogStore,
+  clampLogTailLines,
+  parseLogFileTail,
+} from '../../parser'
+import {
+  DEFAULT_PROFILE_FETCH_LIMIT,
+  MAX_PROFILE_FETCH_LIMIT,
+  MIN_PROFILE_FETCH_LIMIT,
+} from '../../profiler'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
 import { useLogTailStore } from './log-tail'
 
 export type AppScreen = 'welcome' | 'dashboard'
 
 export type AppTab = 'slow-queries' | 'live-ops' | 'replication' | 'indexes' | 'logs'
+
+export type DataSourceMode = 'static' | 'live'
 
 export type SlowQueriesPendingNavigation = {
   patternId?: number
@@ -80,6 +92,14 @@ type SessionState = {
   logPath: string | null
   logStore: LogStore | null
   queryPatterns: QueryPatternStore | null
+  /** Last-N-lines window for static Slow Queries parse (welcome / reparse). */
+  logTailLines: number
+  /** How many newest system.profile docs to fetch in live Slow Queries. */
+  profilerFetchLimit: number
+  /** Static file vs live profiler; live only meaningful when a connection is selected. */
+  slowQueriesSource: DataSourceMode
+  /** Static file tail vs getLog; live only meaningful when a connection is selected. */
+  logsSource: DataSourceMode
   /** 0–100 while parsing; null when idle */
   parseProgress: number | null
   /** Wall-clock ms for the last successful parse; null until then */
@@ -95,6 +115,10 @@ type SessionState = {
   setScreen: (screen: AppScreen) => void
   setActiveConnectionId: (id: string | null) => void
   setSelectedDatabase: (database: string | null) => void
+  setSlowQueriesSource: (source: DataSourceMode) => void
+  setLogsSource: (source: DataSourceMode) => void
+  setLogTailLines: (lines: number) => Promise<void>
+  setProfilerFetchLimit: (limit: number) => void
   goToWelcome: () => void
   startParse: (path: string) => Promise<void>
   resetToWelcome: () => void
@@ -118,11 +142,57 @@ function suggestionFromIndexesNav(
     reason: pending.suggestedReason,
   }
 }
+
 function progressPercent(bytesRead: number, fileSize: number): number {
   if (fileSize === 0) {
     return 100
   }
   return Math.min(100, Math.round((bytesRead / fileSize) * 100))
+}
+
+async function runTailParse(
+  path: string,
+  maxLines: number,
+  set: (partial: Partial<SessionState>) => void,
+): Promise<void> {
+  const startedAt = performance.now()
+  set({
+    logPath: path,
+    logStore: null,
+    queryPatterns: null,
+    parseProgress: 0,
+    parseDurationMs: null,
+    parseError: null,
+  })
+
+  try {
+    const { size } = await stat(path)
+    const store = await parseLogFileTail(path, {
+      maxLines,
+      onProgress({ bytesRead }) {
+        set({ parseProgress: progressPercent(bytesRead, size) })
+      },
+    })
+    const queryPatterns = await buildQueryPatternStore(store)
+    set({
+      logStore: store,
+      queryPatterns,
+      parseProgress: null,
+      parseDurationMs: Math.round(performance.now() - startedAt),
+      parseError: null,
+      screen: 'dashboard',
+      activeTab: 'slow-queries',
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    set({
+      parseProgress: null,
+      parseDurationMs: null,
+      parseError: message,
+      logStore: null,
+      queryPatterns: null,
+    })
+  }
 }
 
 export const useSession = create<SessionState>((set, get) => ({
@@ -136,6 +206,10 @@ export const useSession = create<SessionState>((set, get) => ({
   logPath: null,
   logStore: null,
   queryPatterns: null,
+  logTailLines: DEFAULT_LOG_TAIL_LINES,
+  profilerFetchLimit: DEFAULT_PROFILE_FETCH_LIMIT,
+  slowQueriesSource: 'static',
+  logsSource: 'static',
   parseProgress: null,
   parseDurationMs: null,
   parseError: null,
@@ -211,11 +285,62 @@ export const useSession = create<SessionState>((set, get) => ({
   },
 
   setActiveConnectionId(id) {
+    if (id == null) {
+      set({
+        activeConnectionId: null,
+        selectedDatabase: null,
+        slowQueriesSource: 'static',
+        logsSource: 'static',
+      })
+      return
+    }
     set({ activeConnectionId: id, selectedDatabase: null })
   },
 
   setSelectedDatabase(database) {
     set({ selectedDatabase: database })
+  },
+
+  setSlowQueriesSource(source) {
+    if (source === 'live' && get().activeConnectionId == null) {
+      return
+    }
+    set({ slowQueriesSource: source })
+  },
+
+  setLogsSource(source) {
+    if (source === 'live' && get().activeConnectionId == null) {
+      return
+    }
+    set({ logsSource: source })
+  },
+
+  async setLogTailLines(lines) {
+    if (get().parseProgress !== null) {
+      return
+    }
+    const next = clampLogTailLines(lines)
+    if (next === get().logTailLines && get().logStore != null) {
+      return
+    }
+    set({ logTailLines: next })
+    const path = get().logPath
+    if (path == null) {
+      return
+    }
+    useLogTailStore.getState().teardown()
+    await runTailParse(path, next, set)
+  },
+
+  setProfilerFetchLimit(limit) {
+    const next = Math.min(
+      MAX_PROFILE_FETCH_LIMIT,
+      Math.max(MIN_PROFILE_FETCH_LIMIT, Math.floor(limit)),
+    )
+    if (!Number.isFinite(next) || next === get().profilerFetchLimit) {
+      return
+    }
+    set({ profilerFetchLimit: next })
   },
 
   goToWelcome() {
@@ -226,53 +351,12 @@ export const useSession = create<SessionState>((set, get) => ({
     if (get().parseProgress !== null) {
       return
     }
-
     useLogTailStore.getState().teardown()
-
     set({
-      logPath: path,
-      logStore: null,
-      queryPatterns: null,
-      parseProgress: 0,
-      parseDurationMs: null,
-      parseError: null,
+      slowQueriesSource: 'static',
+      logsSource: 'static',
     })
-
-    const startedAt = performance.now()
-
-    try {
-      const { size } = await stat(path)
-      let latest: LogStore | null = null
-
-      for await (const batch of parseLogFile(path, {
-        onProgress({ bytesRead }) {
-          set({ parseProgress: progressPercent(bytesRead, size) })
-        },
-      })) {
-        latest = batch.store
-      }
-
-      const queryPatterns = latest != null ? await buildQueryPatternStore(latest) : null
-
-      set({
-        logStore: latest,
-        queryPatterns,
-        parseProgress: null,
-        parseDurationMs: Math.round(performance.now() - startedAt),
-        parseError: null,
-        screen: 'dashboard',
-        activeTab: 'slow-queries',
-      })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      set({
-        parseProgress: null,
-        parseDurationMs: null,
-        parseError: message,
-        logStore: null,
-        queryPatterns: null,
-      })
-    }
+    await runTailParse(path, get().logTailLines, set)
   },
 
   resetToWelcome() {
@@ -288,6 +372,10 @@ export const useSession = create<SessionState>((set, get) => ({
       logPath: null,
       logStore: null,
       queryPatterns: null,
+      logTailLines: DEFAULT_LOG_TAIL_LINES,
+      profilerFetchLimit: DEFAULT_PROFILE_FETCH_LIMIT,
+      slowQueriesSource: 'static',
+      logsSource: 'static',
       parseProgress: null,
       parseDurationMs: null,
       parseError: null,

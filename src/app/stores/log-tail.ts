@@ -1,17 +1,19 @@
 import { create } from 'zustand'
 import {
+  createGetLogPoller,
   createLogTailer,
   filterTailLines,
   parseCustomFilterExpression,
   DEFAULT_ENABLED_CATEGORIES,
-  LOG_CATEGORY_COMPONENTS,
   LOG_TAIL_UI_COALESCE_MS,
   type CustomFilterExpression,
+  type GetLogPoller,
   type LogCategoryComponent,
   type LogTailer,
   type LogTailStats,
   type TailLogLine,
 } from '../../log-tail'
+import { liveConnectionManager } from '../../live-connection'
 
 const EMPTY_STATS: LogTailStats = {
   format: 'raw/legacy',
@@ -20,8 +22,11 @@ const EMPTY_STATS: LogTailStats = {
   bufferedCount: 0,
 }
 
+type IngestMode = 'file' | 'live' | null
+
 type LogTailState = {
   path: string | null
+  connectionKey: string | null
   lines: TailLogLine[]
   stats: LogTailStats
   error: string | null
@@ -33,11 +38,11 @@ type LogTailState = {
   search: string
   searchEditing: boolean
   filterEditing: boolean
-  /** Start or resume polling for path; keeps buffer across pause. */
-  activate: (path: string) => void
-  /** Stop polling; retain buffer + offset. */
+  /** Start or resume file tailing for path. */
+  activateFile: (path: string) => void
+  /** Start or resume getLog polling for connectionKey (`id:generation`). */
+  activateLive: (connectionKey: string) => void
   deactivate: () => void
-  /** Full teardown (path change / resetToWelcome). */
   teardown: () => void
   setFollowing: (following: boolean) => void
   toggleCategory: (component: LogCategoryComponent) => void
@@ -49,10 +54,13 @@ type LogTailState = {
   setFilterEditing: (editing: boolean) => void
 }
 
-let tailer: LogTailer | null = null
-let unsubscribeTailer: (() => void) | null = null
+let fileTailer: LogTailer | null = null
+let livePoller: GetLogPoller | null = null
+let unsubscribe: (() => void) | null = null
 let coalesceTimer: ReturnType<typeof setTimeout> | null = null
 let activePath: string | null = null
+let activeConnectionKey: string | null = null
+let ingestMode: IngestMode = null
 
 function clearCoalesceTimer(): void {
   if (coalesceTimer != null) {
@@ -63,41 +71,68 @@ function clearCoalesceTimer(): void {
 
 function flushSnapshot(set: (partial: Partial<LogTailState>) => void): void {
   clearCoalesceTimer()
-  if (tailer == null) {
+  if (ingestMode === 'file' && fileTailer != null) {
+    const snap = fileTailer.getSnapshot()
+    set({
+      lines: snap.lines,
+      stats: snap.stats,
+      error: snap.error,
+    })
     return
   }
-  const snap = tailer.getSnapshot()
-  set({
-    lines: snap.lines,
-    stats: snap.stats,
-    error: snap.error,
-  })
+  if (ingestMode === 'live' && livePoller != null) {
+    const snap = livePoller.getSnapshot()
+    set({
+      lines: snap.lines,
+      stats: snap.stats,
+      error: snap.error,
+    })
+  }
 }
 
 function scheduleFlush(set: (partial: Partial<LogTailState>) => void): void {
   if (coalesceTimer != null) {
     return
   }
-  coalesceTimer = setTimeout(function flushCoalescedTailSnapshot() {
+  coalesceTimer = setTimeout(function flushCoalescedLogSnapshot() {
     coalesceTimer = null
     flushSnapshot(set)
   }, LOG_TAIL_UI_COALESCE_MS)
 }
 
-function detachTailer(): void {
+function detachAll(): void {
   clearCoalesceTimer()
-  if (unsubscribeTailer != null) {
-    unsubscribeTailer()
-    unsubscribeTailer = null
+  if (unsubscribe != null) {
+    unsubscribe()
+    unsubscribe = null
   }
-  if (tailer != null) {
-    tailer.stop()
-    tailer = null
+  if (fileTailer != null) {
+    fileTailer.stop()
+    fileTailer = null
   }
+  if (livePoller != null) {
+    livePoller.stop()
+    livePoller = null
+  }
+  ingestMode = null
+}
+
+function createLiveGetLogPoller(): GetLogPoller {
+  return createGetLogPoller({
+    async fetchLog() {
+      const snapshot = liveConnectionManager.getSnapshot()
+      const client = liveConnectionManager.getActiveClient()
+      if (client == null || snapshot.status !== 'connected') {
+        throw new Error('Not connected')
+      }
+      return client.db('admin').admin().command({ getLog: 'global' })
+    },
+  })
 }
 
 export const useLogTailStore = create<LogTailState>((set, get) => ({
   path: null,
+  connectionKey: null,
   lines: [],
   stats: EMPTY_STATS,
   error: null,
@@ -110,63 +145,99 @@ export const useLogTailStore = create<LogTailState>((set, get) => ({
   searchEditing: false,
   filterEditing: false,
 
-  activate(path) {
-    if (activePath !== path) {
-      detachTailer()
+  activateFile(path) {
+    if (ingestMode === 'live') {
+      detachAll()
+      activeConnectionKey = null
+    }
+
+    if (activePath !== path || fileTailer == null) {
+      detachAll()
       activePath = path
+      ingestMode = 'file'
       set({
         path,
+        connectionKey: null,
         lines: [],
         stats: EMPTY_STATS,
         error: null,
         following: true,
       })
       const next = createLogTailer({ path })
-      tailer = next
-      unsubscribeTailer = next.subscribe(function onTailerEmit() {
+      fileTailer = next
+      unsubscribe = next.subscribe(function onFileTailEmit() {
         scheduleFlush(set)
       })
-      void next.start().then(function afterTailerStart() {
+      void next.start().then(function afterFileTailStart() {
         flushSnapshot(set)
       })
       return
     }
 
-    if (tailer == null) {
-      activePath = path
-      const next = createLogTailer({ path })
-      tailer = next
-      unsubscribeTailer = next.subscribe(function onTailerEmit() {
-        scheduleFlush(set)
-      })
-      void next.start().then(function afterTailerStart() {
+    if (!fileTailer.getSnapshot().running) {
+      void fileTailer.start().then(function afterResume() {
         flushSnapshot(set)
       })
-      set({ path, following: get().following })
+    }
+    set({ path, connectionKey: null, following: get().following })
+  },
+
+  activateLive(connectionKey) {
+    if (ingestMode === 'file') {
+      detachAll()
+      activePath = null
+    }
+
+    if (activeConnectionKey !== connectionKey || livePoller == null) {
+      detachAll()
+      activeConnectionKey = connectionKey
+      ingestMode = 'live'
+      set({
+        path: null,
+        connectionKey,
+        lines: [],
+        stats: EMPTY_STATS,
+        error: null,
+        following: true,
+      })
+      const next = createLiveGetLogPoller()
+      livePoller = next
+      unsubscribe = next.subscribe(function onGetLogEmit() {
+        scheduleFlush(set)
+      })
+      void next.start().then(function afterGetLogStart() {
+        flushSnapshot(set)
+      })
       return
     }
 
-    // Same path: resume polling if stopped (tab re-entered).
-    if (!tailer.getSnapshot().running) {
-      void tailer.start().then(function afterResume() {
+    if (!livePoller.getSnapshot().running) {
+      void livePoller.start().then(function afterResume() {
         flushSnapshot(set)
       })
     }
+    set({ connectionKey, path: null, following: get().following })
   },
 
   deactivate() {
-    if (tailer != null) {
+    if (fileTailer != null) {
       flushSnapshot(set)
-      tailer.stop()
+      fileTailer.stop()
+    }
+    if (livePoller != null) {
+      flushSnapshot(set)
+      livePoller.stop()
     }
     clearCoalesceTimer()
   },
 
   teardown() {
-    detachTailer()
+    detachAll()
     activePath = null
+    activeConnectionKey = null
     set({
       path: null,
+      connectionKey: null,
       lines: [],
       stats: EMPTY_STATS,
       error: null,

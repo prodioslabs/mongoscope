@@ -258,6 +258,30 @@ export class LogStore {
     return i
   }
 
+  /**
+   * Keep only the last `maxRows` entries (drop oldest). No-op when already ≤ maxRows.
+   * Intern tables are left as-is (may retain unused strings).
+   */
+  retainTail(maxRows: number): void {
+    if (maxRows < 0) {
+      throw new RangeError('maxRows must be >= 0')
+    }
+    if (this.length <= maxRows) {
+      return
+    }
+    const drop = this.length - maxRows
+    this.offsets.copyWithin(0, drop, this.length)
+    this.lengths.copyWithin(0, drop, this.length)
+    this.timestamps.copyWithin(0, drop, this.length)
+    this.severities.copyWithin(0, drop, this.length)
+    this.ids.copyWithin(0, drop, this.length)
+    this.kinds.copyWithin(0, drop, this.length)
+    this.componentIds.copyWithin(0, drop, this.length)
+    this.ctxIds.copyWithin(0, drop, this.length)
+    this.msgIds.copyWithin(0, drop, this.length)
+    this.length = maxRows
+  }
+
   getEntry(row: number): LogEntry {
     if (row < 0 || row >= this.length) {
       throw new RangeError(`row ${row} out of range 0..${this.length - 1}`)
