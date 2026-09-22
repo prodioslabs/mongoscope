@@ -72,14 +72,7 @@ export function createSecretStore(backend: SecretBackend = bunSecretsBackend): S
         throw new Error('Invalid connections store in OS keychain: not valid JSON')
       }
 
-      try {
-        return validateConnectionsBlob(parsed)
-      } catch (error) {
-        if (error instanceof Error) {
-          throw error
-        }
-        throw new Error(String(error))
-      }
+      return validateConnectionsBlob(parsed)
     },
 
     async save(blob) {

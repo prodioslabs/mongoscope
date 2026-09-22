@@ -861,8 +861,7 @@ function sortArrow(sortDirection: SortDirection): string {
 }
 
 /**
- * Active sort headers keep the label muted and paint only the arrow in the
- * selection/primary color so the sort indicator reads clearly.
+ * Active sort: muted label, primary-colored arrow only.
  */
 function sortableHeaderCell(
   base: string,

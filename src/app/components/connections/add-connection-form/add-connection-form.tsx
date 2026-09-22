@@ -11,7 +11,7 @@ import { type FooterKeybinding } from '../../../stores/footer'
 import { useTheme } from '../../../stores/theme'
 import { useFooterKeybindings } from '../../footer-keybindings'
 
-export const ADD_CONNECTION_FORM_KEYBINDINGS: FooterKeybinding[] = [
+const ADD_CONNECTION_FORM_KEYBINDINGS: FooterKeybinding[] = [
   { keys: 'tab', label: 'field' },
   { keys: '→', label: 'local URI' },
   { keys: 'enter', label: 'save' },

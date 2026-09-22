@@ -43,7 +43,7 @@ function extractLogLines(getLogRaw: unknown): string[] {
   if (getLogRaw == null || typeof getLogRaw !== 'object') {
     return []
   }
-  const log = (getLogRaw as { log?: unknown }).log
+  const log = (getLogRaw as Record<string, unknown>).log
   if (!Array.isArray(log)) {
     return []
   }

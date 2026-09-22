@@ -1,7 +1,4 @@
-/**
- * Normalize `planSummary` into a short UI label.
- * Examples: `COLLSCAN`, `IXSCAN`, `IXSCAN+SORT`, `n/a`.
- */
+/** Normalize planSummary to a short UI label (COLLSCAN, IXSCAN, IXSCAN+SORT, …). */
 export function normalizePlanSummary(planSummary: unknown): string {
   if (typeof planSummary !== 'string' || planSummary.length === 0) {
     return 'n/a'

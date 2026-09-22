@@ -1,41 +1,10 @@
 /**
- * Mongod structured-log byte scanner (Phase 1 indexing).
+ * Mongod structured-log byte scanner.
  *
- * High-level flow
- * ---------------
- *   Log file ──► 4 MB Uint8Array chunks ──► newline split (+ carry across
- *   chunk boundaries) ──► per-line hot-field extract ──► Columnar LogStore
- *   ──► progressive ParseBatch yields for the UI.
- *
- * Why bytes, not strings
- * ----------------------
- * Chunks stay as Uint8Array. Lines are located with indexOf-style scans for
- * 0x0A; only complete lines are decoded, and only the hot fields needed for
- * the list view (t, s, c, id, ctx, msg). Full JSON.parse of every line is
- * avoided on the index path — Bun's JSON.parse is reserved for (a) shape
- * fallback when the specialized scanner misses, and (b) lazy detail parse
- * of a single row when the UI expands it (see readEntryDetail in index.ts).
- *
- * Hot-field path
- * --------------
- * MongoDB 4.4+ JSON logs emit a fixed field order with padding spaces:
- *   {"t":{"$date":"…"},"s":"I",  "c":"COMMAND",  "id":51803,   "ctx":"…","msg":"…",…}
- * scanHotFields walks that shape in one forward pass and hand-parses the
- * ISO-8601 timestamp into epoch millis. Non-matching / legacy / malformed
- * lines become raw rows (kind=raw) instead of failing the whole file.
- *
- * Progressive delivery
- * --------------------
- * parseLogFile is an async generator: every ~50k lines it yields
- * { store, start, end } against one shared LogStore so the TUI can paint
- * the first screen while indexing continues (and so follow/tail can plug
- * into the same seam later).
- *
- * Related modules
- * ---------------
- * - store.ts  — columnar SoA buffers + StringInterner for low-cardinality
- *               string columns (component / ctx / msg)
- * - index.ts  — public API surface (parseLogFile, getEntry, readEntryDetail)
+ * Indexes files as Uint8Array chunks (newline + carry), extracting only hot
+ * fields (t, s, c, id, ctx, msg) into a columnar LogStore. Avoids JSON.parse
+ * on the hot path; non-matching lines become kind=raw. `parseLogFile` yields
+ * progressive batches so the TUI can render while indexing continues.
  */
 
 import { createReadStream } from 'node:fs'
@@ -326,12 +295,7 @@ function parseTimestampFromJson(t: MongoLine['t']): number {
 }
 
 function tryJsonFallback(buf: Uint8Array, start: number, end: number): HotFields | null {
-  let text: string
-  try {
-    text = decodeSlice(buf, start, end)
-  } catch {
-    return null
-  }
+  const text = decodeSlice(buf, start, end)
   let parsed: unknown
   try {
     parsed = JSON.parse(text)
@@ -357,7 +321,7 @@ function tryJsonFallback(buf: Uint8Array, start: number, end: number): HotFields
   }
 }
 
-export function ingestLine(
+function ingestLine(
   store: LogStore,
   buf: Uint8Array,
   start: number,
@@ -371,7 +335,7 @@ export function ingestLine(
     return
   }
 
-  // Skip leading BOM / whitespace-only? Keep as-is for indexing fidelity.
+  // Keep leading BOM / whitespace for indexing fidelity.
   let hot = scanHotFields(buf, start, end)
   if (!hot) {
     hot = tryJsonFallback(buf, start, end)

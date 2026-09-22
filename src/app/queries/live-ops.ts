@@ -9,7 +9,7 @@ import { liveConnectionManager } from '../../live-connection'
 import { useLiveConnection } from '../stores/live-connection'
 import { useSession } from '../stores/session'
 
-export const liveOpsKeys = {
+const liveOpsKeys = {
   all: ['live-ops'] as const,
   snapshot: (connectionId: string | null, generation: number) =>
     [...liveOpsKeys.all, 'snapshot', connectionId, generation] as const,

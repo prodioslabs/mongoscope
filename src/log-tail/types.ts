@@ -30,11 +30,8 @@ export type TailLogLine = {
   id: number
   ctx: string
   msg: string
-  /** Optional `attr.ns` when present. */
   namespace: string | null
-  /** Optional `attr.durationMillis` when present. */
   durationMillis: number | null
-  /** Optional raw `attr.planSummary` when present. */
   planSummary: string | null
   kind: 'json' | 'raw'
 }

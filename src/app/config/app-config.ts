@@ -25,14 +25,10 @@ export function validateAppConfig(value: unknown): AppConfig {
 
 /**
  * Load ~/.config/mongoscope/config.json.
- * Missing / corrupt / unsupported → DEFAULT_APP_CONFIG (no throw to caller for boot).
+ * Missing file → {@link DEFAULT_APP_CONFIG}. Corrupt / unsupported → throws (boot catches).
  */
 export async function loadAppConfig(filePath: string = appConfigFilePath()): Promise<AppConfig> {
-  try {
-    return await loadJsonConfigFile(filePath, DEFAULT_APP_CONFIG, validateAppConfig)
-  } catch {
-    return DEFAULT_APP_CONFIG
-  }
+  return loadJsonConfigFile(filePath, DEFAULT_APP_CONFIG, validateAppConfig)
 }
 
 export async function saveAppConfigTheme(

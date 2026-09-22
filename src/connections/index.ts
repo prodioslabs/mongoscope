@@ -11,12 +11,8 @@ export {
   type SecretStoreCode,
 } from './secret-store'
 export {
-  add,
   connectionStore,
   createConnectionStore,
-  list,
-  remove,
-  update,
   type AddConnectionInput,
   type ConnectionStore,
   type ConnectionStoreDeps,

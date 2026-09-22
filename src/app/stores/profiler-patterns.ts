@@ -3,11 +3,11 @@ import type { QueryPattern } from '../../query-patterns'
 
 type ProfilerPatternsState = {
   patterns: QueryPattern[]
-  samples: unknown[]
+  samples: Record<string, unknown>[]
   database: string | null
   setSnapshot: (next: {
     patterns: QueryPattern[]
-    samples: unknown[]
+    samples: Record<string, unknown>[]
     database: string
   }) => void
   clear: () => void

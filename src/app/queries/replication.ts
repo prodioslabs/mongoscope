@@ -13,7 +13,7 @@ import { liveConnectionManager } from '../../live-connection'
 import { useLiveConnection } from '../stores/live-connection'
 import { useSession } from '../stores/session'
 
-export const replicationKeys = {
+const replicationKeys = {
   all: ['replication'] as const,
   snapshot: (connectionId: string | null, generation: number) =>
     [...replicationKeys.all, 'snapshot', connectionId, generation] as const,

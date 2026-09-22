@@ -23,26 +23,22 @@ export type LogEntry = {
 
 export type LogEntryDetail = LogEntry & {
   attr?: unknown
-  raw: unknown
+  /** Raw line text, or the parsed JSON object for structured lines. */
+  raw: string | Record<string, unknown>
 }
 
 /** Approximate in-memory footprint of a {@link LogStore} after indexing. */
 export type MemoryEstimate = {
-  /** Byte length of all growable columnar typed arrays (offsets, lengths, timestamps, etc.), including unused capacity. */
+  /** Growable columnar typed arrays (includes unused capacity). */
   typedArraysBytes: number
-  /** Approximate bytes held by interned component/ctx/msg strings plus Map overhead. */
+  /** Interned component/ctx/msg strings plus Map overhead. */
   internBytes: number
-  /** `typedArraysBytes + internBytes` — excludes JS object headers and the source file on disk. */
+  /** typedArraysBytes + internBytes (excludes JS object headers and the file on disk). */
   totalBytes: number
-  /** Number of indexed log rows. */
   rowCount: number
-  /** Distinct interned string counts per column (cardinality of each string table). */
   internCounts: {
-    /** Unique `c` / component values. */
     component: number
-    /** Unique `ctx` values. */
     ctx: number
-    /** Unique `msg` values (raw lines also land here). */
     msg: number
   }
 }
@@ -50,18 +46,13 @@ export type MemoryEstimate = {
 const INITIAL_CAPACITY = 65_536
 
 /**
- * Deduplicates repeated strings into a dense id table.
- *
- * LogStore keeps three of these (component, ctx, msg). Each row stores a
- * Uint32 index into the table instead of a JS string pointer, so a million
- * "Slow query" / "COMMAND" / "conn42" values share one heap string each.
- * getEntry() resolves ids back to strings on demand for the list view.
+ * Dense string table: LogStore stores Uint32 ids for component/ctx/msg so
+ * repeated values share one heap string.
  */
 class StringInterner {
   private readonly map = new Map<string, number>()
   readonly values: string[] = []
 
-  /** Return existing id for `value`, or assign the next id and store it. */
   intern(value: string): number {
     const existing = this.map.get(value)
     if (existing !== undefined) return existing
@@ -71,17 +62,15 @@ class StringInterner {
     return id
   }
 
-  /** Resolve an intern id back to its string (empty string if out of range). */
   get(id: number): string {
     return this.values[id] ?? ''
   }
 
-  /** Number of distinct strings in this table. */
   get size(): number {
     return this.values.length
   }
 
-  /** Approximate UTF-16 code-unit bytes for interned strings + map overhead estimate. */
+  /** Approximate UTF-16 code units for strings + Map overhead. */
   estimateBytes(): number {
     let bytes = 0
     for (const value of this.values) {
@@ -201,7 +190,7 @@ export class LogStore {
       Ctor: new (n: number) => T,
     ): T => {
       const out = new Ctor(next)
-      out.set(arr as unknown as ArrayLike<number>)
+      out.set(arr)
       return out
     }
 

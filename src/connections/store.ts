@@ -122,22 +122,6 @@ export function createConnectionStore(deps: ConnectionStoreDeps = {}): Connectio
 
 export const connectionStore = createConnectionStore()
 
-export async function list(): Promise<ConnectionProfile[]> {
-  return connectionStore.list()
-}
-
-export async function add(input: AddConnectionInput): Promise<ConnectionProfile> {
-  return connectionStore.add(input)
-}
-
-export async function update(id: string, input: UpdateConnectionInput): Promise<ConnectionProfile> {
-  return connectionStore.update(id, input)
-}
-
-export async function remove(id: string): Promise<void> {
-  return connectionStore.remove(id)
-}
-
 function assertNameAvailable(blob: ConnectionsBlob, name: string, exceptId?: string): void {
   const normalizedName = name.toLowerCase()
   if (

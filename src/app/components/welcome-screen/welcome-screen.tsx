@@ -17,7 +17,7 @@ const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 
 const WELCOME_IDLE_KEYBINDINGS = toFooter(WELCOME_SHORTCUTS)
 
-// Original "scope" mark: a monitor screen with a pulse waveform.
+// Scope mark: monitor with a pulse waveform.
 const SCOPE = [
   '  ▄███████████▄  ',
   '  █           █  ',

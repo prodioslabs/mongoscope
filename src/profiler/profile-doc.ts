@@ -79,16 +79,13 @@ export function profileDocTimestampMs(doc: unknown): number {
   if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
     return Number.NaN
   }
-  const ts = (doc as { ts?: unknown }).ts
+  const ts = (doc as Record<string, unknown>).ts
   if (ts instanceof Date) {
     return ts.getTime()
   }
-  if (ts != null && typeof ts === 'object' && 'getTime' in ts) {
-    const getTime = (ts as { getTime?: unknown }).getTime
-    if (typeof getTime === 'function') {
-      const value = (getTime as () => number).call(ts)
-      return typeof value === 'number' && Number.isFinite(value) ? value : Number.NaN
-    }
+  if (isDateLike(ts)) {
+    const value = ts.getTime()
+    return typeof value === 'number' && Number.isFinite(value) ? value : Number.NaN
   }
   if (typeof ts === 'number' && Number.isFinite(ts)) {
     return ts
@@ -101,13 +98,25 @@ export function profileDocTimestampMs(doc: unknown): number {
 }
 
 export function toProfileSample(doc: unknown): ProfileSample | null {
-  const attr = profileDocToAttr(doc)
+  if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
+    return null
+  }
+  const record = doc as Record<string, unknown>
+  const attr = profileDocToAttr(record)
   if (attr == null) {
     return null
   }
   return {
-    doc,
+    doc: record,
     attr,
-    timestampMs: profileDocTimestampMs(doc),
+    timestampMs: profileDocTimestampMs(record),
   }
+}
+
+function isDateLike(value: unknown): value is { getTime: () => number } {
+  return (
+    value != null &&
+    typeof value === 'object' &&
+    typeof (value as { getTime?: unknown }).getTime === 'function'
+  )
 }

@@ -6,11 +6,9 @@ const CHAR_LF = 0x0a
 const CHAR_CR = 0x0d
 
 /**
- * Live-tail ingest seam: same carry / newline contract as {@link scanBuffer},
- * but appends {@link TailLogLine} entries into a ring (with optional attr fields)
- * instead of growing an unbounded LogStore.
- *
- * Never flushes a trailing partial line — callers must retain `carry` across polls.
+ * Live-tail ingest: same carry/newline contract as {@link scanBuffer}, but
+ * appends into a ring instead of an unbounded LogStore. Never flushes a
+ * trailing partial line — callers retain `carry` across polls.
  */
 export function appendTailChunk(
   ring: LogLineRingBuffer,
@@ -42,12 +40,7 @@ export function appendTailChunk(
     if (lineEnd > lineStart && buf[lineEnd - 1] === CHAR_CR) {
       lineEnd--
     }
-    let text: string
-    try {
-      text = TEXT_DECODER.decode(buf.subarray(lineStart, lineEnd))
-    } catch {
-      text = '[invalid utf-8]'
-    }
+    const text = TEXT_DECODER.decode(buf.subarray(lineStart, lineEnd))
     ring.push(parseTailLogLineFromText(text))
     linesAdded++
     lineStart = i + 1

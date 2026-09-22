@@ -16,8 +16,7 @@ import { refreshThemeCatalog, resolveConfiguredThemeName } from './theme/catalog
 export type { AppOptions }
 
 /**
- * Resolve theme selection before first React paint.
- * Pre-render state: no ThemeProvider / App mount — only this await (then createCliRenderer).
+ * Resolve theme before first React paint (config + catalog only; no providers yet).
  */
 async function bootstrapThemeSelection(): Promise<string> {
   try {

@@ -461,8 +461,11 @@ export function ConnectionsDialog() {
                       return
                     }
                     await liveConnectionManager.connect(editedId, uri)
-                  } catch {
-                    void retryLiveConnection()
+                  } catch (error) {
+                    await liveConnectionManager.fail(
+                      editedId,
+                      new LiveConnectionError('unknown', formatConnectionError(error)),
+                    )
                   }
                 })()
               }}

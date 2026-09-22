@@ -175,33 +175,7 @@ function modalPlan(counts: Map<string, number>): string {
   return best
 }
 
-/**
- * Hand control back to the event loop for one tick.
- *
- * Node/Bun run JavaScript on a single thread. A long stretch of sync work
- * (or many consecutive `await`s that resume immediately, like tiny file reads)
- * can starve everything else scheduled on that thread — TUI paints, keyboard
- * handlers, timers, progress updates.
- *
- * `setImmediate` queues the continuation *after* the current turn finishes and
- * after pending I/O callbacks get a chance to run. Awaiting it is cooperative
- * multitasking: we do not parallelize the build; we only pause between batches
- * so the runtime can flush other work.
- *
- * @example
- * // Without yielding — one continuous turn, UI frozen until the loop ends:
- * for (const row of slowRows) {
- *   await readAttrAt(store, row, fh) // may resume in the same turn
- *   aggregate(row)
- * }
- *
- * // With yielding — every N rows, let OpenTUI / timers run:
- * for (const row of slowRows) {
- *   await readAttrAt(store, row, fh)
- *   aggregate(row)
- *   if (++processed % 256 === 0) await yieldEventLoop()
- * }
- */
+/** Let the event loop run (TUI / timers) between attr-read batches. */
 async function yieldEventLoop(): Promise<void> {
   await new Promise<void>((resolve) => setImmediate(resolve))
 }
@@ -209,19 +183,9 @@ async function yieldEventLoop(): Promise<void> {
 type FileHandle = Awaited<ReturnType<typeof open>>
 
 /**
- * Re-read one log line and return its `attr` object (or null).
- *
- * Uses `JSON.parse` on the full line. That is intentional and scoped:
- * - The first parse pass only indexes hot fields (no `attr`); metrics live only
- *   in the JSON body, so a second pass must decode them somehow.
- * - We only call this for rows already filtered by `ids === 51803`, so cost
- *   scales with slow-query count, not total log size.
- * - One shared file handle keeps reads sequential; we still pay for a full
- *   object tree (envelope + nested `command`) and discard most of it after
- *   {@link extractSlowQueryAttr}.
- *
- * Hotter paths (huge slowms files) could later replace this with a targeted
- * attr scanner or first-pass columns — not required for the current design.
+ * Re-read one indexed line and return its `attr` (or null).
+ * Indexing stores only hot fields; slow-query metrics live in the JSON body,
+ * so we `JSON.parse` the line again for rows already filtered to id 51803.
  */
 async function readAttrAt(
   store: LogStore,
@@ -229,8 +193,7 @@ async function readAttrAt(
   fh: FileHandle | null,
 ): Promise<unknown | null> {
   if (fh == null) {
-    // In-memory test stores: lengths/offsets point into a side channel — not supported.
-    // Tests that need attr use a real temp file.
+    // In-memory test stores lack a real file backing; use a temp file in tests.
     return null
   }
 
