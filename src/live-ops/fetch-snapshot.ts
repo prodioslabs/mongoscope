@@ -1,10 +1,10 @@
-import type { MongoClientLike } from '../live-connection'
+import type { MongoDbClient } from '../live-connection'
 import { normalizeCurrentOpDocs, parseServerStatus } from './normalize'
 import { panelErrorFromUnknown } from './permissions'
 import { parseTopCommandResult } from './collection-top'
 import type { LiveOpsPanelError, LiveOpsSnapshot, TopSample } from './types'
 
-export type LiveOpsAdminClient = Pick<MongoClientLike, 'db'>
+export type LiveOpsAdminClient = MongoDbClient
 
 export type FetchLiveOpsSnapshotResult = {
   snapshot: LiveOpsSnapshot

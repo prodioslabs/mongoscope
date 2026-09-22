@@ -1,4 +1,4 @@
-import { type FooterChip, type Shortcut } from './types'
+import { type Shortcut } from './types'
 
 /**
  * Replication tab help entries. Connection open is owned by DbSelector
@@ -27,6 +27,3 @@ export const REPLICATION_SHORTCUTS: readonly Shortcut[] = [
     bindings: [],
   },
 ]
-
-/** No extra footer chips — DbSelector already contributes `c` / connections. */
-export const REPLICATION_FOOTER: FooterChip[] = []

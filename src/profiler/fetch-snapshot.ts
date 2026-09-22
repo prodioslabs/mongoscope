@@ -1,4 +1,4 @@
-import type { MongoClientLike } from '../live-connection'
+import type { MongoDbClient } from '../live-connection'
 import {
   filterPickerDatabases,
   parseListDatabasesResult,
@@ -19,7 +19,7 @@ import {
   type ProfilingStatus,
 } from './types'
 
-export type ProfilerClient = Pick<MongoClientLike, 'db'>
+export type ProfilerClient = MongoDbClient
 
 export type FetchProfilerSnapshotResult = {
   snapshot: ProfilerSlowQueriesSnapshot

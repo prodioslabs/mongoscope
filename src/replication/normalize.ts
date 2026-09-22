@@ -15,6 +15,8 @@ export type RawStatusMember = {
   stateStr?: unknown
   optimeDate?: unknown
   self?: unknown
+  /** Present on remote members in replSetGetStatus (heartbeat RTT). */
+  pingMs?: unknown
 }
 
 export type RawReplSetStatus = {

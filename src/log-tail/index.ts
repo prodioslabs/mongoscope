@@ -4,15 +4,12 @@ export { diffGetLogLines, type GetLogDiffResult } from './diff-get-log'
 export {
   evaluateCustomFilter,
   filterTailLines,
-  isLogCategoryComponent,
-  lineMatchesCategories,
   lineMatchesSearch,
   parseCustomFilterExpression,
 } from './filter'
 export { extractGetLogLines } from './get-log-lines'
 export {
   createGetLogPoller,
-  GET_LOG_POLL_INTERVAL_MS,
   type GetLogPoller,
   type GetLogPollerOptions,
   type GetLogSnapshot,

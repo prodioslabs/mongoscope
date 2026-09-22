@@ -1,22 +1,8 @@
+import { formatBytes } from '../lib/format-bytes'
+import { truncateText } from '../lib/truncate-text'
 import type { IndexOptionFlag } from './types'
 
-export function formatBytes(bytes: number | null): string {
-  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) {
-    return '—'
-  }
-  if (bytes < 1024) {
-    return `${Math.round(bytes)} B`
-  }
-  const units = ['KiB', 'MiB', 'GiB', 'TiB'] as const
-  let value = bytes / 1024
-  let unitIndex = 0
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024
-    unitIndex += 1
-  }
-  const digits = value >= 10 ? 0 : 1
-  return `${value.toFixed(digits)} ${units[unitIndex]}`
-}
+export { formatBytes }
 
 export function formatOps(ops: number | null): string {
   if (ops == null || !Number.isFinite(ops) || ops < 0) {
@@ -71,13 +57,7 @@ export function formatBuildProgress(input: {
 }
 
 export function truncateIndexCell(value: string, maxLen: number): string {
-  if (value.length <= maxLen) {
-    return value
-  }
-  if (maxLen <= 1) {
-    return '…'
-  }
-  return `${value.slice(0, maxLen - 1)}…`
+  return truncateText(value, maxLen)
 }
 
 /** Compact `{ a: 1, b: -1 }` → `a:1,b:-1`. */

@@ -93,11 +93,11 @@ export async function readEntryDetail(store: LogStore, row: number): Promise<Log
 
   try {
     const parsed: unknown = JSON.parse(text)
-    const attr =
-      parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && 'attr' in parsed
-        ? (parsed as { attr?: unknown }).attr
-        : undefined
-    return { ...entry, attr, raw: parsed }
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { ...entry, kind: 'raw', raw: text }
+    }
+    const record = parsed as Record<string, unknown>
+    return { ...entry, attr: record.attr, raw: record }
   } catch {
     return { ...entry, kind: 'raw', raw: text }
   }

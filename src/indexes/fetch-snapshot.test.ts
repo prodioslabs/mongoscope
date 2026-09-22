@@ -63,6 +63,19 @@ function createFakeClient(handlers: {
         },
         collection(name) {
           const collection: CollectionLike = {
+            find() {
+              return {
+                sort() {
+                  return this
+                },
+                limit() {
+                  return this
+                },
+                async toArray() {
+                  return []
+                },
+              }
+            },
             async indexes() {
               if (handlers.indexes == null) {
                 throw new Error('indexes not stubbed')

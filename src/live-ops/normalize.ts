@@ -45,7 +45,7 @@ export function normalizeCurrentOpDocs(docs: unknown[]): {
   }
 }
 
-export function toCurrentOpRow(doc: RawCurrentOpDoc): CurrentOpRow {
+function toCurrentOpRow(doc: RawCurrentOpDoc): CurrentOpRow {
   const waitingForLock = doc.waitingForLock === true
   return {
     opid: formatOpid(doc.opid),
@@ -60,7 +60,7 @@ export function toCurrentOpRow(doc: RawCurrentOpDoc): CurrentOpRow {
   }
 }
 
-export function buildLockWaits(ops: CurrentOpRow[]): LockWaitCount[] {
+function buildLockWaits(ops: CurrentOpRow[]): LockWaitCount[] {
   const counts = new Map<string, number>()
   for (const op of ops) {
     if (!op.waitingForLock) {

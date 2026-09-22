@@ -1,4 +1,6 @@
-import type { MongoClientLike } from '../live-connection'
+import { asDriverErrorLike } from '../lib/driver-error'
+import { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
+import type { MongoDbClient } from '../live-connection'
 import { normalizeHeartbeats } from './heartbeats'
 import { buildOplogWindow } from './oplog'
 import { normalizeRecentReplicationEvents } from './recent-events'
@@ -14,7 +16,7 @@ import type {
   WriteConcernView,
 } from './types'
 
-export type ReplicationAdminClient = Pick<MongoClientLike, 'db'>
+export type ReplicationAdminClient = MongoDbClient
 
 export type FetchReplicationSnapshotResult = {
   snapshot: ReplicationSnapshot
@@ -178,34 +180,13 @@ function toWriteConcernPanelError(reason: unknown): ReplicationPanelError {
   return { kind: 'unknown', message: 'failed to load write concern' }
 }
 
-function isUnauthorizedError(error: unknown): boolean {
-  if (error == null || typeof error !== 'object') {
+function isNotReplicaSetError(error: unknown): boolean {
+  const record = asDriverErrorLike(error)
+  if (record == null) {
     return false
-  }
-  const record = error as { code?: unknown; codeName?: unknown; message?: unknown }
-  if (record.code === 13 || record.codeName === 'Unauthorized') {
-    return true
   }
   const message = typeof record.message === 'string' ? record.message.toLowerCase() : ''
-  return (
-    message.includes('not authorized') ||
-    message.includes('unauthorized') ||
-    message.includes('requires authentication')
-  )
-}
-
-function isNotReplicaSetError(error: unknown): boolean {
-  if (error == null || typeof error !== 'object') {
-    return false
-  }
-  const message =
-    typeof (error as { message?: unknown }).message === 'string'
-      ? (error as { message: string }).message.toLowerCase()
-      : ''
-  const codeName =
-    typeof (error as { codeName?: unknown }).codeName === 'string'
-      ? (error as { codeName: string }).codeName.toLowerCase()
-      : ''
+  const codeName = typeof record.codeName === 'string' ? record.codeName.toLowerCase() : ''
   return (
     message.includes('not running with --replset') ||
     message.includes('no replset config') ||

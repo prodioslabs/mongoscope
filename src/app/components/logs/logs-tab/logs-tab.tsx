@@ -10,6 +10,7 @@ import {
   type TailLogLine,
 } from '../../../../log-tail'
 import { displayText } from '../../../../lib/display-text'
+import { truncateText } from '../../../../lib/truncate-text'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import {
   computeTableCapacity,
@@ -663,11 +664,5 @@ function formatLogTimestamp(ms: number): string {
 }
 
 function truncateLogCell(value: string, maxLen: number): string {
-  if (value.length <= maxLen) {
-    return value
-  }
-  if (maxLen <= 1) {
-    return '…'
-  }
-  return `${value.slice(0, maxLen - 1)}…`
+  return truncateText(value, maxLen)
 }

@@ -10,7 +10,7 @@ import { useLiveConnection } from '../stores/live-connection'
 import { useProfilerPatternsStore } from '../stores/profiler-patterns'
 import { useSession } from '../stores/session'
 
-export const slowQueriesKeys = {
+const slowQueriesKeys = {
   all: ['slow-queries'] as const,
   snapshot: (
     connectionId: string | null,

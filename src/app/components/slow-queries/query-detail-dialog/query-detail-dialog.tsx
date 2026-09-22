@@ -33,7 +33,7 @@ type QueryDetailDialogProps = {
   open: boolean
   pattern: QueryPattern | null
   /** Raw system.profile sample for live explain; preferred over logStore path. */
-  sampleDoc?: unknown | null
+  sampleDoc?: Record<string, unknown> | null
   logStore?: LogStore | null
   queryPatterns?: QueryPatternStore | null
   onClose: () => void

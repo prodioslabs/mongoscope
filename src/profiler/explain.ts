@@ -22,9 +22,9 @@ const COMMAND_STRIP_KEYS = new Set([
  */
 export function getPatternExplainFromSample(
   pattern: QueryPattern,
-  sampleDoc: unknown,
+  sampleDoc: Record<string, unknown>,
 ): PatternExplain {
-  const attr = profileDocToAttr(sampleDoc) ?? asRecord(sampleDoc)
+  const attr = profileDocToAttr(sampleDoc) ?? sampleDoc
   const extracted = extractSlowQueryAttr(attr)
   const context = extractContext(attr, sampleDoc)
   const work = extractWorkMetrics(attr)
@@ -98,11 +98,10 @@ function stageDetailFor(plan: string, attr?: Record<string, unknown> | null): st
 
 function extractContext(
   attr: Record<string, unknown> | null,
-  sampleDoc: unknown,
+  sampleDoc: Record<string, unknown>,
 ): Pick<PatternExplain, 'timestampMs' | 'ctx' | 'appName' | 'remote' | 'protocol'> {
-  const doc = asRecord(sampleDoc)
   let timestampMs = Number.NaN
-  const ts = doc?.ts
+  const ts = sampleDoc.ts
   if (ts instanceof Date) {
     timestampMs = ts.getTime()
   } else if (typeof ts === 'number' && Number.isFinite(ts)) {
@@ -111,10 +110,10 @@ function extractContext(
 
   return {
     timestampMs,
-    ctx: typeof doc?.user === 'string' ? doc.user : '',
-    appName: stringOrNull(attr?.appName) ?? stringOrNull(doc?.appName),
-    remote: stringOrNull(attr?.remote) ?? stringOrNull(doc?.client),
-    protocol: stringOrNull(attr?.protocol) ?? stringOrNull(doc?.protocol),
+    ctx: typeof sampleDoc.user === 'string' ? sampleDoc.user : '',
+    appName: stringOrNull(attr?.appName) ?? stringOrNull(sampleDoc.appName),
+    remote: stringOrNull(attr?.remote) ?? stringOrNull(sampleDoc.client),
+    protocol: stringOrNull(attr?.protocol) ?? stringOrNull(sampleDoc.protocol),
   }
 }
 
@@ -155,13 +154,6 @@ function cleanCommandDisplay(command: unknown): string {
     cleaned[key] = value
   }
   return prettyJson(cleaned) ?? 'n/a'
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    return null
-  }
-  return value as Record<string, unknown>
 }
 
 function stringOrNull(value: unknown): string | null {

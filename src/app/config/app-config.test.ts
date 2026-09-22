@@ -43,13 +43,13 @@ describe('loadAppConfig / saveAppConfigTheme', () => {
     await expect(loadAppConfig(path)).resolves.toEqual(DEFAULT_APP_CONFIG)
   })
 
-  it('returns defaults when the file is corrupt or unsupported', async () => {
+  it('throws when the file is corrupt or unsupported', async () => {
     const path = await makeTempConfigPath()
     await writeFile(path, '{not-json', 'utf8')
-    await expect(loadAppConfig(path)).resolves.toEqual(DEFAULT_APP_CONFIG)
+    await expect(loadAppConfig(path)).rejects.toThrow(/not valid JSON/)
 
     await writeFile(path, JSON.stringify({ version: 99, theme: 'nord' }), 'utf8')
-    await expect(loadAppConfig(path)).resolves.toEqual(DEFAULT_APP_CONFIG)
+    await expect(loadAppConfig(path)).rejects.toThrow(/version/)
   })
 
   it('round-trips a theme selection with atomic write', async () => {

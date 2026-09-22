@@ -1,16 +1,6 @@
 import type { CollectionTopRow, TopSample } from './types'
 
-export const MICROSECONDS_PER_MILLISECOND = 1000
-
-export type CollectionTopScale = {
-  maxTotalMs: number
-  rows: Array<
-    CollectionTopRow & {
-      fillPercent: number
-      readSharePercent: number
-    }
-  >
-}
+const MICROSECONDS_PER_MILLISECOND = 1000
 
 export type BuildCollectionTopResult = {
   rows: CollectionTopRow[]
@@ -38,7 +28,7 @@ export function parseTopCommandResult(result: unknown): TopSample {
   if (result == null || typeof result !== 'object') {
     return { byNamespace }
   }
-  const totals = (result as { totals?: unknown }).totals
+  const totals = (result as Record<string, unknown>).totals
   if (totals == null || typeof totals !== 'object') {
     return { byNamespace }
   }
@@ -47,12 +37,11 @@ export function parseTopCommandResult(result: unknown): TopSample {
     if (namespace === 'note' || entry == null || typeof entry !== 'object') {
       continue
     }
-    const record = entry as {
-      readLock?: { time?: unknown }
-      writeLock?: { time?: unknown }
-    }
-    const readLockMicros = toNonNegativeNumber(record.readLock?.time)
-    const writeLockMicros = toNonNegativeNumber(record.writeLock?.time)
+    const record = entry as Record<string, unknown>
+    const readLock = asOptionalRecord(record.readLock)
+    const writeLock = asOptionalRecord(record.writeLock)
+    const readLockMicros = toNonNegativeNumber(readLock?.time)
+    const writeLockMicros = toNonNegativeNumber(writeLock?.time)
     byNamespace[namespace] = { readLockMicros, writeLockMicros }
   }
 
@@ -111,29 +100,11 @@ export function buildCollectionTopRows(
   }
 }
 
-export function computeCollectionTopScale(rows: readonly CollectionTopRow[]): CollectionTopScale {
-  if (rows.length === 0) {
-    return { maxTotalMs: 0, rows: [] }
+function asOptionalRecord(value: unknown): Record<string, unknown> | null {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+    return null
   }
-
-  let maxTotalMs = 0
-  for (const row of rows) {
-    if (row.totalMs > maxTotalMs) {
-      maxTotalMs = row.totalMs
-    }
-  }
-
-  const scaledRows = rows.map(function scaleRow(row) {
-    const fillPercent = maxTotalMs > 0 ? (row.totalMs / maxTotalMs) * 100 : 0
-    const readSharePercent = row.totalMs > 0 ? (row.readMs / row.totalMs) * 100 : 0
-    return {
-      ...row,
-      fillPercent,
-      readSharePercent,
-    }
-  })
-
-  return { maxTotalMs, rows: scaledRows }
+  return value as Record<string, unknown>
 }
 
 function toNonNegativeNumber(value: unknown): number {

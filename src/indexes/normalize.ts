@@ -2,7 +2,7 @@ import { formatIndexKey } from './format'
 import { indexBuildKey, type IndexBuildProgressByKey } from './parse-index-builds'
 import type { IndexOptionFlag, IndexRow } from './types'
 
-export const SYSTEM_DATABASE_NAMES = new Set(['admin', 'local', 'config'])
+const SYSTEM_DATABASE_NAMES = new Set(['admin', 'local', 'config'])
 
 export function filterPickerDatabases(names: string[]): string[] {
   return names.filter(function keepUserDatabase(name) {
@@ -14,7 +14,7 @@ export function parseListDatabasesResult(raw: unknown): string[] {
   if (raw == null || typeof raw !== 'object') {
     return []
   }
-  const databases = (raw as { databases?: unknown }).databases
+  const databases = (raw as Record<string, unknown>).databases
   if (!Array.isArray(databases)) {
     return []
   }
@@ -23,7 +23,7 @@ export function parseListDatabasesResult(raw: unknown): string[] {
     if (entry == null || typeof entry !== 'object') {
       continue
     }
-    const name = (entry as { name?: unknown }).name
+    const name = (entry as Record<string, unknown>).name
     if (typeof name === 'string' && name.trim() !== '') {
       names.push(name)
     }
@@ -43,7 +43,7 @@ export function parseListCollectionsResult(raw: unknown): string[] {
     if (entry == null || typeof entry !== 'object') {
       continue
     }
-    const name = (entry as { name?: unknown }).name
+    const name = (entry as Record<string, unknown>).name
     if (typeof name !== 'string' || name.trim() === '') {
       continue
     }
@@ -59,11 +59,11 @@ function extractCursorBatch(raw: unknown): unknown[] | null {
   if (raw == null || typeof raw !== 'object') {
     return null
   }
-  const cursor = (raw as { cursor?: unknown }).cursor
+  const cursor = (raw as Record<string, unknown>).cursor
   if (cursor == null || typeof cursor !== 'object') {
     return null
   }
-  const firstBatch = (cursor as { firstBatch?: unknown }).firstBatch
+  const firstBatch = (cursor as Record<string, unknown>).firstBatch
   return Array.isArray(firstBatch) ? firstBatch : null
 }
 

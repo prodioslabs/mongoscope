@@ -1,3 +1,8 @@
+import { formatBytes } from '../lib/format-bytes'
+import { horizontalBarString } from '../lib/horizontal-bar-string'
+
+export { formatBytes, horizontalBarString }
+
 export function formatLagSeconds(lagSeconds: number | null): string {
   if (lagSeconds == null || !Number.isFinite(lagSeconds) || lagSeconds < 0) {
     return '—'
@@ -19,24 +24,6 @@ export function formatLagSeconds(lagSeconds: number | null): string {
   return `${minutes}m ${seconds}s`
 }
 
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) {
-    return '—'
-  }
-  if (bytes < 1024) {
-    return `${Math.round(bytes)} B`
-  }
-  const units = ['KiB', 'MiB', 'GiB', 'TiB'] as const
-  let value = bytes / 1024
-  let unitIndex = 0
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024
-    unitIndex += 1
-  }
-  const digits = value >= 10 ? 0 : 1
-  return `${value.toFixed(digits)} ${units[unitIndex]}`
-}
-
 export function formatWindowHours(hours: number | null): string {
   if (hours == null || !Number.isFinite(hours) || hours < 0) {
     return '—'
@@ -52,7 +39,7 @@ export function formatGrowthRate(bytesPerHour: number | null): string {
 }
 
 /**
- * Prefer hostname without port for DNS-like hosts; keep port for bare IPs.
+ * Hostname label: drop port for DNS hosts; keep `host:port` for bare IPs.
  */
 export function formatMemberLabel(hostPort: string): string {
   const trimmed = hostPort.trim()
@@ -81,7 +68,7 @@ export function formatPriorityVotes(priority: number | null, votes: number | nul
   return `${p} / ${v}`
 }
 
-/** Mockup-style member meta: `priority 2 • votes 1`. */
+/** Member meta line, e.g. `priority 2 • votes 1`. */
 export function formatMemberMeta(priority: number | null, votes: number | null): string {
   const p = priority == null ? '—' : String(priority)
   const v = votes == null ? '—' : String(votes)
@@ -111,23 +98,6 @@ export function formatHeartbeatEdge(fromName: string, toName: string): string {
 
 const FULL_BLOCK = '█'
 const TRACK_EMPTY = ' '
-const PARTIAL_BLOCKS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'] as const
-
-/** Fixed-width horizontal fill bar (0–100%). */
-export function horizontalBarString(percent: number, trackWidth: number): string {
-  const safeWidth = Math.max(0, Math.floor(trackWidth))
-  if (safeWidth === 0) {
-    return ''
-  }
-  const clampedPercent = Math.max(0, Math.min(100, percent))
-  const filled = (clampedPercent / 100) * safeWidth
-  const fullBlocks = Math.floor(filled)
-  const remainder = filled - fullBlocks
-  const partialIndex = Math.round(remainder * 8)
-  const partialChar = PARTIAL_BLOCKS[Math.min(8, Math.max(0, partialIndex))] ?? ''
-  const emptyCount = safeWidth - fullBlocks - (partialChar === '' ? 0 : 1)
-  return FULL_BLOCK.repeat(fullBlocks) + partialChar + TRACK_EMPTY.repeat(Math.max(0, emptyCount))
-}
 
 /**
  * Multi-row vertical bar chart. Each column is one value; returns `height` lines

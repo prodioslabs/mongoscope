@@ -1,12 +1,14 @@
+import { asDriverErrorLike } from './driver-error'
+
 /**
- * Detect unauthorized / privilege failures from driver errors.
+ * Detect unauthorized / privilege failures from MongoDB driver errors.
  * Never includes connection strings — callers should already avoid logging raw errors.
  */
 export function isUnauthorizedError(error: unknown): boolean {
-  if (error == null || typeof error !== 'object') {
+  const record = asDriverErrorLike(error)
+  if (record == null) {
     return false
   }
-  const record = error as { code?: unknown; codeName?: unknown; message?: unknown }
   if (record.code === 13 || record.codeName === 'Unauthorized') {
     return true
   }
@@ -14,6 +16,7 @@ export function isUnauthorizedError(error: unknown): boolean {
   return (
     message.includes('not authorized') ||
     message.includes('unauthorized') ||
-    message.includes('requires authentication')
+    message.includes('requires authentication') ||
+    message.includes('command top requires authentication')
   )
 }

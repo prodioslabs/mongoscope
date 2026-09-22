@@ -1,20 +1,14 @@
 export type GetLogDiffResult = {
-  /** Lines from `current` that are new since `previous` (oldest → newest). */
+  /** Lines in `current` that are new since `previous` (oldest → newest). */
   newLines: string[]
-  /**
-   * True when no suffix/prefix overlap was found — the server RAM ring likely
-   * rotated past everything we had seen (or the buffer was empty before).
-   */
+  /** No overlap found — server RAM ring likely rotated past our previous window. */
   wrapped: boolean
 }
 
 /**
- * Detect lines that appeared since the last getLog poll.
- *
- * getLog returns the current RAM window (oldest → newest, ≤ ~1024). We find the
- * longest overlap of `previous` suffix with `current` prefix; anything after
- * that overlap is new. No overlap ⇒ treat the whole current window as new and
- * mark `wrapped` (caller may increment a wrap counter for honest UI).
+ * Diff two getLog windows (oldest → newest, ≤ ~1024). Finds the longest
+ * previous-suffix / current-prefix overlap; lines after it are new.
+ * No overlap ⇒ whole `current` is new and `wrapped` is true.
  */
 export function diffGetLogLines(previous: string[], current: string[]): GetLogDiffResult {
   if (current.length === 0) {

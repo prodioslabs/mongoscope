@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import {
   createGetLogPoller,
   createLogTailer,
-  filterTailLines,
   parseCustomFilterExpression,
   DEFAULT_ENABLED_CATEGORIES,
   LOG_TAIL_UI_COALESCE_MS,
@@ -310,16 +309,3 @@ export const useLogTailStore = create<LogTailState>((set, get) => ({
     set({ filterEditing: editing })
   },
 }))
-
-export function selectFilteredLogLines(state: {
-  lines: TailLogLine[]
-  enabledCategories: ReadonlySet<string>
-  customFilter: CustomFilterExpression | null
-  search: string
-}): TailLogLine[] {
-  return filterTailLines(state.lines, {
-    enabledCategories: state.enabledCategories,
-    customFilter: state.customFilter,
-    search: state.search,
-  })
-}

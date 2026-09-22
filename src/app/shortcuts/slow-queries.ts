@@ -90,9 +90,6 @@ export const SLOW_QUERIES_LIVE_FOOTER: FooterChip[] = [
   { keys: 'l', label: 'source' },
 ]
 
-/** @deprecated use SLOW_QUERIES_STATIC_FOOTER / SLOW_QUERIES_LIVE_FOOTER */
-export const SLOW_QUERIES_FOOTER: FooterChip[] = SLOW_QUERIES_STATIC_FOOTER
-
 export const SLOW_QUERIES_ENABLE_CONFIRM_FOOTER: FooterChip[] = [
   { keys: 'enter', label: 'confirm' },
   { keys: 'esc', label: 'cancel' },

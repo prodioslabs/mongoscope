@@ -1,4 +1,4 @@
-import type { CollectionLike, MongoClientLike } from '../live-connection'
+import type { CollectionLike, MongoDbClient } from '../live-connection'
 import {
   filterPickerDatabases,
   normalizeIndexSpecs,
@@ -11,7 +11,7 @@ import { panelErrorFromUnknown } from './panel-error'
 import { parseIndexBuildOps, type IndexBuildProgressByKey } from './parse-index-builds'
 import type { CollectionIndexes, IndexesSnapshot } from './types'
 
-export type IndexesClient = Pick<MongoClientLike, 'db'>
+export type IndexesClient = MongoDbClient
 
 export type FetchIndexesSnapshotResult = {
   snapshot: IndexesSnapshot
@@ -193,7 +193,7 @@ async function mapWithConcurrency<T, R>(
   if (items.length === 0) {
     return []
   }
-  const results = Array.from({ length: items.length }) as R[]
+  const results: R[] = new Array<R>(items.length)
   let nextIndex = 0
 
   async function worker() {

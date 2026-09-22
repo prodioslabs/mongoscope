@@ -83,7 +83,7 @@ function errorMessage(error: unknown): string {
     return error.message
   }
   if (error != null && typeof error === 'object' && 'message' in error) {
-    const maybe = (error as { message: unknown }).message
+    const maybe = (error as { message?: string }).message
     if (typeof maybe === 'string') {
       return maybe
     }

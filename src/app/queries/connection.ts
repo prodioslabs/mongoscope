@@ -5,7 +5,7 @@ import {
   type UpdateConnectionInput,
 } from '../../connections'
 
-export const connectionKeys = {
+const connectionKeys = {
   all: ['connections'] as const,
   list: () => [...connectionKeys.all, 'list'] as const,
 }

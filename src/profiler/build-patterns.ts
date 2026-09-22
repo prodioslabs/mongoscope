@@ -3,8 +3,8 @@ import type { ProfileSample } from './types'
 
 export type BuildPatternsResult = {
   patterns: QueryPattern[]
-  /** Raw profile docs aligned with pattern.sampleRow indices. */
-  samples: unknown[]
+  /** Docs aligned with `pattern.sampleRow` (slowest sample per pattern). */
+  samples: Record<string, unknown>[]
   windowStartMs: number
   windowEndMs: number
   slowQueryCount: number
@@ -24,10 +24,7 @@ type MutablePattern = {
   trend: Uint16Array
 }
 
-/**
- * Aggregate profile samples into QueryPatterns.
- * `pattern.sampleRow` stores the index into the returned `samples` array (slowest sample).
- */
+/** Aggregate profile samples into QueryPatterns (`sampleRow` → `samples` index). */
 export function buildPatternsFromSamples(samples: ProfileSample[]): BuildPatternsResult {
   const usable: ProfileSample[] = []
   let windowStartMs = Number.POSITIVE_INFINITY
@@ -65,7 +62,7 @@ export function buildPatternsFromSamples(samples: ProfileSample[]): BuildPattern
 
   const span = Math.max(1, windowEndMs - windowStartMs)
   const patterns = new Map<string, MutablePattern>()
-  const rawSamples: unknown[] = []
+  const rawSamples: Record<string, unknown>[] = []
 
   for (const sample of usable) {
     const extracted = extractSlowQueryAttr(sample.attr)

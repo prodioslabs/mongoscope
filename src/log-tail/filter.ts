@@ -4,8 +4,6 @@ import {
   type CustomFilterField,
   type CustomFilterOperator,
   type CustomFilterParseResult,
-  type LogCategoryComponent,
-  LOG_CATEGORY_COMPONENTS,
 } from './types'
 
 const FIELD_SET = new Set<string>([
@@ -149,7 +147,7 @@ function match(
   }
 }
 
-export function lineMatchesCategories(
+function lineMatchesCategories(
   line: TailLogLine,
   enabled: ReadonlySet<string>,
 ): boolean {
@@ -197,8 +195,4 @@ export function filterTailLines(
     out.push(line)
   }
   return out
-}
-
-export function isLogCategoryComponent(value: string): value is LogCategoryComponent {
-  return (LOG_CATEGORY_COMPONENTS as readonly string[]).includes(value)
 }

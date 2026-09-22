@@ -1,3 +1,4 @@
+import { Timestamp } from 'mongodb'
 import type { OplogWindow } from './types'
 
 export type OplogStatsInput = {
@@ -16,6 +17,10 @@ export type OplogEdgeDoc = {
 export function oplogTimestampSeconds(ts: unknown): number | null {
   if (ts == null || typeof ts !== 'object') {
     return null
+  }
+
+  if (ts instanceof Timestamp) {
+    return finiteNumber(ts.getHighBits())
   }
 
   if ('getHighBits' in ts && typeof (ts as { getHighBits: unknown }).getHighBits === 'function') {

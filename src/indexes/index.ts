@@ -20,7 +20,6 @@ export {
   parseIndexStatsDocs,
   parseListCollectionsResult,
   parseListDatabasesResult,
-  SYSTEM_DATABASE_NAMES,
 } from './normalize'
 export { panelErrorFromUnknown } from './panel-error'
 export {
@@ -30,7 +29,7 @@ export {
   type IndexBuildProgressByKey,
 } from './parse-index-builds'
 export { findIndexMatchingSuggestion } from './match-suggestion'
-export { isUnauthorizedError } from './permissions'
+export { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
 export type {
   CollectionIndexes,
   IndexOptionFlag,

@@ -1,9 +1,7 @@
-export type LiveOpsPanelErrorKind = 'permission' | 'unavailable' | 'unknown'
+import type { PanelError, PanelErrorKind } from '../lib/panel-error'
 
-export type LiveOpsPanelError = {
-  kind: LiveOpsPanelErrorKind
-  message: string
-}
+export type LiveOpsPanelErrorKind = PanelErrorKind
+export type LiveOpsPanelError = PanelError
 
 export type CurrentOpRow = {
   opid: string
