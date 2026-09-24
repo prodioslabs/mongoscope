@@ -3,7 +3,7 @@ import { type FooterChip, type Shortcut, toFooter } from './types'
 export const LIVE_OPS_SHORTCUTS: readonly Shortcut[] = [
   {
     keys: '↑/↓ / j/k',
-    helpLabel: 'Navigate rows',
+    helpLabel: 'Navigate currentOp rows (COLLSCAN plans highlighted)',
     footerLabel: 'navigate',
     footerKeys: '↑↓/jk',
     bindings: [
@@ -15,15 +15,20 @@ export const LIVE_OPS_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'x',
-    helpLabel: 'Kill selected operation (confirm)',
+    helpLabel: 'Kill selected operation (confirm dialog)',
     footerLabel: 'kill',
     bindings: [{ key: 'x', cmd: 'live-ops.kill-open' }],
   },
   {
     keys: 'e',
-    helpLabel: 'Jump to explain on Slow Queries tab',
+    helpLabel: 'Jump to matching Slow Queries detail / explain when a pattern matches',
     footerLabel: 'explain',
     bindings: [{ key: 'e', cmd: 'live-ops.jump-explain' }],
+  },
+  {
+    keys: '1s',
+    helpLabel: 'currentOp + collection top + sidebar auto-refresh while this tab is open',
+    bindings: [],
   },
 ]
 

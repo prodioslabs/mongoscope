@@ -26,12 +26,12 @@ export const GLOBAL_BASE_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'm',
-    helpLabel: 'Toggle light/dark mode',
+    helpLabel: 'Toggle light/dark mode (session only; not saved to config)',
     bindings: [{ key: 'm', cmd: 'app.toggle-mode' }],
   },
   {
     keys: 't',
-    helpLabel: 'Cycle theme',
+    helpLabel: 'Cycle theme (persisted to ~/.config/mongoscope/config.json)',
     bindings: [{ key: 't', cmd: 'app.cycle-theme' }],
   },
 ]
