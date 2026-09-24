@@ -20,7 +20,7 @@ export function ThemeProvider({ mode, theme: themeName, children }: ThemeProvide
     function syncThemeFromProps() {
       // Hydrate (no persist) so boot props don't clobber config.json before/without user action.
       if (typeof themeName === 'string' && hasTheme(themeName)) {
-        hydrate(themeName)
+        hydrate({ theme: themeName })
       }
     },
     [themeName, hydrate],
@@ -28,9 +28,12 @@ export function ThemeProvider({ mode, theme: themeName, children }: ThemeProvide
 
   useEffect(
     function syncModeFromProps() {
-      if (mode === 'dark' || mode === 'light') setMode(mode)
+      // Hydrate (no persist) — matches theme prop sync; user toggles go through setMode.
+      if (mode === 'dark' || mode === 'light') {
+        hydrate({ mode })
+      }
     },
-    [mode, setMode],
+    [mode, hydrate],
   )
 
   useEffect(

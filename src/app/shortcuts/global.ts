@@ -26,7 +26,7 @@ export const GLOBAL_BASE_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'm',
-    helpLabel: 'Toggle light/dark mode (session only; not saved to config)',
+    helpLabel: 'Toggle light/dark mode (persisted to config.json)',
     bindings: [{ key: 'm', cmd: 'app.toggle-mode' }],
   },
   {

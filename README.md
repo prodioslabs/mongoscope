@@ -90,9 +90,9 @@ Requires a selected live connection. Auto-refresh ~5s.
 ### Themes
 
 - Built-ins (e.g. gruvbox default, catppuccin, nord, tokyonight, …) plus optional user themes.
-- Selected theme name persisted in `~/.config/mongoscope/config.json` (or `$XDG_CONFIG_HOME/mongoscope/config.json`).
+- Theme name + light/dark mode persisted in `~/.config/mongoscope/config.json` (or `$XDG_CONFIG_HOME/mongoscope/config.json`).
 - Drop `*.json` theme files in `~/.config/mongoscope/themes/` (basename = theme name; user overrides built-in of the same name).
-- `t` cycles themes · `m` toggles light/dark (mode is session-only; not written to config) · Ctrl+K → Switch theme.
+- `t` cycles themes · `m` toggles light/dark · Ctrl+K → Switch theme.
 
 ## CLI flags
 

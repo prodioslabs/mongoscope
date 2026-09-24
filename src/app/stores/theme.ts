@@ -1,10 +1,15 @@
 import { create } from 'zustand'
-import { saveAppConfigTheme } from '../config/app-config'
-import { DEFAULT_THEME_NAME } from '../config/types'
+import { saveAppConfig } from '../config/app-config'
+import { DEFAULT_THEME_NAME, type ThemeMode } from '../config/types'
 import { allThemes, hasTheme, resolveTheme } from '../theme'
 import { getThemeCatalog, resolveConfiguredThemeName } from '../theme/catalog'
 
-export type ThemeMode = 'dark' | 'light'
+export type { ThemeMode }
+
+type ThemeHydrateInput = {
+  theme?: string
+  mode?: ThemeMode
+}
 
 type ThemeState = {
   theme: ReturnType<typeof resolveTheme>
@@ -15,7 +20,7 @@ type ThemeState = {
   setMode: (mode: ThemeMode) => void
   set: (theme: string) => boolean
   /** Apply a bootstrapped selection without writing config. */
-  hydrate: (themeName: string) => void
+  hydrate: (partial: ThemeHydrateInput) => void
 }
 
 const THEME_PERSIST_DEBOUNCE_MS = 200
@@ -35,19 +40,20 @@ function resolveActiveTheme(selected: string, mode: ThemeMode) {
   return resolveTheme(active, mode)
 }
 
-function schedulePersistThemeSelection(themeName: string): void {
+function schedulePersistThemeConfig(): void {
   if (!themePersistenceEnabled) {
     return
   }
   if (persistTimer !== undefined) {
     clearTimeout(persistTimer)
   }
-  persistTimer = setTimeout(function persistThemeSelection() {
+  persistTimer = setTimeout(function persistThemeConfig() {
     persistTimer = undefined
-    void saveAppConfigTheme(themeName).catch(function warnThemePersistFailure(error) {
+    const { selected, mode } = useTheme.getState()
+    void saveAppConfig({ theme: selected, mode }).catch(function warnThemePersistFailure(error) {
       const message = error instanceof Error ? error.message : String(error)
       // oxlint-disable-next-line no-console -- OpenTUI console overlay; persist failure
-      console.warn(`Failed to persist theme selection: ${message}`)
+      console.warn(`Failed to persist theme config: ${message}`)
     })
   }, THEME_PERSIST_DEBOUNCE_MS)
 }
@@ -61,6 +67,7 @@ export const useTheme = create<ThemeState>((set, get) => ({
   setMode(mode) {
     const { selected } = get()
     set({ mode, theme: resolveActiveTheme(selected, mode) })
+    schedulePersistThemeConfig()
   },
   set(name) {
     if (!hasTheme(name)) {
@@ -68,12 +75,20 @@ export const useTheme = create<ThemeState>((set, get) => ({
     }
     const { mode } = get()
     set({ selected: name, theme: resolveActiveTheme(name, mode) })
-    schedulePersistThemeSelection(name)
+    schedulePersistThemeConfig()
     return true
   },
-  hydrate(themeName) {
-    const resolvedName = resolveConfiguredThemeName(getThemeCatalog(), themeName)
-    const { mode } = get()
-    set({ selected: resolvedName, theme: resolveActiveTheme(resolvedName, mode) })
+  hydrate(partial) {
+    const current = get()
+    const nextSelected =
+      partial.theme != null
+        ? resolveConfiguredThemeName(getThemeCatalog(), partial.theme)
+        : current.selected
+    const nextMode = partial.mode ?? current.mode
+    set({
+      selected: nextSelected,
+      mode: nextMode,
+      theme: resolveActiveTheme(nextSelected, nextMode),
+    })
   },
 }))
