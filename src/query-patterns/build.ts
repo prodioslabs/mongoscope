@@ -1,4 +1,5 @@
 import { open } from 'node:fs/promises'
+import { isRecord } from '../lib/is-record'
 import type { LogStore } from '../parser'
 import { extractSlowQueryAttr } from './attr'
 import { SLOW_QUERY_ID, TREND_BUCKETS, type QueryPattern, type QueryPatternStore } from './types'
@@ -205,9 +206,10 @@ async function readAttrAt(
 
   try {
     const parsed: unknown = JSON.parse(text)
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null
-    if (!('attr' in parsed)) return null
-    return (parsed as { attr?: unknown }).attr ?? null
+    if (!isRecord(parsed) || !('attr' in parsed)) {
+      return null
+    }
+    return parsed.attr ?? null
   } catch {
     return null
   }

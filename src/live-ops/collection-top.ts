@@ -1,3 +1,4 @@
+import { isRecord } from '../lib/is-record'
 import type { CollectionTopRow, TopSample } from './types'
 
 const MICROSECONDS_PER_MILLISECOND = 1000
@@ -25,21 +26,20 @@ export function formatTopTimeLabel(totalMs: number): string {
 
 export function parseTopCommandResult(result: unknown): TopSample {
   const byNamespace: TopSample['byNamespace'] = {}
-  if (result == null || typeof result !== 'object') {
+  if (!isRecord(result)) {
     return { byNamespace }
   }
-  const totals = (result as Record<string, unknown>).totals
-  if (totals == null || typeof totals !== 'object') {
+  const totals = result.totals
+  if (!isRecord(totals)) {
     return { byNamespace }
   }
 
-  for (const [namespace, entry] of Object.entries(totals as Record<string, unknown>)) {
-    if (namespace === 'note' || entry == null || typeof entry !== 'object') {
+  for (const [namespace, entry] of Object.entries(totals)) {
+    if (namespace === 'note' || !isRecord(entry)) {
       continue
     }
-    const record = entry as Record<string, unknown>
-    const readLock = asOptionalRecord(record.readLock)
-    const writeLock = asOptionalRecord(record.writeLock)
+    const readLock = asOptionalRecord(entry.readLock)
+    const writeLock = asOptionalRecord(entry.writeLock)
     const readLockMicros = toNonNegativeNumber(readLock?.time)
     const writeLockMicros = toNonNegativeNumber(writeLock?.time)
     byNamespace[namespace] = { readLockMicros, writeLockMicros }
@@ -101,10 +101,7 @@ export function buildCollectionTopRows(
 }
 
 function asOptionalRecord(value: unknown): Record<string, unknown> | null {
-  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
-    return null
-  }
-  return value as Record<string, unknown>
+  return isRecord(value) ? value : null
 }
 
 function toNonNegativeNumber(value: unknown): number {
@@ -114,8 +111,8 @@ function toNonNegativeNumber(value: unknown): number {
   if (typeof value === 'bigint') {
     return Math.max(0, Number(value))
   }
-  if (value != null && typeof value === 'object' && 'toNumber' in value) {
-    const maybe = (value as { toNumber: () => number }).toNumber()
+  if (isRecord(value) && typeof value.toNumber === 'function') {
+    const maybe = value.toNumber()
     if (typeof maybe === 'number' && Number.isFinite(maybe)) {
       return Math.max(0, maybe)
     }

@@ -1,18 +1,10 @@
+import { isRecord } from '../lib/is-record'
 import type { RecentReplicationEvent } from './types'
 
 const REPLICATION_COMPONENTS = new Set(['REPL', 'ELECTION', 'REPL_HB', 'INITSYNC', 'ROLLBACK'])
 
 /** Max events kept for the Recent panel (RAM ring is already ≤1024 total). */
 export const RECENT_EVENTS_LIMIT = 12
-
-type StructuredLogLine = {
-  t?: unknown
-  s?: unknown
-  c?: unknown
-  msg?: unknown
-  attr?: unknown
-  ctx?: unknown
-}
 
 /**
  * Parse getLog:'global' output into recent replication-related events.
@@ -40,10 +32,10 @@ export function normalizeRecentReplicationEvents(
 }
 
 function extractLogLines(getLogRaw: unknown): string[] {
-  if (getLogRaw == null || typeof getLogRaw !== 'object') {
+  if (!isRecord(getLogRaw)) {
     return []
   }
-  const log = (getLogRaw as Record<string, unknown>).log
+  const log = getLogRaw.log
   if (!Array.isArray(log)) {
     return []
   }
@@ -57,12 +49,16 @@ function extractLogLines(getLogRaw: unknown): string[] {
 }
 
 function parseLogLine(line: string): RecentReplicationEvent | null {
-  let doc: StructuredLogLine
+  let parsed: unknown
   try {
-    doc = JSON.parse(line) as StructuredLogLine
+    parsed = JSON.parse(line)
   } catch {
     return null
   }
+  if (!isRecord(parsed)) {
+    return null
+  }
+  const doc = parsed
 
   const component = typeof doc.c === 'string' ? doc.c.toUpperCase() : ''
   if (!REPLICATION_COMPONENTS.has(component)) {
@@ -83,14 +79,14 @@ function parseLogLine(line: string): RecentReplicationEvent | null {
   }
 }
 
-function buildMessage(doc: StructuredLogLine): string {
+function buildMessage(doc: Record<string, unknown>): string {
   const msg = typeof doc.msg === 'string' ? doc.msg.trim() : ''
   if (msg !== '') {
     return msg
   }
   // Fallback for older lines that bury text in attr.
-  if (doc.attr != null && typeof doc.attr === 'object') {
-    const attrMsg = (doc.attr as { msg?: unknown }).msg
+  if (isRecord(doc.attr)) {
+    const attrMsg = doc.attr.msg
     if (typeof attrMsg === 'string' && attrMsg.trim() !== '') {
       return attrMsg.trim()
     }
@@ -106,8 +102,8 @@ function parseLogTimestampMs(t: unknown): number | null {
     const ms = Date.parse(t)
     return Number.isFinite(ms) ? ms : null
   }
-  if (typeof t === 'object' && '$date' in t) {
-    const raw = (t as { $date: unknown }).$date
+  if (isRecord(t) && '$date' in t) {
+    const raw = t.$date
     if (typeof raw === 'string' || typeof raw === 'number') {
       const ms = new Date(raw).getTime()
       return Number.isFinite(ms) ? ms : null

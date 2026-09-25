@@ -1,3 +1,5 @@
+import { isRecord } from '../lib/is-record'
+
 /**
  * Optional structured fields from a MongoDB log `attr` object.
  * Unlike extractSlowQueryAttr, missing `ns` is allowed.
@@ -9,10 +11,10 @@ export type LogLineAttrFields = {
 }
 
 export function extractLogLineAttrFields(attr: unknown): LogLineAttrFields {
-  if (attr === null || typeof attr !== 'object' || Array.isArray(attr)) {
+  if (!isRecord(attr)) {
     return { namespace: null, durationMillis: null, planSummary: null }
   }
-  const record = attr as Record<string, unknown>
+  const record = attr
 
   const namespace = typeof record.ns === 'string' && record.ns.length > 0 ? record.ns : null
 

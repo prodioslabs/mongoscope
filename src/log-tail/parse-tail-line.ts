@@ -4,6 +4,7 @@ import {
   severityLabel,
   SEVERITY_RAW,
 } from '../parser'
+import { isRecord } from '../lib/is-record'
 import { extractLogLineAttrFields } from './attr-fields'
 import type { TailLogLine } from './types'
 
@@ -39,8 +40,8 @@ export function parseTailLogLineFromText(text: string): TailLogLine {
 
   try {
     const parsed: unknown = JSON.parse(text)
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const obj = parsed as Record<string, unknown>
+    if (isRecord(parsed)) {
+      const obj = parsed
       if (typeof obj.s === 'string' && typeof obj.c === 'string' && typeof obj.msg === 'string') {
         const attr = extractLogLineAttrFields(obj.attr)
         const severity = encodeSeverity(obj.s)
@@ -69,8 +70,8 @@ export function parseTailLogLineFromText(text: string): TailLogLine {
 function tryExtractAttr(text: string): ReturnType<typeof extractLogLineAttrFields> {
   try {
     const parsed: unknown = JSON.parse(text)
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) && 'attr' in parsed) {
-      return extractLogLineAttrFields((parsed as { attr?: unknown }).attr)
+    if (isRecord(parsed) && 'attr' in parsed) {
+      return extractLogLineAttrFields(parsed.attr)
     }
   } catch {
     // ignore
@@ -102,8 +103,8 @@ function parseTimestampLoose(t: unknown): number {
     const ms = Date.parse(t)
     return Number.isNaN(ms) ? Number.NaN : ms
   }
-  if (typeof t === 'object' && t !== null && '$date' in t) {
-    const raw = (t as { $date: unknown }).$date
+  if (isRecord(t) && '$date' in t) {
+    const raw = t.$date
     if (typeof raw === 'string' || typeof raw === 'number') {
       const ms = new Date(raw).getTime()
       return Number.isFinite(ms) ? ms : Number.NaN

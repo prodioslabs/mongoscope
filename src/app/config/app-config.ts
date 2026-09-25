@@ -1,4 +1,5 @@
 import { appConfigFilePath } from '../../lib/config-paths'
+import { isRecord } from '../../lib/is-record'
 import { loadJsonConfigFile, saveJsonConfigFile } from '../../lib/json-config-file'
 import {
   DEFAULT_APP_CONFIG,
@@ -8,11 +9,11 @@ import {
 } from './types'
 
 export function validateAppConfig(value: unknown): AppConfig {
-  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new Error('Invalid app config: expected an object')
   }
 
-  const record = value as Record<string, unknown>
+  const record = value
 
   if (record.version !== 1) {
     throw new Error('Invalid app config: unsupported version (expected 1)')
@@ -40,7 +41,7 @@ export function validateAppConfig(value: unknown): AppConfig {
 
 /**
  * Load ~/.config/mongoscope/config.json.
- * Missing file → {@link DEFAULT_APP_CONFIG}. Corrupt / unsupported → throws (boot catches).
+ * Missing file → {@link DEFAULT_APP_CONFIG}. Corrupt / unsupported → throws.
  */
 export async function loadAppConfig(filePath: string = appConfigFilePath()): Promise<AppConfig> {
   return loadJsonConfigFile(filePath, DEFAULT_APP_CONFIG, validateAppConfig)

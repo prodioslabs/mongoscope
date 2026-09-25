@@ -24,7 +24,7 @@ export type RawReplSetStatus = {
   members?: RawStatusMember[] | unknown
 }
 
-export type RawConfigMember = {
+type RawConfigMember = {
   _id?: unknown
   host?: unknown
   priority?: unknown

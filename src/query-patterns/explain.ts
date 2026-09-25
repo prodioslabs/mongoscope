@@ -1,16 +1,15 @@
 import { readEntryDetail, type LogStore } from '../parser'
-import { extractSlowQueryAttr, formatJson, normalizePlanSummary } from './attr'
+import { extractSlowQueryAttr } from './attr'
+import {
+  asRecord,
+  cleanCommandDisplay,
+  extractWorkMetrics,
+  prettyJson,
+  stageDetailFor,
+  stringOrNull,
+} from './explain-shared'
 import { suggestIndex } from './suggest-index'
 import type { PatternExplain, QueryPatternStore } from './types'
-
-const COMMAND_STRIP_KEYS = new Set([
-  'lsid',
-  '$clusterTime',
-  '$configTime',
-  '$topologyTime',
-  '$client',
-  '$db',
-])
 
 export async function getPatternExplain(
   logStore: LogStore,
@@ -77,24 +76,6 @@ export async function getPatternExplain(
   }
 }
 
-function stageDetailFor(plan: string, attr?: unknown): string {
-  if (plan === 'COLLSCAN') {
-    return 'executionStages.stage: COLLSCAN (no index used)'
-  }
-  if (plan === 'IXSCAN+SORT') {
-    return 'executionStages.stage: IXSCAN + SORT'
-  }
-  if (plan === 'IXSCAN') {
-    const raw = asRecord(attr)?.planSummary
-    const summary = typeof raw === 'string' ? raw : 'IXSCAN'
-    return `executionStages.stage: ${summary}`
-  }
-  if (plan === 'n/a') {
-    return 'executionStages.stage: n/a'
-  }
-  return `executionStages.stage: ${normalizePlanSummary(plan)}`
-}
-
 function extractContext(
   attr: Record<string, unknown> | null,
   ctx: string,
@@ -106,62 +87,5 @@ function extractContext(
     appName: stringOrNull(attr?.appName),
     remote: stringOrNull(attr?.remote),
     protocol: stringOrNull(attr?.protocol),
-  }
-}
-
-function extractWorkMetrics(
-  attr: Record<string, unknown> | null,
-): Pick<
-  PatternExplain,
-  | 'keysExamined'
-  | 'numYields'
-  | 'reslen'
-  | 'cpuNanos'
-  | 'workingMillis'
-  | 'waitForWriteConcernDurationMillis'
-> {
-  return {
-    keysExamined: numberOrNull(attr?.keysExamined),
-    numYields: numberOrNull(attr?.numYields),
-    reslen: numberOrNull(attr?.reslen),
-    cpuNanos: numberOrNull(attr?.cpuNanos),
-    workingMillis: numberOrNull(attr?.workingMillis),
-    waitForWriteConcernDurationMillis: numberOrNull(attr?.waitForWriteConcernDurationMillis),
-  }
-}
-
-function cleanCommandDisplay(command: unknown): string {
-  if (command === undefined) return 'n/a'
-  if (command === null || typeof command !== 'object' || Array.isArray(command)) {
-    return prettyJson(command) ?? formatJson(command) ?? 'n/a'
-  }
-
-  const cleaned: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(command as Record<string, unknown>)) {
-    if (COMMAND_STRIP_KEYS.has(key)) continue
-    cleaned[key] = value
-  }
-  return prettyJson(cleaned) ?? 'n/a'
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null
-  return value as Record<string, unknown>
-}
-
-function stringOrNull(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null
-}
-
-function numberOrNull(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null
-}
-
-function prettyJson(value: unknown): string | null {
-  if (value === undefined) return null
-  try {
-    return JSON.stringify(value, null, 2)
-  } catch {
-    return null
   }
 }

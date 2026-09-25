@@ -1,4 +1,5 @@
 import { normalizePlanSummary } from '../lib/plan-summary'
+import { isRecord } from '../lib/is-record'
 import { equalityFieldsOfFilter, shapeOfFilter, shapeOfPipeline } from './shape'
 import type { SlowQueryAttr } from './types'
 
@@ -9,16 +10,17 @@ export { normalizePlanSummary } from '../lib/plan-summary'
  * Returns null when required fields are missing.
  */
 export function extractSlowQueryAttr(attr: unknown): SlowQueryAttr | null {
-  if (attr === null || typeof attr !== 'object' || Array.isArray(attr)) return null
-  const a = attr as Record<string, unknown>
+  if (!isRecord(attr)) {
+    return null
+  }
+  const a = attr
 
   const namespace = typeof a.ns === 'string' ? a.ns : ''
-  if (!namespace) return null
+  if (!namespace) {
+    return null
+  }
 
-  const command =
-    a.command !== null && typeof a.command === 'object' && !Array.isArray(a.command)
-      ? (a.command as Record<string, unknown>)
-      : null
+  const command = isRecord(a.command) ? a.command : null
 
   const op = resolveOp(command, a.type)
   const { shape, filterDisplay, equalityFields } = resolveShape(op, command, a)
@@ -67,7 +69,9 @@ function resolveOp(command: Record<string, unknown> | null, type: unknown): stri
       return key
     }
   }
-  if (typeof type === 'string' && type.length > 0) return type
+  if (typeof type === 'string' && type.length > 0) {
+    return type
+  }
   return 'unknown'
 }
 
@@ -108,38 +112,52 @@ function findFilter(
   attr: Record<string, unknown>,
 ): unknown {
   if (command) {
-    if (command.filter !== undefined) return command.filter
-    if (command.query !== undefined) return command.query
-    if (command.q !== undefined) return command.q
+    if (command.filter !== undefined) {
+      return command.filter
+    }
+    if (command.query !== undefined) {
+      return command.query
+    }
+    if (command.q !== undefined) {
+      return command.q
+    }
 
     if (op === 'update' && Array.isArray(command.updates) && command.updates[0]) {
       const first = command.updates[0]
-      if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
-        const u = first as Record<string, unknown>
-        if (u.q !== undefined) return u.q
+      if (isRecord(first) && first.q !== undefined) {
+        return first.q
       }
     }
 
     if (op === 'delete' && Array.isArray(command.deletes) && command.deletes[0]) {
       const first = command.deletes[0]
-      if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
-        const d = first as Record<string, unknown>
-        if (d.q !== undefined) return d.q
+      if (isRecord(first) && first.q !== undefined) {
+        return first.q
       }
     }
   }
 
-  if (attr.filter !== undefined) return attr.filter
-  if (attr.query !== undefined) return attr.query
+  if (attr.filter !== undefined) {
+    return attr.filter
+  }
+  if (attr.query !== undefined) {
+    return attr.query
+  }
   return undefined
 }
 
 function equalityFieldsFromPipeline(pipeline: unknown): string[] {
-  if (!Array.isArray(pipeline)) return []
+  if (!Array.isArray(pipeline)) {
+    return []
+  }
   for (const stage of pipeline) {
-    if (stage === null || typeof stage !== 'object' || Array.isArray(stage)) continue
-    const match = (stage as Record<string, unknown>)['$match']
-    if (match !== undefined) return equalityFieldsOfFilter(match)
+    if (!isRecord(stage)) {
+      continue
+    }
+    const match = stage['$match']
+    if (match !== undefined) {
+      return equalityFieldsOfFilter(match)
+    }
   }
   return []
 }
@@ -150,7 +168,9 @@ function numberOrZero(value: unknown): number {
 
 /** Compact JSON for display (single-line, sorted keys not required). */
 export function formatJson(value: unknown): string | null {
-  if (value === undefined) return null
+  if (value === undefined) {
+    return null
+  }
   try {
     return JSON.stringify(value)
   } catch {
@@ -158,9 +178,10 @@ export function formatJson(value: unknown): string | null {
   }
 }
 
-/** Split `db.collection` namespace into parts. */
 export function splitNamespace(ns: string): { db: string; collection: string } {
   const dot = ns.indexOf('.')
-  if (dot <= 0) return { db: ns, collection: ns }
+  if (dot <= 0) {
+    return { db: ns, collection: ns }
+  }
   return { db: ns.slice(0, dot), collection: ns.slice(dot + 1) }
 }

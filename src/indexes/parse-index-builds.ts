@@ -1,3 +1,5 @@
+import { isRecord } from '../lib/is-record'
+
 export type IndexBuildProgress = {
   database: string
   collection: string
@@ -21,10 +23,10 @@ export function parseIndexBuildOps(docs: unknown[]): IndexBuildProgressByKey {
   const byKey: IndexBuildProgressByKey = new Map()
 
   for (const doc of docs) {
-    if (doc == null || typeof doc !== 'object') {
+    if (!isRecord(doc)) {
       continue
     }
-    const record = doc as Record<string, unknown>
+    const record = doc
     if (!isIndexBuildOp(record)) {
       continue
     }
@@ -58,10 +60,8 @@ function isIndexBuildOp(record: Record<string, unknown>): boolean {
   const msg = typeof record.msg === 'string' ? record.msg : ''
   const command = record.command
 
-  if (op === 'command' && command != null && typeof command === 'object') {
-    if ('createIndexes' in (command as Record<string, unknown>)) {
-      return true
-    }
+  if (op === 'command' && isRecord(command) && 'createIndexes' in command) {
+    return true
   }
 
   if ((op === 'none' || op === 'command') && /^Index Build/i.test(msg)) {
@@ -73,9 +73,9 @@ function isIndexBuildOp(record: Record<string, unknown>): boolean {
 
 function extractBuildPercent(record: Record<string, unknown>): number | null {
   const progress = record.progress
-  if (progress != null && typeof progress === 'object') {
-    const done = toFiniteNumber((progress as { done?: unknown }).done)
-    const total = toFiniteNumber((progress as { total?: unknown }).total)
+  if (isRecord(progress)) {
+    const done = toFiniteNumber(progress.done)
+    const total = toFiniteNumber(progress.total)
     if (done != null && total != null && total > 0) {
       return clampPercent((done / total) * 100)
     }
@@ -98,8 +98,8 @@ function extractBuildTargets(
   const parsedNs = ns != null ? splitNamespace(ns) : null
   const command = record.command
 
-  if (command != null && typeof command === 'object') {
-    const cmd = command as Record<string, unknown>
+  if (isRecord(command)) {
+    const cmd = command
     const collectionFromCommand =
       typeof cmd.createIndexes === 'string' && cmd.createIndexes.trim() !== ''
         ? cmd.createIndexes
@@ -111,10 +111,10 @@ function extractBuildTargets(
     if (database != null && collection != null && Array.isArray(cmd.indexes)) {
       const targets: Array<{ database: string; collection: string; indexName: string }> = []
       for (const indexSpec of cmd.indexes) {
-        if (indexSpec == null || typeof indexSpec !== 'object') {
+        if (!isRecord(indexSpec)) {
           continue
         }
-        const name = (indexSpec as { name?: unknown }).name
+        const name = indexSpec.name
         if (typeof name === 'string' && name.trim() !== '') {
           targets.push({ database, collection, indexName: name })
         }
@@ -170,14 +170,9 @@ function toFiniteNumber(value: unknown): number | null {
   if (typeof value === 'bigint') {
     return Number(value)
   }
-  if (
-    value != null &&
-    typeof value === 'object' &&
-    'toNumber' in value &&
-    typeof (value as { toNumber: unknown }).toNumber === 'function'
-  ) {
-    const converted = (value as { toNumber: () => number }).toNumber()
-    return Number.isFinite(converted) ? converted : null
+  if (isRecord(value) && typeof value.toNumber === 'function') {
+    const converted = value.toNumber()
+    return typeof converted === 'number' && Number.isFinite(converted) ? converted : null
   }
   return null
 }

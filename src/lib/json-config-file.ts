@@ -33,7 +33,7 @@ export async function loadJsonConfigFile<T>(
 /**
  * Atomically write JSON (tmp file in the same directory + rename).
  */
-export async function saveJsonConfigFile(filePath: string, value: unknown): Promise<void> {
+export async function saveJsonConfigFile<T>(filePath: string, value: T): Promise<void> {
   const directoryPath = dirname(filePath)
   await mkdir(directoryPath, { recursive: true })
 

@@ -1,3 +1,4 @@
+import { isRecord } from '../lib/is-record'
 import type { ConnectionProfile, ConnectionsBlob, StoredConnection } from './types'
 
 export function emptyConnectionsBlob(): ConnectionsBlob {
@@ -5,11 +6,11 @@ export function emptyConnectionsBlob(): ConnectionsBlob {
 }
 
 export function validateConnectionsBlob(value: unknown): ConnectionsBlob {
-  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new Error('Invalid connections store: expected an object')
   }
 
-  const record = value as Record<string, unknown>
+  const record = value
 
   if (record.version !== 1) {
     throw new Error('Invalid connections store: unsupported version (expected 1)')
@@ -52,11 +53,11 @@ export function toConnectionProfile(connection: StoredConnection): ConnectionPro
 }
 
 function validateStoredConnection(value: unknown, locationSuffix: string): StoredConnection {
-  if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+  if (!isRecord(value)) {
     throw new Error(`Invalid connection${locationSuffix}: expected an object`)
   }
 
-  const record = value as Record<string, unknown>
+  const record = value
   const id = requireNonEmptyString(record.id, 'id', locationSuffix)
   const name = requireNonEmptyString(record.name, 'name', locationSuffix)
   const hostLabel = requireNonEmptyString(record.hostLabel, 'hostLabel', locationSuffix)

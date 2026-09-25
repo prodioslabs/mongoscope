@@ -87,15 +87,15 @@ export type ThemeJson = {
 }
 
 export const DEFAULT_THEMES: Record<string, ThemeJson> = {
-  catppuccin: catppuccin as ThemeJson,
-  'catppuccin-frappe': catppuccinFrappe as ThemeJson,
-  'catppuccin-macchiato': catppuccinMacchiato as ThemeJson,
-  github: github as ThemeJson,
-  gruvbox: gruvbox as ThemeJson,
-  nord: nord as ThemeJson,
-  'one-dark': oneDark as ThemeJson,
-  synthwave84: synthwave84 as ThemeJson,
-  tokyonight: tokyonight as ThemeJson,
+  catppuccin: requireThemeJson(catppuccin),
+  'catppuccin-frappe': requireThemeJson(catppuccinFrappe),
+  'catppuccin-macchiato': requireThemeJson(catppuccinMacchiato),
+  github: requireThemeJson(github),
+  gruvbox: requireThemeJson(gruvbox),
+  nord: requireThemeJson(nord),
+  'one-dark': requireThemeJson(oneDark),
+  synthwave84: requireThemeJson(synthwave84),
+  tokyonight: requireThemeJson(tokyonight),
 }
 
 export function isTheme(theme: unknown): theme is ThemeJson {
@@ -104,6 +104,13 @@ export function isTheme(theme: unknown): theme is ThemeJson {
   }
   const value = Reflect.get(theme, 'theme')
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function requireThemeJson(value: unknown): ThemeJson {
+  if (!isTheme(value)) {
+    throw new Error('Invalid built-in theme asset')
+  }
+  return value
 }
 
 function ansiToRgba(code: number): RGBA {
@@ -163,11 +170,11 @@ export function resolveTheme(theme: ThemeJson, mode: 'dark' | 'light'): Theme {
       if (chain.includes(c)) {
         throw new Error(`Circular color reference: ${[...chain, c].join(' -> ')}`)
       }
-      const next = defs[c] ?? theme.theme[c as ThemeColor]
+      const next = defs[c] ?? Reflect.get(theme.theme, c)
       if (next === undefined) {
         throw new Error(`Color reference "${c}" not found in defs or theme`)
       }
-      return resolveColor(next, [...chain, c])
+      return resolveColor(next as ColorValue, [...chain, c])
     }
     if (typeof c === 'number') {
       return ansiToRgba(c)
@@ -181,7 +188,7 @@ export function resolveTheme(theme: ThemeJson, mode: 'dark' | 'light'): Theme {
         ([key]) =>
           key !== 'selectedListItemText' && key !== 'backgroundMenu' && key !== 'thinkingOpacity',
       )
-      .map(([key, value]) => [key, resolveColor(value as ColorValue)]),
+      .map(([key, value]) => [key, resolveColor(value)]),
   ) as Partial<Record<ThemeColor, RGBA>>
 
   const hasSelectedListItemText = theme.theme.selectedListItemText !== undefined

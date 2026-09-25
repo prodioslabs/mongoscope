@@ -1,4 +1,5 @@
 import { normalizePlanSummary } from '../lib/plan-summary'
+import { isRecord } from '../lib/is-record'
 import type {
   ConnectionStats,
   CurrentOpRow,
@@ -197,11 +198,11 @@ function runningMsFromDoc(doc: RawCurrentOpDoc): number {
 }
 
 function formatLocks(locks: unknown): string {
-  if (locks == null || typeof locks !== 'object') {
+  if (!isRecord(locks)) {
     return EMPTY_CELL
   }
   const parts: string[] = []
-  for (const [lockType, mode] of Object.entries(locks as Record<string, unknown>)) {
+  for (const [lockType, mode] of Object.entries(locks)) {
     if (typeof mode === 'string' && mode.trim() !== '') {
       parts.push(`${lockType}:${mode}`)
     }
