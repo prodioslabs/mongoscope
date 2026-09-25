@@ -2,9 +2,7 @@ import { Star } from 'lucide-react'
 import { Suspense, use } from 'react'
 import { cn } from '@/lib/cn'
 import { getGitHubStars } from '@/lib/github-stars'
-import { gitConfig } from '@/lib/shared'
-
-export const githubRepoUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`
+import { appName, githubRepoUrl } from '@/lib/shared'
 
 const starFormatter = new Intl.NumberFormat('en', {
   notation: 'compact',
@@ -42,8 +40,8 @@ function GitHubStarAnchor({
       rel="noreferrer noopener"
       aria-label={
         stars != null
-          ? `Star MongoScope on GitHub (${starFormatter.format(stars)} stars)`
-          : 'Star MongoScope on GitHub'
+          ? `Star ${appName} on GitHub (${starFormatter.format(stars)} stars)`
+          : `Star ${appName} on GitHub`
       }
       className={cn(
         'inline-flex items-center justify-center gap-1.5 text-sm font-medium transition-colors',

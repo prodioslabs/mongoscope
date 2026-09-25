@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { GitHubStarLink } from '@/components/github-star'
 import { TuiMockup } from '@/components/home/tui-mockup'
 import { MongoScopeMark } from '@/components/mongoscope-mark'
+import { appName, docsRoute } from '@/lib/shared'
 
 export default function HomePage() {
   return (
@@ -13,7 +14,7 @@ export default function HomePage() {
           </p>
           <h1 className="mb-4 flex items-center justify-center gap-3 text-3xl font-bold tracking-tight text-balance sm:text-4xl lg:justify-start lg:text-5xl">
             <MongoScopeMark className="size-[1em] shrink-0" />
-            MongoScope
+            {appName}
           </h1>
           <p className="mb-8 text-base text-pretty text-fd-muted-foreground sm:text-lg">
             Inspect slow queries, live operations, replication, indexes, and logs — from a real
@@ -21,13 +22,13 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-start">
             <Link
-              href="/docs"
+              href={docsRoute}
               className="rounded-full bg-fd-primary px-5 py-2.5 text-center text-sm font-medium text-fd-primary-foreground transition-opacity hover:opacity-90"
             >
               Read the docs
             </Link>
             <Link
-              href="/docs/getting-started"
+              href={`${docsRoute}/getting-started`}
               className="rounded-full border px-5 py-2.5 text-center text-sm font-medium transition-colors hover:bg-fd-accent"
             >
               Getting started

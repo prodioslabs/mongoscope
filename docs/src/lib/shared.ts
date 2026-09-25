@@ -2,8 +2,9 @@ import { createGetUrl } from 'fumadocs-core/source';
 
 export const appName = 'MongoScope'
 export const docsRoute = '/docs'
-export const docsImageRoute = '/og/docs'
+const docsImageRoute = '/og/docs'
 export const docsContentRoute = '/llms.mdx/docs'
+export const docsContentDir = 'content/docs'
 
 export const gitConfig = {
   user: 'prodioslabs',
@@ -11,18 +12,33 @@ export const gitConfig = {
   branch: 'main',
 }
 
-const getContentUrl = createGetUrl(docsContentRoute);
+export const githubRepoUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`
 
-export function getPageMarkdownUrl(page: { slugs: string[]; locale?: string }) {
-  const segments = [...page.slugs, 'content.md'];
-
-  return { segments, url: getContentUrl(segments, page.locale) };
+export function getDocsGithubBlobUrl(pagePath: string) {
+  return `${githubRepoUrl}/blob/${gitConfig.branch}/${docsContentDir}/${pagePath}`
 }
 
-const getImageUrl = createGetUrl(docsImageRoute);
-
-export function getPageImageUrl(page: { slugs: string[]; locale?: string }) {
-  const segments = [...page.slugs, 'image.png'];
-
-  return { segments, url: getImageUrl(segments, page.locale) };
+export type DocsPagePath = {
+  slugs: string[]
+  locale?: string
 }
+
+export type DocsPageAssetUrl = {
+  segments: string[]
+  url: string
+}
+
+function createPageAssetUrl(
+  baseRoute: string,
+  filename: string,
+): (page: DocsPagePath) => DocsPageAssetUrl {
+  const getUrl = createGetUrl(baseRoute)
+
+  return (page: DocsPagePath): DocsPageAssetUrl => {
+    const segments = [...page.slugs, filename]
+    return { segments, url: getUrl(segments, page.locale) }
+  }
+}
+
+export const getPageMarkdownUrl = createPageAssetUrl(docsContentRoute, 'content.md')
+export const getPageImageUrl = createPageAssetUrl(docsImageRoute, 'image.png')

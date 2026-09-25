@@ -21,9 +21,27 @@ const DEPENDENCY_FIELDS = [
 
 type DependencyField = (typeof DEPENDENCY_FIELDS)[number]
 
-type PackageJson = {
-  [key: string]: unknown
-} & Partial<Record<DependencyField, Record<string, string>>>
+type JsonPrimitive = string | number | boolean | null
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[]
+type JsonObject = { [key: string]: JsonValue }
+
+/** package.json fields this script mutates, plus passthrough for other keys. */
+type PackageJson = Partial<Record<DependencyField, Record<string, string>>> & JsonObject
+
+/**
+ * Bun lockfile v1 `packages` entry: `[pkgId, info, deps?, integrity?, ...]`.
+ * Only `entry[0]` (resolved id) is used here.
+ */
+type BunLockPackageEntry = readonly [id: string, ...rest: JsonValue[]]
+
+type BunLockfile = {
+  lockfileVersion?: number
+  packages?: Record<string, BunLockPackageEntry>
+}
+
+type InstalledPackageJson = {
+  version?: string
+}
 
 function isPinned(version: string): boolean {
   if (version === 'latest' || version === '*') {
@@ -37,18 +55,86 @@ function isPinned(version: string): boolean {
   return true
 }
 
+function isJsonObject(value: JsonValue): value is JsonObject {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isStringRecord(value: JsonValue | undefined): value is Record<string, string> {
+  if (value === undefined || !isJsonObject(value)) {
+    return false
+  }
+
+  return Object.values(value).every((entry) => typeof entry === 'string')
+}
+
+function parseJsonObject(text: string): JsonObject {
+  const parsed: unknown = JSON.parse(text)
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Expected a JSON object')
+  }
+  return parsed as JsonObject
+}
+
+function parseBunLockfile(text: string): BunLockfile {
+  const obj = parseJsonObject(text)
+  const packagesValue = obj.packages
+  if (packagesValue !== undefined && !isJsonObject(packagesValue)) {
+    throw new Error('bun.lock packages must be an object')
+  }
+
+  const packages: Record<string, BunLockPackageEntry> | undefined =
+    packagesValue === undefined
+      ? undefined
+      : Object.fromEntries(
+          Object.entries(packagesValue).flatMap(([name, entry]) => {
+            if (!Array.isArray(entry) || typeof entry[0] !== 'string') {
+              return []
+            }
+            const packageEntry: BunLockPackageEntry = [entry[0], ...entry.slice(1)]
+            return [[name, packageEntry]]
+          }),
+        )
+
+  return {
+    lockfileVersion: typeof obj.lockfileVersion === 'number' ? obj.lockfileVersion : undefined,
+    packages,
+  }
+}
+
+function parsePackageJson(text: string): PackageJson {
+  const obj = parseJsonObject(text)
+  const result: PackageJson = { ...obj }
+
+  for (const field of DEPENDENCY_FIELDS) {
+    const value = obj[field]
+    if (value === undefined) {
+      continue
+    }
+    if (!isStringRecord(value)) {
+      throw new Error(`package.json ${field} must be a string map`)
+    }
+    result[field] = value
+  }
+
+  return result
+}
+
+function parseInstalledPackageJson(text: string): InstalledPackageJson {
+  const obj = parseJsonObject(text)
+  return {
+    version: typeof obj.version === 'string' ? obj.version : undefined,
+  }
+}
+
 function resolveFromBunLock(packageName: string): string | null {
   const lockPath = join(root, 'bun.lock')
   if (!existsSync(lockPath)) {
     return null
   }
 
-  const lock = JSON.parse(readFileSync(lockPath, 'utf-8')) as {
-    packages?: Record<string, [string, ...unknown[]]>
-  }
-
+  const lock = parseBunLockfile(readFileSync(lockPath, 'utf-8'))
   const entry = lock.packages?.[packageName]
-  if (!entry || typeof entry[0] !== 'string') {
+  if (!entry) {
     return null
   }
 
@@ -63,24 +149,28 @@ function resolveFromBunLock(packageName: string): string | null {
 }
 
 function resolveInstalledVersion(packageName: string): string | null {
+  let pkgJsonPath: string
   try {
-    const pkgJsonPath = require.resolve(`${packageName}/package.json`, {
+    pkgJsonPath = require.resolve(`${packageName}/package.json`, {
       paths: [root],
     })
-    const installed = JSON.parse(readFileSync(pkgJsonPath, 'utf-8')) as {
-      version?: string
-    }
-
-    return installed.version ?? null
   } catch {
     return resolveFromBunLock(packageName)
   }
+
+  const installed = parseInstalledPackageJson(readFileSync(pkgJsonPath, 'utf-8'))
+
+  if (typeof installed.version !== 'string') {
+    throw new Error(`${packageName}/package.json has no version field`)
+  }
+
+  return installed.version
 }
 
 function main() {
   intro('Pin package versions')
 
-  const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8')) as PackageJson
+  const pkg = parsePackageJson(readFileSync(packageJsonPath, 'utf-8'))
   const changes: Array<{
     field: DependencyField
     name: string

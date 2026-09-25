@@ -2,7 +2,7 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
-/* MongoScope mark accent — mirrors the TUI's gruvbox `theme.accent` (light / dark). */
+/* Mark accent — matches TUI gruvbox theme.accent */
 :root {
   --ms-accent: #427b58;
 }

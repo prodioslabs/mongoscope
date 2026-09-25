@@ -12,13 +12,13 @@ Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/open
 
 ## What you get
 
-| Area | What it surfaces |
-| --- | --- |
+| Area         | What it surfaces                                                |
+| ------------ | --------------------------------------------------------------- |
 | Slow Queries | Aggregated patterns from logs, or live `system.profile` samples |
-| Live Ops | `currentOp`, COLLSCAN highlights, kill-op, collection `top` |
-| Replication | Topology, oplog window, lag sparkline, heartbeats, elections |
-| Indexes | Inventory, build %, `$indexStats`, jump from a slow query |
-| Logs | File tail or rolling `getLog` buffer from a live connection |
+| Live Ops     | `currentOp`, COLLSCAN highlights, kill-op, collection `top`     |
+| Replication  | Topology, oplog window, lag sparkline, heartbeats, elections    |
+| Indexes      | Inventory, build %, `$indexStats`, jump from a slow query       |
+| Logs         | File tail or rolling `getLog` buffer from a live connection     |
 
 Connections land in your OS keychain (`Bun.secrets`). Themes (gruvbox, catppuccin, nord, …) persist under `~/.config/mongoscope/`.
 
@@ -35,27 +35,27 @@ bun start
 
 On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`). Enter parses the last 100k lines and opens the dashboard.
 
-| Key | Action |
-| --- | --- |
-| `1`–`5` / Tab | Switch tabs |
-| `c` | Connections (Live Ops / Replication / Indexes) |
-| `l` | Toggle Static ↔ Live (Slow Queries / Logs) |
-| `?` | Help |
-| `Ctrl+K` | Command palette |
-| `m` / `t` | Light-dark / cycle theme |
-| `q` | Quit |
+| Key           | Action                                         |
+| ------------- | ---------------------------------------------- |
+| `1`–`5` / Tab | Switch tabs                                    |
+| `c`           | Connections (Live Ops / Replication / Indexes) |
+| `l`           | Toggle Static ↔ Live (Slow Queries / Logs)     |
+| `?`           | Help                                           |
+| `Ctrl+K`      | Command palette                                |
+| `m` / `t`     | Light-dark / cycle theme                       |
+| `q`           | Quit                                           |
 
 Deeper reference lives in [`docs/`](./docs) — `cd docs && bun install && bun run dev`.
 
 ## Scripts
 
-| Script | Purpose |
-| --- | --- |
-| `bun start` | Launch the TUI |
-| `bun run typecheck` | Typecheck |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check |
-| `bun run test` | Vitest |
-| `bun run build` | Standalone binary → `dist/mongoscope` |
+| Script                               | Purpose                               |
+| ------------------------------------ | ------------------------------------- |
+| `bun start`                          | Launch the TUI                        |
+| `bun run typecheck`                  | Typecheck                             |
+| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                   |
+| `bun run test`                       | Vitest                                |
+| `bun run build`                      | Standalone binary → `dist/mongoscope` |
 
 ## CLI flags
 
@@ -63,22 +63,7 @@ Deeper reference lives in [`docs/`](./docs) — `cd docs && bun install && bun r
 bun start --help
 ```
 
-| Flag | Status |
-| --- | --- |
-| `--log-dir` | Wired — welcome screen’s second log list (default `.`) |
+| Flag                                                                               | Status                                                                |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `--log-dir`                                                                        | Wired — welcome screen’s second log list (default `.`)                |
 | `--log-path`, `--uri`, `--host`, `--port`, `--username`, `--password`, `--auth-db` | Parsed, not wired yet — use the welcome picker and in-app connections |
-
-## Author
-
-<p>
-  <a href="https://github.com/shubhamRavani">
-    <img src="https://github.com/shubhamRavani.png?size=96" width="48" height="48" alt="shubhamRavani" style="border-radius:50%" />
-  </a>
-  &nbsp;
-  <a href="https://github.com/shubhamRavani"><strong>shubhamRavani</strong></a>
-  ·
-  <a href="https://github.com/prodioslabs">prodioslabs</a>
-</p>
-
-[![GitHub](https://img.shields.io/badge/GitHub-shubhamRavani-181717?style=flat&logo=github)](https://github.com/shubhamRavani)
-[![Repo](https://img.shields.io/badge/prodioslabs%2Fmongoscope--v2-blue?style=flat&logo=github)](https://github.com/prodioslabs/mongoscope-v2)

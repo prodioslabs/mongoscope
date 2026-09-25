@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/* eslint-disable no-console */
+/* oxlint-disable no-console */
 
 import { existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -24,11 +24,7 @@ type BenchResult = {
 }
 
 function gc(): void {
-  try {
-    Bun.gc(true)
-  } catch {
-    // ignore
-  }
+  Bun.gc(true)
 }
 
 function mem() {
@@ -144,6 +140,59 @@ function iterateUtf8Lines(fileText: string): string[] {
   return lines.map((line) => (line.endsWith('\r') ? line.slice(0, -1) : line))
 }
 
+type JsonPrimitive = string | number | boolean | null
+type JsonValue = JsonPrimitive | JsonObject | JsonValue[]
+type JsonObject = { [key: string]: JsonValue }
+
+/** MongoDB structured log line fields used by the naive JSON.parse baseline. */
+type MongoDate = { $date?: string }
+type MongoLogLine = {
+  t?: MongoDate | string
+  s?: string
+  c?: string
+  id?: number
+  ctx?: string
+  msg?: string
+  attr?: Record<string, JsonValue>
+}
+
+type NaiveBenchRow = {
+  t: number
+  s: string
+  c: string
+  id: number
+  ctx: string
+  msg: string
+  /** Full parsed object (or raw text on failure) kept for fair memory measurement. */
+  raw: MongoLogLine | string
+}
+
+function parseTimestamp(t: MongoLogLine['t']): number {
+  if (t == null) {
+    return Number.NaN
+  }
+  if (typeof t === 'string') {
+    return Date.parse(t)
+  }
+  if (typeof t.$date === 'string') {
+    return Date.parse(t.$date)
+  }
+  return Number.NaN
+}
+
+function parseMongoLogLine(text: string): MongoLogLine | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    return null
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return null
+  }
+  return parsed as MongoLogLine
+}
+
 async function benchNaive(path: string, label: string): Promise<BenchResult> {
   gc()
   await Bun.sleep(50)
@@ -151,29 +200,13 @@ async function benchNaive(path: string, label: string): Promise<BenchResult> {
   const before = mem()
   const t0 = performance.now()
 
-  type Row = {
-    t: number
-    s: string
-    c: string
-    id: number
-    ctx: string
-    msg: string
-    raw: unknown
-  }
-  const rows: Row[] = []
+  const rows: NaiveBenchRow[] = []
 
   for (const text of iterateUtf8Lines(await Bun.file(path).text())) {
-    try {
-      const obj = JSON.parse(text) as {
-        t?: { $date?: string }
-        s?: string
-        c?: string
-        id?: number
-        ctx?: string
-        msg?: string
-      }
+    const obj = parseMongoLogLine(text)
+    if (obj) {
       rows.push({
-        t: obj.t?.$date ? Date.parse(obj.t.$date) : Number.NaN,
+        t: parseTimestamp(obj.t),
         s: obj.s ?? '',
         c: obj.c ?? '',
         id: obj.id ?? 0,
@@ -181,7 +214,7 @@ async function benchNaive(path: string, label: string): Promise<BenchResult> {
         msg: obj.msg ?? '',
         raw: obj,
       })
-    } catch {
+    } else {
       rows.push({
         t: Number.NaN,
         s: '',
@@ -265,11 +298,7 @@ async function runSynthetic(): Promise<void> {
     printResult(naive)
     printComparison(scanner, naive)
   } finally {
-    try {
-      unlinkSync(path)
-    } catch {
-      // ignore
-    }
+    unlinkSync(path)
   }
 }
 
