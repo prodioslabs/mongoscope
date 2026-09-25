@@ -2,6 +2,8 @@
 
 Terminal UI for inspecting MongoDB slow queries, live operations, replication, indexes, and logs. Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui).
 
+Deeper reference: [`docs/`](./docs) (`cd docs && bun install && bun run dev`).
+
 Requires a real interactive TTY (`bun start` will not render correctly if stdout is piped).
 
 ## Prerequisites
