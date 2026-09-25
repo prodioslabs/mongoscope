@@ -1,9 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { cn } from '@/lib/cn'
 
-/**
- * Static Slow Queries table mockup (gruvbox-dark palette tokens).
- * Illustrative only — update by hand when the real TUI columns change.
- */
+/** Static Slow Queries mockup — update when TUI columns change. */
 export function TuiMockup() {
   return (
     <div
@@ -97,7 +95,7 @@ export function TuiMockup() {
   )
 }
 
-/** Gruvbox-dark tokens mirroring mongoscope default theme severity colors. */
+/** Gruvbox-dark palette matching the default TUI theme. */
 const tuiPaletteStyle = {
   '--tui-bg': '#282828',
   '--tui-panel': '#3c3836',
@@ -119,11 +117,10 @@ type RowProps = {
 function Row({ children, muted = false }: RowProps) {
   return (
     <div
-      className={
-        muted
-          ? 'grid grid-cols-[minmax(9rem,1.4fr)_3.5rem_4rem_5rem_7rem_7rem_5rem] gap-x-2 py-0.5 text-(--tui-muted)'
-          : 'grid grid-cols-[minmax(9rem,1.4fr)_3.5rem_4rem_5rem_7rem_7rem_5rem] gap-x-2 py-0.5'
-      }
+      className={cn(
+        'grid grid-cols-[minmax(9rem,1.4fr)_3.5rem_4rem_5rem_7rem_7rem_5rem] gap-x-2 py-0.5',
+        muted && 'text-(--tui-muted)',
+      )}
     >
       {children}
     </div>
