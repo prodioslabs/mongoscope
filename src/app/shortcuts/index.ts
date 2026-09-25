@@ -34,6 +34,7 @@ export {
   toBindings,
   toFooter,
   toHelpSection,
+  type FooterChip,
   type HelpBinding,
   type HelpSection,
   type MnemonicSegment,

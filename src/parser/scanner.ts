@@ -431,7 +431,7 @@ export function flushCarry(
   return store.rowCount - before
 }
 
-export type ScanBytesOptions = {
+type ScanBytesOptions = {
   chunkSize?: number
 }
 

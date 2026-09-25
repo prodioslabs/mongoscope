@@ -1,16 +1,29 @@
+import { isRecord } from './is-record'
+
 /**
  * Structural shape of MongoDB Node driver / command failures.
  * Prefer {@link asDriverErrorLike} over ad-hoc casts.
  */
-export type DriverErrorLike = {
+type DriverErrorLike = {
   code?: string | number
   codeName?: string
   message?: string
 }
 
 export function asDriverErrorLike(error: unknown): DriverErrorLike | null {
-  if (error == null || typeof error !== 'object') {
+  if (!isRecord(error)) {
     return null
   }
-  return error as DriverErrorLike
+
+  const result: DriverErrorLike = {}
+  if (typeof error.code === 'string' || typeof error.code === 'number') {
+    result.code = error.code
+  }
+  if (typeof error.codeName === 'string') {
+    result.codeName = error.codeName
+  }
+  if (typeof error.message === 'string') {
+    result.message = error.message
+  }
+  return result
 }

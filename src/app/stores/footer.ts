@@ -1,12 +1,9 @@
 import { create } from 'zustand'
 import { GLOBAL_FOOTER_SHORTCUTS } from '../shortcuts/global'
-import { toFooter, type MnemonicSegment } from '../shortcuts/types'
+import { toFooter, type FooterChip } from '../shortcuts/types'
 
-export type FooterKeybinding = {
-  keys: string
-  label: string
-  segments?: readonly MnemonicSegment[]
-}
+/** Footer store bindings — same shape as shortcut footer chips. */
+export type FooterKeybinding = FooterChip
 
 type FooterKeybindingScope = {
   path: string

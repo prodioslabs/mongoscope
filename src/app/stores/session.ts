@@ -13,22 +13,23 @@ import {
   MIN_PROFILE_FETCH_LIMIT,
 } from '../../profiler'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
+import { errorMessageText } from '../../lib/error-message'
 import { useLogTailStore } from './log-tail'
 
-export type AppScreen = 'welcome' | 'dashboard'
+type AppScreen = 'welcome' | 'dashboard'
 
 export type AppTab = 'slow-queries' | 'live-ops' | 'replication' | 'indexes' | 'logs'
 
-export type DataSourceMode = 'static' | 'live'
+type DataSourceMode = 'static' | 'live'
 
-export type SlowQueriesPendingNavigation = {
+type SlowQueriesPendingNavigation = {
   patternId?: number
   openDetail?: boolean
   statusMessage?: string
 }
 
 /** Cross-tab jump from Slow Queries suggestIndex (or namespace) into Indexes. */
-export type IndexesPendingNavigation = {
+type IndexesPendingNavigation = {
   database: string
   collection: string
   /** Compact key label from ESR suggestion, when present. */
@@ -39,7 +40,7 @@ export type IndexesPendingNavigation = {
 }
 
 /** Sticky Slow Queries suggestion shown on Indexes until dismissed or left. */
-export type IndexesSuggestionContext = {
+type IndexesSuggestionContext = {
   database: string
   collection: string
   keyLabel?: string
@@ -47,12 +48,12 @@ export type IndexesSuggestionContext = {
   reason?: string
 }
 
-export type TabNavigationContext = {
+type TabNavigationContext = {
   slowQueries?: SlowQueriesPendingNavigation
   indexes?: IndexesPendingNavigation
 }
 
-export type TabDefinition = {
+type TabDefinition = {
   id: AppTab
   key: string
   label: string
@@ -184,7 +185,7 @@ async function runTailParse(
       activeTab: 'slow-queries',
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
+    const message = errorMessageText(error)
     set({
       parseProgress: null,
       parseDurationMs: null,

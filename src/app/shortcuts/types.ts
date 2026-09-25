@@ -1,4 +1,4 @@
-export type ShortcutBinding = {
+type ShortcutBinding = {
   key: string
   cmd: string
 }
@@ -17,21 +17,19 @@ export type Shortcut = {
   bindings: ReadonlyArray<ShortcutBinding>
 }
 
-export type HelpBinding = {
-  keys: string
-  label: string
-  segments?: readonly MnemonicSegment[]
-}
-
-export type HelpSection = {
-  title: string
-  bindings: HelpBinding[]
-}
-
+/** Display chip for keybinding UIs (footer chips and help-menu rows). */
 export type FooterChip = {
   keys: string
   label: string
   segments?: readonly MnemonicSegment[]
+}
+
+/** Help-menu row — same shape as footer chips. */
+export type HelpBinding = FooterChip
+
+export type HelpSection = {
+  title: string
+  bindings: HelpBinding[]
 }
 
 export function toFooter(shortcuts: ReadonlyArray<Shortcut>): FooterChip[] {

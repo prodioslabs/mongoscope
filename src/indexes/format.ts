@@ -1,5 +1,6 @@
 import { formatBytes } from '../lib/format-bytes'
-import { truncateText } from '../lib/truncate-text'
+import { formatCount } from '../lib/format-count'
+import { isRecord } from '../lib/is-record'
 import type { IndexOptionFlag } from './types'
 
 export { formatBytes }
@@ -8,7 +9,7 @@ export function formatOps(ops: number | null): string {
   if (ops == null || !Number.isFinite(ops) || ops < 0) {
     return '—'
   }
-  return Math.round(ops).toLocaleString('en-US')
+  return formatCount(ops)
 }
 
 export function formatSince(since: Date | null, nowMs = Date.now()): string {
@@ -56,16 +57,12 @@ export function formatBuildProgress(input: {
   return 'building'
 }
 
-export function truncateIndexCell(value: string, maxLen: number): string {
-  return truncateText(value, maxLen)
-}
-
 /** Compact `{ a: 1, b: -1 }` → `a:1,b:-1`. */
 export function formatIndexKey(key: unknown): string {
-  if (key == null || typeof key !== 'object' || Array.isArray(key)) {
+  if (!isRecord(key)) {
     return '—'
   }
-  const entries = Object.entries(key as Record<string, unknown>)
+  const entries = Object.entries(key)
   if (entries.length === 0) {
     return '—'
   }

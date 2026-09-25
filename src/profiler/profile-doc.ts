@@ -1,3 +1,4 @@
+import { isRecord } from '../lib/is-record'
 import type { ProfileSample } from './types'
 
 /**
@@ -6,10 +7,10 @@ import type { ProfileSample } from './types'
  * Returns null when the doc should be skipped (noise / missing ns).
  */
 export function profileDocToAttr(doc: unknown): Record<string, unknown> | null {
-  if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
+  if (!isRecord(doc)) {
     return null
   }
-  const record = doc as Record<string, unknown>
+  const record = doc
   const namespace = typeof record.ns === 'string' ? record.ns : ''
   if (!namespace || namespace.endsWith('.$cmd')) {
     return null
@@ -76,10 +77,10 @@ export function profileDocToAttr(doc: unknown): Record<string, unknown> | null {
 }
 
 export function profileDocTimestampMs(doc: unknown): number {
-  if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
+  if (!isRecord(doc)) {
     return Number.NaN
   }
-  const ts = (doc as Record<string, unknown>).ts
+  const ts = doc.ts
   if (ts instanceof Date) {
     return ts.getTime()
   }
@@ -98,10 +99,10 @@ export function profileDocTimestampMs(doc: unknown): number {
 }
 
 export function toProfileSample(doc: unknown): ProfileSample | null {
-  if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
+  if (!isRecord(doc)) {
     return null
   }
-  const record = doc as Record<string, unknown>
+  const record = doc
   const attr = profileDocToAttr(record)
   if (attr == null) {
     return null
@@ -114,9 +115,5 @@ export function toProfileSample(doc: unknown): ProfileSample | null {
 }
 
 function isDateLike(value: unknown): value is { getTime: () => number } {
-  return (
-    value != null &&
-    typeof value === 'object' &&
-    typeof (value as { getTime?: unknown }).getTime === 'function'
-  )
+  return isRecord(value) && typeof value.getTime === 'function'
 }

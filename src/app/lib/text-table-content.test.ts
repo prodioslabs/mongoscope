@@ -1,3 +1,4 @@
+import { RGBA } from '@opentui/core'
 import { describe, expect, it } from 'vitest'
 import { computeTableCapacity, emptyTableRow, headerCell, padTableRows } from './text-table-content'
 
@@ -10,9 +11,7 @@ describe('computeTableCapacity', () => {
 
 describe('padTableRows', () => {
   it('pads data rows to rowCapacity without altering the header', () => {
-    const theme = {
-      textMuted: { r: 0, g: 0, b: 0, a: 255 },
-    } as Parameters<typeof headerCell>[1]
+    const theme = { textMuted: RGBA.fromInts(0, 0, 0, 255) }
     const header = [headerCell('NAMESPACE', theme), headerCell('OP', theme)]
     const row = [headerCell('app.users', theme), headerCell('find', theme)]
     const padded = padTableRows([header, row], 3)
@@ -24,9 +23,7 @@ describe('padTableRows', () => {
   })
 
   it('does not pad when capacity is already met', () => {
-    const theme = {
-      textMuted: { r: 0, g: 0, b: 0, a: 255 },
-    } as Parameters<typeof headerCell>[1]
+    const theme = { textMuted: RGBA.fromInts(0, 0, 0, 255) }
     const header = [headerCell('NAMESPACE', theme)]
     const rows = [header, [headerCell('a', theme)], [headerCell('b', theme)]]
     expect(padTableRows(rows, 2)).toEqual(rows)

@@ -82,8 +82,6 @@ export function createLiveConnectionManager(
     state.closeListener = null
     if (typeof client.off === 'function') {
       client.off('close', listener)
-    } else if (typeof client.removeListener === 'function') {
-      client.removeListener('close', listener)
     }
   }
 

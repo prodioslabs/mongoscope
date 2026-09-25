@@ -1,4 +1,5 @@
 import type { MongoDbClient } from '../live-connection'
+import { isRecord } from '../lib/is-record'
 import {
   filterPickerDatabases,
   parseListDatabasesResult,
@@ -142,10 +143,10 @@ export async function fetchProfilerSlowQueriesSnapshot(
  * MongoDB returns `{ was: <level>, slowms, ok: 1 }`.
  */
 export function parseProfilingStatus(raw: unknown): ProfilingStatus | null {
-  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) {
+  if (!isRecord(raw)) {
     return null
   }
-  const record = raw as Record<string, unknown>
+  const record = raw
   const levelValue =
     typeof record.was === 'number' && Number.isFinite(record.was)
       ? record.was

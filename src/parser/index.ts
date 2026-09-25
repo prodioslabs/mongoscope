@@ -1,3 +1,4 @@
+import { isRecord } from '../lib/is-record'
 import {
   parseLogFile,
   readLineAt,
@@ -93,11 +94,10 @@ export async function readEntryDetail(store: LogStore, row: number): Promise<Log
 
   try {
     const parsed: unknown = JSON.parse(text)
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    if (!isRecord(parsed)) {
       return { ...entry, kind: 'raw', raw: text }
     }
-    const record = parsed as Record<string, unknown>
-    return { ...entry, attr: record.attr, raw: record }
+    return { ...entry, attr: parsed.attr, raw: parsed }
   } catch {
     return { ...entry, kind: 'raw', raw: text }
   }

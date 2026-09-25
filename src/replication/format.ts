@@ -51,11 +51,11 @@ export function formatMemberLabel(hostPort: string): string {
     return trimmed
   }
   const host = trimmed.slice(0, lastColon)
-  // IPv4 — keep host:port for clarity.
+  // IPv4 — keep host:port
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
     return trimmed
   }
-  // IPv6 in brackets — keep as-is.
+  // Bracketed IPv6 — keep host:port
   if (host.startsWith('[')) {
     return trimmed
   }

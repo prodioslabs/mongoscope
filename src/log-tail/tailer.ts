@@ -1,4 +1,5 @@
 import { open, stat } from 'node:fs/promises'
+import { errorMessageText } from '../lib/error-message'
 import { appendTailChunk, skipPartialLeadingLine } from './append-chunk'
 import { LogLineRingBuffer } from './ring-buffer'
 import {
@@ -238,7 +239,7 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
       error = null
       emit()
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err)
+      error = errorMessageText(err)
       emit()
     } finally {
       tickInFlight = false
@@ -258,7 +259,7 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
           seeded = true
           emit()
         } catch (err) {
-          error = err instanceof Error ? err.message : String(err)
+          error = errorMessageText(err)
           emit()
         }
       }

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { saveAppConfig } from '../config/app-config'
 import { DEFAULT_THEME_NAME, type ThemeMode } from '../config/types'
+import { errorMessageText } from '../../lib/error-message'
 import { allThemes, hasTheme, resolveTheme } from '../theme'
 import { getThemeCatalog, resolveConfiguredThemeName } from '../theme/catalog'
 
@@ -51,7 +52,7 @@ function schedulePersistThemeConfig(): void {
     persistTimer = undefined
     const { selected, mode } = useTheme.getState()
     void saveAppConfig({ theme: selected, mode }).catch(function warnThemePersistFailure(error) {
-      const message = error instanceof Error ? error.message : String(error)
+      const message = errorMessageText(error)
       // oxlint-disable-next-line no-console -- OpenTUI console overlay; persist failure
       console.warn(`Failed to persist theme config: ${message}`)
     })

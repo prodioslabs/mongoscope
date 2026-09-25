@@ -1,7 +1,6 @@
 export type {
   ProfileSample,
   ProfilerPanelError,
-  ProfilerPanelErrorKind,
   ProfilerSlowQueriesSnapshot,
   ProfilingStatus,
 } from './types'

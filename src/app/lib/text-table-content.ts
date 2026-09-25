@@ -10,7 +10,7 @@ export function computeTableCapacity(chromeRows: number, terminalHeight: number)
   return Math.max(1, Math.floor((terminalHeight - chromeRows) / TABLE_ROW_STRIDE))
 }
 
-export function headerCell(label: string, theme: Theme): TextChunk[] {
+export function headerCell(label: string, theme: Pick<Theme, 'textMuted'>): TextChunk[] {
   return [bold(fg(theme.textMuted)(label))]
 }
 

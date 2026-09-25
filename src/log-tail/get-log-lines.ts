@@ -1,12 +1,14 @@
+import { isRecord } from '../lib/is-record'
+
 /**
  * Extract string log lines from a MongoDB `getLog: 'global'` command result.
  * The server returns at most ~1024 recent events from an in-RAM ring — not a durable file.
  */
 export function extractGetLogLines(getLogRaw: unknown): string[] {
-  if (getLogRaw == null || typeof getLogRaw !== 'object') {
+  if (!isRecord(getLogRaw)) {
     return []
   }
-  const log = (getLogRaw as Record<string, unknown>).log
+  const log = getLogRaw.log
   if (!Array.isArray(log)) {
     return []
   }

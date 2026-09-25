@@ -1,6 +1,5 @@
-import type { PanelError, PanelErrorKind } from '../lib/panel-error'
+import type { PanelError } from '../lib/panel-error'
 
-export type ReplicationPanelErrorKind = PanelErrorKind
 export type ReplicationPanelError = PanelError
 
 /** Status-dot severity for a topology member. */

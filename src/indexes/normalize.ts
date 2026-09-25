@@ -1,4 +1,5 @@
 import { formatIndexKey } from './format'
+import { isRecord } from '../lib/is-record'
 import { indexBuildKey, type IndexBuildProgressByKey } from './parse-index-builds'
 import type { IndexOptionFlag, IndexRow } from './types'
 
@@ -11,19 +12,19 @@ export function filterPickerDatabases(names: string[]): string[] {
 }
 
 export function parseListDatabasesResult(raw: unknown): string[] {
-  if (raw == null || typeof raw !== 'object') {
+  if (!isRecord(raw)) {
     return []
   }
-  const databases = (raw as Record<string, unknown>).databases
+  const databases = raw.databases
   if (!Array.isArray(databases)) {
     return []
   }
   const names: string[] = []
   for (const entry of databases) {
-    if (entry == null || typeof entry !== 'object') {
+    if (!isRecord(entry)) {
       continue
     }
-    const name = (entry as Record<string, unknown>).name
+    const name = entry.name
     if (typeof name === 'string' && name.trim() !== '') {
       names.push(name)
     }
@@ -40,10 +41,10 @@ export function parseListCollectionsResult(raw: unknown): string[] {
 
   const names: string[] = []
   for (const entry of source) {
-    if (entry == null || typeof entry !== 'object') {
+    if (!isRecord(entry)) {
       continue
     }
-    const name = (entry as Record<string, unknown>).name
+    const name = entry.name
     if (typeof name !== 'string' || name.trim() === '') {
       continue
     }
@@ -56,14 +57,14 @@ export function parseListCollectionsResult(raw: unknown): string[] {
 }
 
 function extractCursorBatch(raw: unknown): unknown[] | null {
-  if (raw == null || typeof raw !== 'object') {
+  if (!isRecord(raw)) {
     return null
   }
-  const cursor = (raw as Record<string, unknown>).cursor
-  if (cursor == null || typeof cursor !== 'object') {
+  const cursor = raw.cursor
+  if (!isRecord(cursor)) {
     return null
   }
-  const firstBatch = (cursor as Record<string, unknown>).firstBatch
+  const firstBatch = cursor.firstBatch
   return Array.isArray(firstBatch) ? firstBatch : null
 }
 
@@ -86,8 +87,8 @@ export function extractIndexFlags(spec: Record<string, unknown>): IndexOptionFla
   }
 
   const key = spec.key
-  if (key != null && typeof key === 'object' && !Array.isArray(key)) {
-    const values = Object.values(key as Record<string, unknown>)
+  if (isRecord(key)) {
+    const values = Object.values(key)
     if (values.includes('text')) {
       flags.push('text')
     }
@@ -105,7 +106,7 @@ export function extractIndexFlags(spec: Record<string, unknown>): IndexOptionFla
   return flags
 }
 
-export type IndexUsageByName = Map<
+type IndexUsageByName = Map<
   string,
   {
     ops: number | null
@@ -117,23 +118,19 @@ export type IndexUsageByName = Map<
 export function parseIndexStatsDocs(docs: unknown[]): IndexUsageByName {
   const byName: IndexUsageByName = new Map()
   for (const doc of docs) {
-    if (doc == null || typeof doc !== 'object') {
+    if (!isRecord(doc)) {
       continue
     }
-    const record = doc as {
-      name?: unknown
-      building?: unknown
-      accesses?: { ops?: unknown; since?: unknown }
-    }
-    if (typeof record.name !== 'string' || record.name.trim() === '') {
+    if (typeof doc.name !== 'string' || doc.name.trim() === '') {
       continue
     }
-    const opsRaw = record.accesses?.ops
-    const sinceRaw = record.accesses?.since
-    byName.set(record.name, {
+    const accesses = isRecord(doc.accesses) ? doc.accesses : null
+    const opsRaw = accesses?.ops
+    const sinceRaw = accesses?.since
+    byName.set(doc.name, {
       ops: typeof opsRaw === 'number' && Number.isFinite(opsRaw) ? opsRaw : null,
       since: toDate(sinceRaw),
-      building: record.building === true,
+      building: doc.building === true,
     })
   }
   return byName
@@ -143,21 +140,20 @@ export function parseCollStatsIndexSizes(raw: unknown): {
   indexSizes: Record<string, number>
   totalIndexSizeBytes: number | null
 } {
-  if (raw == null || typeof raw !== 'object') {
+  if (!isRecord(raw)) {
     return { indexSizes: {}, totalIndexSizeBytes: null }
   }
-  const record = raw as { indexSizes?: unknown; totalIndexSize?: unknown }
   const indexSizes: Record<string, number> = {}
-  if (record.indexSizes != null && typeof record.indexSizes === 'object') {
-    for (const [name, size] of Object.entries(record.indexSizes as Record<string, unknown>)) {
+  if (isRecord(raw.indexSizes)) {
+    for (const [name, size] of Object.entries(raw.indexSizes)) {
       if (typeof size === 'number' && Number.isFinite(size)) {
         indexSizes[name] = size
       }
     }
   }
   const total =
-    typeof record.totalIndexSize === 'number' && Number.isFinite(record.totalIndexSize)
-      ? record.totalIndexSize
+    typeof raw.totalIndexSize === 'number' && Number.isFinite(raw.totalIndexSize)
+      ? raw.totalIndexSize
       : null
   return { indexSizes, totalIndexSizeBytes: total }
 }
@@ -178,11 +174,10 @@ export function normalizeIndexSpecs(
   const rows: IndexRow[] = []
 
   for (const spec of specs) {
-    if (spec == null || typeof spec !== 'object') {
+    if (!isRecord(spec)) {
       continue
     }
-    const record = spec as Record<string, unknown>
-    const name = typeof record.name === 'string' ? record.name : null
+    const name = typeof spec.name === 'string' ? spec.name : null
     if (name == null || name.trim() === '') {
       continue
     }
@@ -194,8 +189,8 @@ export function normalizeIndexSpecs(
 
     rows.push({
       name,
-      keyLabel: formatIndexKey(record.key),
-      flags: extractIndexFlags(record),
+      keyLabel: formatIndexKey(spec.key),
+      flags: extractIndexFlags(spec),
       sizeBytes: indexSizes[name] ?? null,
       ops: usage?.ops ?? null,
       since: usage?.since ?? null,

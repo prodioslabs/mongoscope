@@ -9,12 +9,12 @@ import {
   formatIndexFlags,
   formatOps,
   formatSince,
-  truncateIndexCell,
   type CollectionIndexes,
   type IndexesSnapshot,
   type IndexRow,
 } from '../../../../indexes'
 import { displayText } from '../../../../lib/display-text'
+import { truncateText } from '../../../../lib/truncate-text'
 import {
   computeTableCapacity,
   headerCell,
@@ -22,6 +22,7 @@ import {
   tableCell,
 } from '../../../lib/text-table-content'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
+import { type SortDirection } from '../../../lib/sort-direction'
 import { whenNotEditing } from '../../../lib/when-not-editing'
 import { INDEXES_FOOTER, INDEXES_SHORTCUTS, toBindings } from '../../../shortcuts'
 import { useSession } from '../../../stores/session'
@@ -37,7 +38,6 @@ type IndexesDashboardProps = {
 
 type CollectionSortBy = 'name' | 'indexes'
 type IndexSortBy = 'size' | 'ops'
-type SortDirection = 'asc' | 'desc'
 
 const COLLECTION_LIST_WIDTH = 36
 const EMPTY_DATABASES: string[] = []
@@ -893,7 +893,7 @@ function buildCollectionsTableContent(
   for (let i = 0; i < collections.length; i++) {
     const collection = collections[i]!
     const selected = i === selectedIndex
-    const nameLabel = truncateIndexCell(collection.name, 22)
+    const nameLabel = truncateText(collection.name, 22)
     tableRows.push([
       selected ? tableCell(`${nameLabel} ●`, theme.primary) : tableCell(nameLabel, theme.text),
       tableCell(String(collection.indexes.length), theme.textMuted),
@@ -933,7 +933,7 @@ function buildIndexesTableContent(
 }
 
 function buildIndexTableRow(row: IndexRow, selected: boolean, theme: Theme): TextChunk[][] {
-  const nameLabel = truncateIndexCell(row.name, 22)
+  const nameLabel = truncateText(row.name, 22)
   const nameCell = selected
     ? tableCell(`${nameLabel} ●`, theme.primary)
     : tableCell(nameLabel, theme.text)
@@ -945,8 +945,8 @@ function buildIndexTableRow(row: IndexRow, selected: boolean, theme: Theme): Tex
 
   return [
     nameCell,
-    tableCell(truncateIndexCell(row.keyLabel, 28), theme.text),
-    tableCell(truncateIndexCell(formatIndexFlags(row.flags), 16), theme.textMuted),
+    tableCell(truncateText(row.keyLabel, 28), theme.text),
+    tableCell(truncateText(formatIndexFlags(row.flags), 16), theme.textMuted),
     tableCell(buildLabel, buildColor),
     tableCell(formatBytes(row.sizeBytes), theme.textMuted),
     tableCell(formatOps(row.ops), theme.textMuted),

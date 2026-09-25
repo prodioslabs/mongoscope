@@ -2,11 +2,11 @@ import { fg, StyledText } from '@opentui/core'
 import {
   collectionTopBarSegments,
   formatTopTimeLabel,
-  truncateLiveOpsCell,
   type CollectionTopRow,
   type LiveOpsPanelError,
 } from '../../../../live-ops'
 import { displayText } from '../../../../lib/display-text'
+import { truncateText } from '../../../../lib/truncate-text'
 import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 
@@ -72,8 +72,8 @@ export function CollectionTop({
         <box flexDirection="column" gap={0} flexShrink={0} height={maxRows}>
           {visibleRows.map(function renderTopRow(row) {
             const bars = collectionTopBarSegments(row.readMs, row.writeMs, barWidth, scaleMaxMs)
-            const label = truncateLiveOpsCell(row.namespace, NAMESPACE_WIDTH)
-            const time = truncateLiveOpsCell(formatTopTimeLabel(row.totalMs), TIME_WIDTH)
+            const label = truncateText(row.namespace, NAMESPACE_WIDTH)
+            const time = truncateText(formatTopTimeLabel(row.totalMs), TIME_WIDTH)
             return (
               <box key={row.namespace} flexDirection="row" gap={1} height={1} flexShrink={0}>
                 <text

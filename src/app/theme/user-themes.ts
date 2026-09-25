@@ -12,7 +12,7 @@ const REQUIRED_THEME_COLOR_KEYS = [
   'background',
 ] as const
 
-export type UserThemesLoadResult = {
+type UserThemesLoadResult = {
   themes: Record<string, ThemeJson>
   warnings: string[]
 }

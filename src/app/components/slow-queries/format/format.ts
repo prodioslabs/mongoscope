@@ -1,16 +1,14 @@
 import type { Severity } from '../../../lib/text-table-content'
+import { formatCount } from '../../../../lib/format-count'
 import { truncateText } from '../../../../lib/truncate-text'
 
 export type { Severity } from '../../../lib/text-table-content'
+export { formatCount }
 
 const SPARK_CHARS = '▁▂▃▄▅▆▇█'
 
 /** Default sparkline width so the TREND column stays narrow in the table. */
 const SPARKLINE_WIDTH = 12
-
-export function formatCount(n: number): string {
-  return Math.round(n).toLocaleString('en-US')
-}
 
 export function formatExaminedRet(examined: number, returned: number): string {
   return `${formatCount(examined)} / ${formatCount(returned)}`
