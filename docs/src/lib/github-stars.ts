@@ -2,7 +2,7 @@ import { cache } from 'react'
 import { fetchRepositoryInfo } from 'fumadocs-ui/components/github-info'
 import { gitConfig } from '@/lib/shared'
 
-/** Cached GitHub star count. Revalidates hourly. Returns null on failure. */
+/** Cached GitHub star count (hourly revalidate). Returns null on failure. */
 export const getGitHubStars = cache(async (): Promise<number | null> => {
   try {
     const info = await fetchRepositoryInfo({
@@ -12,7 +12,8 @@ export const getGitHubStars = cache(async (): Promise<number | null> => {
       fetchOptions: { next: { revalidate: 3600 } },
     })
     return info.stars
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch GitHub star count:', error)
     return null
   }
 })
