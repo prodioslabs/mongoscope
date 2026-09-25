@@ -1,4 +1,3 @@
-/** Format a byte count with binary units (B, KiB, MiB, …). */
 export function formatBytes(bytes: number | null): string {
   if (bytes == null || !Number.isFinite(bytes) || bytes < 0) {
     return '—'

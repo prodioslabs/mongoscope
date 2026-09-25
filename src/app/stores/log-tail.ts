@@ -37,9 +37,8 @@ type LogTailState = {
   search: string
   searchEditing: boolean
   filterEditing: boolean
-  /** Start or resume file tailing for path. */
   activateFile: (path: string) => void
-  /** Start or resume getLog polling for connectionKey (`id:generation`). */
+  /** `connectionKey` is `id:generation`. */
   activateLive: (connectionKey: string) => void
   deactivate: () => void
   teardown: () => void

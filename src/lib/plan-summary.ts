@@ -20,7 +20,6 @@ export function normalizePlanSummary(planSummary: unknown): string {
   if (hasCollscan) {
     return 'COLLSCAN'
   }
-  // Truncate long raw summaries for table display
   const first = planSummary.split(/[,\s]/)[0] ?? planSummary
   if (first.length > 24) {
     return `${first.slice(0, 21)}…`

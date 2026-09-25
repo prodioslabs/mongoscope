@@ -17,7 +17,7 @@ export type ConnectionStore = {
   add(input: AddConnectionInput): Promise<ConnectionProfile>
   update(id: string, input: UpdateConnectionInput): Promise<ConnectionProfile>
   remove(id: string): Promise<void>
-  /** Resolve the stored URI for a profile (for a future live-connect path). */
+  /** Full URI from the keychain blob for live-connect — never log the return value. */
   getUri(id: string): Promise<string | null>
 }
 
