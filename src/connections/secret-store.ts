@@ -1,6 +1,7 @@
 import { platform } from 'node:os'
 import type { ConnectionsBlob } from './types'
 import { emptyConnectionsBlob, validateConnectionsBlob } from './validate'
+import { errorMessageText } from '../lib/error-message'
 
 export const SECRET_SERVICE = 'com.mongoscope.cli'
 
@@ -29,9 +30,7 @@ export type SecretBackend = {
 export type SecretStore = {
   /** Load the connections blob. Missing secret → empty store. */
   load(): Promise<ConnectionsBlob>
-  /** Persist the connections blob (replaces the previous value). */
   save(blob: ConnectionsBlob): Promise<void>
-  /** Delete the connections secret entirely. */
   clear(): Promise<boolean>
 }
 
@@ -169,10 +168,3 @@ function userMessageForSecretError(
   return `Failed to ${actionVerb} connections via the OS credential store.`
 }
 
-/** Safe for classification only — never included in SecretStoreError.message. */
-function errorMessageText(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-  return String(error)
-}

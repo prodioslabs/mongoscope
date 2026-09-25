@@ -1,3 +1,4 @@
+import { formatCount } from '../lib/format-count'
 import { splitNamespace } from './attr'
 import type { IndexSuggestion } from './types'
 
@@ -46,8 +47,4 @@ export function suggestIndex(input: SuggestIndexInput): IndexSuggestion | null {
     equalityFields: [...input.equalityFields],
     keyLabel,
   }
-}
-
-function formatCount(n: number): string {
-  return Math.round(n).toLocaleString('en-US')
 }

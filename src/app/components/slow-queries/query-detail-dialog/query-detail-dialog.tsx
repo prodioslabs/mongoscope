@@ -11,6 +11,7 @@ import {
 } from '../../../../query-patterns'
 import type { LogStore } from '../../../../parser'
 import { getPatternExplainFromSample } from '../../../../profiler'
+import { errorMessageText } from '../../../../lib/error-message'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { overlayMode } from '../../../lib/overlay-mode'
 import { QUERY_DETAIL_SHORTCUTS, queryDetailFooter, toBindings } from '../../../shortcuts'
@@ -122,7 +123,7 @@ export function QueryDetailDialog({
           }
         } catch (error: unknown) {
           if (!cancelled) {
-            setLoadError(error instanceof Error ? error.message : String(error))
+            setLoadError(errorMessageText(error))
           }
         }
         return function cancelLoadPatternExplain() {
@@ -146,7 +147,7 @@ export function QueryDetailDialog({
           if (cancelled) {
             return
           }
-          setLoadError(error instanceof Error ? error.message : String(error))
+          setLoadError(errorMessageText(error))
         })
 
       return function cancelLoadPatternExplain() {

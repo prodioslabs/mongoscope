@@ -4,6 +4,7 @@ import { useTerminalDimensions } from '@opentui/react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { QueryPattern } from '../../../../query-patterns'
 import { displayText } from '../../../../lib/display-text'
+import { errorMessageText } from '../../../../lib/error-message'
 import { formatLogTailPreset } from '../../../../parser'
 import {
   DEFAULT_SLOWMS,
@@ -12,6 +13,7 @@ import {
   type ProfilerSlowQueriesSnapshot,
 } from '../../../../profiler'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
+import { type SortDirection } from '../../../lib/sort-direction'
 import {
   useEnableProfiling,
   useProfilerSlowQueriesSnapshot,
@@ -47,7 +49,6 @@ import { QueryDetailDialog } from '../query-detail-dialog'
 import { StatsCard } from '../stats-card'
 
 type SortBy = 'count' | 'avgMs' | 'plan'
-type SortDirection = 'asc' | 'desc'
 
 type SlowQueryStats = {
   patternCount: string
@@ -729,7 +730,7 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
             }
           },
           onError(error: unknown) {
-            setEnableErrorMessage(error instanceof Error ? error.message : String(error))
+            setEnableErrorMessage(errorMessageText(error))
           },
         },
       )

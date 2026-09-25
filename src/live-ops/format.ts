@@ -1,4 +1,4 @@
-import { truncateText } from '../lib/truncate-text'
+import { formatCount } from '../lib/format-count'
 
 const LIVE_OP_WARNING_MS = 100
 const LIVE_OP_ERROR_MS = 500
@@ -19,11 +19,7 @@ export function formatRunningMs(runningMs: number): string {
   if (!Number.isFinite(runningMs) || runningMs < 0) {
     return '—'
   }
-  return Math.round(runningMs).toLocaleString('en-US')
-}
-
-export function truncateLiveOpsCell(value: string, maxLen: number): string {
-  return truncateText(value, maxLen)
+  return formatCount(runningMs)
 }
 
 const FULL_BLOCK = '█'

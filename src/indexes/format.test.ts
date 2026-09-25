@@ -6,7 +6,6 @@ import {
   formatIndexKey,
   formatOps,
   formatSince,
-  truncateIndexCell,
 } from './format'
 
 describe('formatBytes', () => {
@@ -67,12 +66,6 @@ describe('formatIndexFlags', () => {
   })
 })
 
-describe('truncateIndexCell', () => {
-  it('truncates with an ellipsis', () => {
-    expect(truncateIndexCell('abcdefghij', 6)).toBe('abcde…')
-    expect(truncateIndexCell('short', 10)).toBe('short')
-  })
-})
 
 describe('formatBuildProgress', () => {
   it('formats percent, building, and idle', () => {

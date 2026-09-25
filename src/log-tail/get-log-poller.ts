@@ -1,4 +1,5 @@
 import { asDriverErrorLike } from '../lib/driver-error'
+import { errorMessageText } from '../lib/error-message'
 import { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
 import { diffGetLogLines } from './diff-get-log'
 import { extractGetLogLines } from './get-log-lines'
@@ -210,7 +211,7 @@ function formatGetLogError(err: unknown): string {
   }
   const record = asDriverErrorLike(err)
   if (record == null) {
-    return err instanceof Error ? err.message : String(err)
+    return errorMessageText(err)
   }
   if (typeof record.message === 'string' && record.message.trim() !== '') {
     return record.message

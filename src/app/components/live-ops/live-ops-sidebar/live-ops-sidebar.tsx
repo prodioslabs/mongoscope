@@ -7,6 +7,7 @@ import type {
   QueuedOpsStats,
 } from '../../../../live-ops'
 import { displayText } from '../../../../lib/display-text'
+import { formatCount } from '../../../../lib/format-count'
 import { truncateText } from '../../../../lib/truncate-text'
 import { useTheme } from '../../../stores/theme'
 
@@ -117,7 +118,7 @@ function formatStat(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) {
     return '—'
   }
-  return Math.round(value).toLocaleString('en-US')
+  return formatCount(value)
 }
 
 function truncateNs(namespace: string): string {

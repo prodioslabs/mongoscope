@@ -6,12 +6,12 @@ import { findBestMatchingPattern } from '../../../../query-patterns'
 import {
   formatRunningMs,
   runningMsSeverity,
-  truncateLiveOpsCell,
   type CurrentOpRow,
   type KillOpTarget,
   type LiveOpsPanelError,
 } from '../../../../live-ops'
 import { displayText } from '../../../../lib/display-text'
+import { truncateText } from '../../../../lib/truncate-text'
 import {
   computeTableCapacity,
   headerCell,
@@ -460,20 +460,20 @@ function buildCurrentOpRow(op: CurrentOpRow, selected: boolean, theme: Theme): T
   const runningColor =
     runningSeverity === 'normal' ? theme.text : severityColor(theme, runningSeverity)
 
-  const namespaceLabel = truncateLiveOpsCell(op.namespace, 20)
+  const namespaceLabel = truncateText(op.namespace, 20)
   const namespaceCell = selected
     ? tableCell(`${namespaceLabel} ●`, theme.primary)
     : tableCell(namespaceLabel, theme.text)
 
   return [
-    tableCell(truncateLiveOpsCell(op.opid, 10), theme.text),
+    tableCell(truncateText(op.opid, 10), theme.text),
     namespaceCell,
-    tableCell(truncateLiveOpsCell(op.op, 8), theme.text),
+    tableCell(truncateText(op.op, 8), theme.text),
     tableCell(displayPlan(op.plan), severityColor(theme, planSeverity(op.plan))),
     tableCell(formatRunningMs(op.runningMs), runningColor),
-    tableCell(truncateLiveOpsCell(op.lock, 14), theme.textMuted),
-    tableCell(truncateLiveOpsCell(op.waitingFor, 14), theme.textMuted),
-    tableCell(truncateLiveOpsCell(op.client, 18), theme.textMuted),
+    tableCell(truncateText(op.lock, 14), theme.textMuted),
+    tableCell(truncateText(op.waitingFor, 14), theme.textMuted),
+    tableCell(truncateText(op.client, 18), theme.textMuted),
   ]
 }
 

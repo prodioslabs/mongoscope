@@ -4,7 +4,6 @@ import {
   collectionTopBarSegments,
   formatRunningMs,
   runningMsSeverity,
-  truncateLiveOpsCell,
 } from './format'
 import { isUnauthorizedError, panelErrorFromUnknown } from './permissions'
 
@@ -61,9 +60,8 @@ describe('runningMsSeverity', () => {
 })
 
 describe('format helpers', () => {
-  it('formats running ms and truncates cells', () => {
+  it('formats running ms', () => {
     expect(formatRunningMs(8412)).toBe('8,412')
-    expect(truncateLiveOpsCell('abcdefghij', 6)).toBe('abcde…')
   })
 
   it('formats time labels', () => {
