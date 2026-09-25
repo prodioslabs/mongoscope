@@ -2,12 +2,7 @@ type MongoScopeMarkProps = {
   className?: string
 }
 
-/**
- * MongoScope mark: magnifying lens over the TUI welcome-screen pulse waveform.
- * Ring/handle follow `currentColor`; the pulse uses `--ms-accent` (see global.css),
- * mirroring `theme.accent` in the TUI's gruvbox light/dark palettes.
- * Keep in sync with `src/app/icon.svg`.
- */
+/** Magnifying lens + pulse mark. Keep in sync with `src/app/icon.svg`. */
 export function MongoScopeMark({ className }: MongoScopeMarkProps) {
   return (
     <svg
