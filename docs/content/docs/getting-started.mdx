@@ -1,0 +1,40 @@
+---
+title: Getting started
+description: Prerequisites, install, welcome flow, and dashboard overview
+---
+
+## Prerequisites
+
+- **Bun** (runtime + package manager)
+- **OS credential store** for saved connections (`Bun.secrets`):
+  - macOS: Keychain
+  - Linux: Secret Service (GNOME Keyring, KWallet, etc.)
+- Optional: a MongoDB log file to analyze, and/or a reachable MongoDB instance for live tabs
+
+## Install & run
+
+```bash
+bun install
+bun start
+```
+
+Useful scripts:
+
+| Script | Purpose |
+| --- | --- |
+| `bun start` | Launch the TUI |
+| `bun run typecheck` | Typecheck |
+| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check (non-mutating) |
+| `bun run test` | Vitest |
+| `bun run build` | Standalone binary → `dist/mongoscope` |
+
+## Getting started
+
+1. **Welcome** — pick a MongoDB log from `/var/log/mongodb` or `--log-dir` (default `.`), then Enter to parse the last **100k** lines and open the dashboard.
+2. **Dashboard tabs** (`1`–`5`, or Tab / Shift+Tab): Slow Queries · Live Ops · Replication · Indexes · Logs.
+3. **Connections** — press `c` on Live Ops / Replication / Indexes (or Ctrl+K → Manage connections). With no saved profiles, those tabs show an inline add form. URIs are stored in the OS keychain under service `com.mongoscope.cli`.
+4. After a connection is selected, Slow Queries and Logs can toggle **Static** vs **Live** with `l`.
+
+There is no separate full-screen connections flow — switching, adding, editing, and deleting happen through **DbSelector** + the connections dialog.
+
+Global keys: `?` help · `Ctrl+K` command palette · `m` light/dark · `t` cycle theme · `q` quit.

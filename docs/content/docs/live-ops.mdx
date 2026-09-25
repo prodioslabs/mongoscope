@@ -1,0 +1,11 @@
+---
+title: Live Ops
+description: currentOp table, kill-op, and collection top
+---
+
+Requires a selected live connection. Polls ~1s.
+
+- `currentOp` table (active & queued), plan column with **COLLSCAN** highlighted as error severity
+- Collection top chart (read/write time from `top`)
+- Sidebar: connections, queued ops, lock waits
+- `x` → confirm kill op · `e` → jump to matching Slow Queries detail/explain when a pattern matches

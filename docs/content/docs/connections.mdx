@@ -1,0 +1,23 @@
+---
+title: Connections
+description: DbSelector, connections dialog, keychain storage, and Static vs Live
+---
+
+Press `c` on Live Ops / Replication / Indexes (or Ctrl+K → **Manage connections**). With no saved profiles, those tabs show an inline add form.
+
+URIs are stored in the OS keychain under service `com.mongoscope.cli`.
+
+After a connection is selected, Slow Queries and Logs can toggle **Static** vs **Live** with `l`.
+
+There is no separate full-screen connections flow — switching, adding, editing, and deleting happen through **DbSelector** + the connections dialog.
+
+## Credential store
+
+Saved connections use `Bun.secrets`:
+
+- macOS: Keychain
+- Linux: Secret Service (GNOME Keyring, KWallet, etc.)
+
+## CLI connection flags
+
+`--log-path`, `--uri`, `--host`, `--port`, `--username`, `--password`, and `--auth-db` are parsed by yargs but **not wired** into the app yet — use the welcome picker and in-app connections dialog. See [CLI flags](/docs/cli).

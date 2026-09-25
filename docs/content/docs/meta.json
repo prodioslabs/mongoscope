@@ -1,0 +1,18 @@
+{
+  "title": "MongoScope",
+  "pages": [
+    "index",
+    "getting-started",
+    "connections",
+    "---Tabs---",
+    "slow-queries",
+    "live-ops",
+    "replication",
+    "indexes",
+    "logs",
+    "---Reference---",
+    "themes",
+    "cli",
+    "shortcuts"
+  ]
+}
