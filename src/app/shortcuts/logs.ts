@@ -34,6 +34,19 @@ export const LOGS_SHORTCUTS: readonly Shortcut[] = [
   {
     keys: 'c/w/r/n/s',
     helpLabel: 'Toggle COMMAND / WRITE / REPL / NETWORK / STORAGE pills',
+    helpSegments: [
+      { key: '', text: 'Toggle ' },
+      { key: 'c', text: 'COMMAND' },
+      { key: '', text: ' / ' },
+      { key: 'w', text: 'WRITE' },
+      { key: '', text: ' / ' },
+      { key: 'r', text: 'REPL' },
+      { key: '', text: ' / ' },
+      { key: 'n', text: 'NETWORK' },
+      { key: '', text: ' / ' },
+      { key: 's', text: 'STORAGE' },
+      { key: '', text: ' pills' },
+    ],
     bindings: [
       { key: 'c', cmd: 'logs.toggle-COMMAND' },
       { key: 'w', cmd: 'logs.toggle-WRITE' },

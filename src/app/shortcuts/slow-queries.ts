@@ -75,16 +75,29 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
   },
 ]
 
+const sortCountAvgPlanChip: FooterChip = {
+  keys: 'c/a/p',
+  label: 'sort count/avg/plan',
+  segments: [
+    { key: '', text: 'sort ' },
+    { key: 'c', text: 'count' },
+    { key: '', text: '/' },
+    { key: 'a', text: 'avg' },
+    { key: '', text: '/' },
+    { key: 'p', text: 'plan' },
+  ],
+}
+
 /** Footer for static mode (default). */
 export const SLOW_QUERIES_STATIC_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
-  { keys: 'c/a/p', label: 'sort count/avg/plan' },
+  sortCountAvgPlanChip,
 ]
 
 /** Footer for live profiler mode. */
 export const SLOW_QUERIES_LIVE_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
-  { keys: 'c/a/p', label: 'sort count/avg/plan' },
+  sortCountAvgPlanChip,
   { keys: '[]', label: 'db' },
   { keys: 'e', label: 'enable' },
   { keys: 'T', label: 'samples' },

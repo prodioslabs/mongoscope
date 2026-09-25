@@ -36,6 +36,7 @@ export {
   toHelpSection,
   type HelpBinding,
   type HelpSection,
+  type MnemonicSegment,
   type Shortcut,
 } from './types'
 export { WELCOME_PARSING_FOOTER, WELCOME_SHORTCUTS } from './welcome'
