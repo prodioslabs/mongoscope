@@ -14,7 +14,6 @@ export {
   collectionTopBarSegments,
   formatRunningMs,
   runningMsSeverity,
-  truncateLiveOpsCell,
   type LiveOpSeverity,
 } from './format'
 export { buildLockNote, normalizeCurrentOpDocs, parseServerStatus } from './normalize'
@@ -28,7 +27,6 @@ export type {
   KillOpResult,
   KillOpTarget,
   LiveOpsPanelError,
-  LiveOpsPanelErrorKind,
   LiveOpsSnapshot,
   LockWaitCount,
   QueuedOpsStats,

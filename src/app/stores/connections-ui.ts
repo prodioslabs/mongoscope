@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ConnectionsDialogView = 'list' | 'add' | 'edit'
+type ConnectionsDialogView = 'list' | 'add' | 'edit'
 
 type ConnectionsUiState = {
   dialogOpen: boolean

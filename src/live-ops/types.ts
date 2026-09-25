@@ -1,6 +1,5 @@
-import type { PanelError, PanelErrorKind } from '../lib/panel-error'
+import type { PanelError } from '../lib/panel-error'
 
-export type LiveOpsPanelErrorKind = PanelErrorKind
 export type LiveOpsPanelError = PanelError
 
 export type CurrentOpRow = {

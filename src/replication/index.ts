@@ -53,7 +53,6 @@ export type {
   OplogWindow,
   RecentReplicationEvent,
   ReplicationPanelError,
-  ReplicationPanelErrorKind,
   ReplicationSnapshot,
   ReplicationTopology,
   TopologyMember,

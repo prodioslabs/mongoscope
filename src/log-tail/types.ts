@@ -1,4 +1,4 @@
-import type { SeverityCode } from '../parser'
+import type { LogKind, SeverityCode } from '../parser'
 
 /** MongoDB structured-log components exposed as Logs category pills. */
 export const LOG_CATEGORY_COMPONENTS = [
@@ -33,7 +33,7 @@ export type TailLogLine = {
   namespace: string | null
   durationMillis: number | null
   planSummary: string | null
-  kind: 'json' | 'raw'
+  kind: LogKind
 }
 
 export type LogTailFormat = 'JSON (4.4+)' | 'raw/legacy'
