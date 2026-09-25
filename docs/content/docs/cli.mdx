@@ -1,0 +1,13 @@
+---
+title: CLI flags
+description: Wired and unwired mongoscope startup flags
+---
+
+```bash
+bun start --help
+```
+
+| Flag | Status |
+| --- | --- |
+| `--log-dir` | **Wired** — welcome screen’s second log list (default `.`) |
+| `--log-path`, `--uri`, `--host`, `--port`, `--username`, `--password`, `--auth-db` | Parsed by yargs but **not wired** into the app yet — use the welcome picker and in-app connections dialog |

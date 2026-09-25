@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* MongoScope mark accent — mirrors the TUI's gruvbox `theme.accent` (light / dark). */
+:root {
+  --ms-accent: #427b58;
+}
+
+.dark {
+  --ms-accent: #8ec07c;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}

@@ -1,0 +1,13 @@
+---
+title: Replication
+description: Replica-set topology, oplog, lag trend, heartbeats, and elections
+---
+
+Requires a selected live connection. Auto-refresh ~5s.
+
+- Replica-set **topology** (members, lag, priority/votes)
+- **Oplog window** (size, fill, growth)
+- **Lag trend** sparkline (session samples since connect, ~10m window, no backfill)
+- **Heartbeats** (ping edges from this node)
+- **Recent elections / state changes** from server `getLog` RAM buffer (not a fixed multi-day history)
+- Default **write concern** (majority wait is not exposed read-only → shown as n/a)

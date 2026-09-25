@@ -1,0 +1,10 @@
+---
+title: Slow Queries
+description: Static log patterns and live system.profile sampling
+---
+
+- **Static (default):** aggregates slow-query patterns from the parsed log file.
+- **Live:** reads newest `system.profile` samples from the selected connection (poll ~2s). Toggle with `l` when a connection is selected.
+- Live requires profiling on the selected database: press `e` → confirm dialog (sets profiler level 1 + `slowms`, default 100).
+- Sort: `c` count · `a` avg ms · `p` plan. Details: Enter. From details, `i` jumps to Indexes with a suggested vs existing index (read-only).
+- Live sample window: `Shift+T` (presets / custom). Cycle databases: `[` / `]`.

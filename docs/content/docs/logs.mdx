@@ -1,0 +1,9 @@
+---
+title: Logs
+description: Static file tail and live getLog buffer
+---
+
+- **Static:** live-tail of the analyzed log file (after welcome parse).
+- **Live:** polls `getLog: 'global'` from the selected connection. Toggle with `l` when connected.
+- Live fidelity: **rolling RAM buffer (~1024 events)** — not a durable full history (banner in UI).
+- `space` follow · `/` search · `f` custom filter · `c`/`w`/`r`/`n`/`s` category pills

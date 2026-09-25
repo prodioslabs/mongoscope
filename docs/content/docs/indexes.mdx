@@ -1,0 +1,12 @@
+---
+title: Indexes
+description: Index inventory, BUILD %, and suggested-index jumps from Slow Queries
+---
+
+Requires a selected live connection. Auto-refresh ~5s.
+
+- Per-database / collection inventory, sizes, flags, `$indexStats` ops/since (connected node only)
+- In-progress **BUILD %** from `$currentOp` (idleConnections included)
+- Navigation: `←`/`→` database · `[`/`]` collection · `↑`/`↓` rows
+- Sort: `n`/`i` collections · `s`/`o` indexes by size/ops
+- Jump target from Slow Queries details (`i`) with suggested-index banner (create outside MongoScope)
