@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- MongoScope mark: magnifying lens over the TUI's pulse waveform.
+       Favicons cannot inherit page colour, so light/dark is handled here.
+       Presentation attributes are the light-mode fallback for renderers that ignore <style>. -->
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .fg { stroke: #ebdbb2; }
+      .ac { stroke: #8ec07c; }
+    }
+  </style>
+  <circle class="fg" cx="13.5" cy="13.5" r="9" stroke="#3c3836" stroke-width="3"/>
+  <path class="fg" d="M20.5 20.5 L28 28" stroke="#3c3836" stroke-width="3.5"/>
+  <path class="ac" d="M7.5 13.5 H10.5 L12.5 9.5 L14.5 17.5 L16.5 13.5 H19.5" stroke="#427b58" stroke-width="2.25"/>
+</svg>
