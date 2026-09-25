@@ -28,5 +28,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "exclude": ["docs", "node_modules", "dist"]
+  "exclude": ["docs", "node_modules", "dist", ".worktrees"]
 }
+
