@@ -17,7 +17,6 @@ const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 
 const WELCOME_IDLE_KEYBINDINGS = toFooter(WELCOME_SHORTCUTS)
 
-// Scope mark: monitor with a pulse waveform.
 const SCOPE = [
   '  ▄███████████▄  ',
   '  █           █  ',
@@ -50,13 +49,36 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
       let cancelled = false
 
       async function load() {
-        const [mongo, dir] = await Promise.all([
+        const [mongoResult, dirResult] = await Promise.allSettled([
           listLogFiles(MONGODB_DEFAULT_LOG_DIR),
           listLogFiles(logDir),
         ])
-        if (cancelled) return
-        setMongoLogs(mongo)
-        setDirLogs(dir)
+        if (cancelled) {
+          return
+        }
+
+        if (mongoResult.status === 'fulfilled') {
+          setMongoLogs(mongoResult.value)
+        } else {
+          const message =
+            mongoResult.reason instanceof Error
+              ? mongoResult.reason.message
+              : String(mongoResult.reason)
+          // oxlint-disable-next-line no-console -- OpenTUI console overlay; log dir I/O
+          console.warn(`Failed to list logs in ${MONGODB_DEFAULT_LOG_DIR}: ${message}`)
+          setMongoLogs([])
+        }
+
+        if (dirResult.status === 'fulfilled') {
+          setDirLogs(dirResult.value)
+        } else {
+          const message =
+            dirResult.reason instanceof Error ? dirResult.reason.message : String(dirResult.reason)
+          // oxlint-disable-next-line no-console -- OpenTUI console overlay; log dir I/O
+          console.warn(`Failed to list logs in ${logDir}: ${message}`)
+          setDirLogs([])
+        }
+
         setSelectedIndexes([0, 0])
       }
 
