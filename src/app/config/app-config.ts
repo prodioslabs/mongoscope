@@ -1,6 +1,11 @@
 import { appConfigFilePath } from '../../lib/config-paths'
 import { loadJsonConfigFile, saveJsonConfigFile } from '../../lib/json-config-file'
-import { DEFAULT_APP_CONFIG, type AppConfig } from './types'
+import {
+  DEFAULT_APP_CONFIG,
+  isThemeMode,
+  type AppConfig,
+  type ThemeMode,
+} from './types'
 
 export function validateAppConfig(value: unknown): AppConfig {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) {
@@ -17,9 +22,19 @@ export function validateAppConfig(value: unknown): AppConfig {
     throw new Error('Invalid app config: theme must be a non-empty string')
   }
 
+  // Older configs omitted mode — default to dark rather than rejecting.
+  let mode: ThemeMode = DEFAULT_APP_CONFIG.mode
+  if (record.mode !== undefined) {
+    if (!isThemeMode(record.mode)) {
+      throw new Error('Invalid app config: mode must be "dark" or "light"')
+    }
+    mode = record.mode
+  }
+
   return {
     version: 1,
     theme: record.theme.trim(),
+    mode,
   }
 }
 
@@ -31,14 +46,17 @@ export async function loadAppConfig(filePath: string = appConfigFilePath()): Pro
   return loadJsonConfigFile(filePath, DEFAULT_APP_CONFIG, validateAppConfig)
 }
 
-export async function saveAppConfigTheme(
-  themeName: string,
+export async function saveAppConfig(
+  input: { theme: string; mode: ThemeMode },
   filePath: string = appConfigFilePath(),
 ): Promise<void> {
-  const theme = themeName.trim()
+  const theme = input.theme.trim()
   if (theme === '') {
     throw new Error('theme must be a non-empty string')
   }
-  const config: AppConfig = { version: 1, theme }
+  if (!isThemeMode(input.mode)) {
+    throw new Error('mode must be "dark" or "light"')
+  }
+  const config: AppConfig = { version: 1, theme, mode: input.mode }
   await saveJsonConfigFile(filePath, config)
 }

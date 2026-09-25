@@ -15,7 +15,7 @@ export const LOGS_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'space',
-    helpLabel: 'Toggle follow (pin to newest getLog lines)',
+    helpLabel: 'Toggle follow (pin to newest lines — file tail or getLog)',
     footerLabel: 'follow',
     bindings: [{ key: 'space', cmd: 'logs.toggle-follow' }],
   },
@@ -44,7 +44,8 @@ export const LOGS_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'l',
-    helpLabel: 'Toggle Static log / Live getLog (when a connection is selected)',
+    helpLabel:
+      'Toggle Static file / Live getLog (when a connection is selected; getLog is a ~1024-event RAM buffer)',
     footerLabel: 'source',
     // Bound in LogsTab source layer (priority), not LogsView.
     bindings: [],

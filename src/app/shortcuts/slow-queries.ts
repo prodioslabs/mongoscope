@@ -45,26 +45,27 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
   {
     keys: 'shift+t',
     helpLabel:
-      'Open profiler sample-window dialog in live mode (10k / 25k / 50k / 100k / 250k / custom)',
+      'Live only: profiler sample window (newest system.profile docs — 10k / 25k / 50k / 100k / 250k / custom)',
     footerLabel: 'samples',
     footerKeys: 'T',
     bindings: [{ key: 'shift+t', cmd: 'slow-queries.open-tail' }],
   },
   {
     keys: 'l',
-    helpLabel: 'Toggle Static log / Live profiler (when a connection is selected)',
+    helpLabel:
+      'Toggle Static log file / Live system.profile (when a connection is selected)',
     footerLabel: 'source',
     bindings: [{ key: 'l', cmd: 'slow-queries.toggle-source' }],
   },
   {
     keys: 'e',
-    helpLabel: 'Enable profiler for selected database (live mode)',
+    helpLabel: 'Live only: enable profiler for selected DB (confirm — profile:1 + slowms)',
     footerLabel: 'enable',
     bindings: [{ key: 'e', cmd: 'slow-queries.enable-open' }],
   },
   {
     keys: '[ / ]',
-    helpLabel: 'Previous / next database (live mode)',
+    helpLabel: 'Live only: previous / next database',
     footerLabel: 'db',
     footerKeys: '[]',
     bindings: [

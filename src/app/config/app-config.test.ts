@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { loadAppConfig, saveAppConfigTheme, validateAppConfig } from './app-config'
+import { loadAppConfig, saveAppConfig, validateAppConfig } from './app-config'
 import { DEFAULT_APP_CONFIG } from './types'
 
 const tempRoots: string[] = []
@@ -20,23 +20,33 @@ async function makeTempConfigPath(): Promise<string> {
 }
 
 describe('validateAppConfig', () => {
-  it('accepts version 1 with a theme name and ignores unknown keys', () => {
+  it('accepts version 1 with theme + mode and ignores unknown keys', () => {
     expect(
       validateAppConfig({
         version: 1,
         theme: 'nord',
+        mode: 'light',
         futureKey: true,
       }),
-    ).toEqual({ version: 1, theme: 'nord' })
+    ).toEqual({ version: 1, theme: 'nord', mode: 'light' })
   })
 
-  it('rejects unsupported versions and empty theme', () => {
+  it('defaults mode to dark when omitted (legacy config)', () => {
+    expect(validateAppConfig({ version: 1, theme: 'nord' })).toEqual({
+      version: 1,
+      theme: 'nord',
+      mode: 'dark',
+    })
+  })
+
+  it('rejects unsupported versions, empty theme, and invalid mode', () => {
     expect(() => validateAppConfig({ version: 2, theme: 'nord' })).toThrow(/version/)
     expect(() => validateAppConfig({ version: 1, theme: '  ' })).toThrow(/theme/)
+    expect(() => validateAppConfig({ version: 1, theme: 'nord', mode: 'dim' })).toThrow(/mode/)
   })
 })
 
-describe('loadAppConfig / saveAppConfigTheme', () => {
+describe('loadAppConfig / saveAppConfig', () => {
   it('returns defaults when the file is missing', async () => {
     const path = await makeTempConfigPath()
     await unlink(path).catch(() => undefined)
@@ -52,12 +62,26 @@ describe('loadAppConfig / saveAppConfigTheme', () => {
     await expect(loadAppConfig(path)).rejects.toThrow(/version/)
   })
 
-  it('round-trips a theme selection with atomic write', async () => {
+  it('round-trips theme and mode with atomic write', async () => {
     const path = await makeTempConfigPath()
-    await saveAppConfigTheme('tokyonight', path)
-    await expect(loadAppConfig(path)).resolves.toEqual({ version: 1, theme: 'tokyonight' })
+    await saveAppConfig({ theme: 'tokyonight', mode: 'light' }, path)
+    await expect(loadAppConfig(path)).resolves.toEqual({
+      version: 1,
+      theme: 'tokyonight',
+      mode: 'light',
+    })
 
     const written = JSON.parse(await readFile(path, 'utf8'))
-    expect(written).toEqual({ version: 1, theme: 'tokyonight' })
+    expect(written).toEqual({ version: 1, theme: 'tokyonight', mode: 'light' })
+  })
+
+  it('loads legacy theme-only config as dark mode', async () => {
+    const path = await makeTempConfigPath()
+    await writeFile(path, JSON.stringify({ version: 1, theme: 'gruvbox' }), 'utf8')
+    await expect(loadAppConfig(path)).resolves.toEqual({
+      version: 1,
+      theme: 'gruvbox',
+      mode: 'dark',
+    })
   })
 })

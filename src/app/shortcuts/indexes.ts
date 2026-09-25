@@ -59,7 +59,7 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'c',
-    helpLabel: 'Select or manage the MongoDB connection',
+    helpLabel: 'Select or manage the MongoDB connection (DbSelector)',
     footerLabel: 'connections',
     bindings: [],
   },
@@ -75,13 +75,13 @@ export const INDEXES_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'build',
-    helpLabel: 'BUILD % comes from $currentOp on the connected node (idleConnections included)',
+    helpLabel: 'BUILD % from $currentOp on the connected node (idleConnections included)',
     bindings: [],
   },
   {
     keys: 'i (in SQ)',
     helpLabel:
-      'From Slow Queries details (enter → i): jump here with suggested vs existing index (read-only)',
+      'From Slow Queries details (enter → i): jump here with suggested vs existing index (read-only — create outside MongoScope)',
     bindings: [],
   },
 ]

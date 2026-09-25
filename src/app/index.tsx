@@ -6,7 +6,7 @@ import { App, type AppOptions } from './app'
 import { QueryProvider } from './components/query-provider'
 import { ThemeProvider } from './components/theme-provider'
 import { loadAppConfig } from './config/app-config'
-import { DEFAULT_THEME_NAME } from './config/types'
+import { DEFAULT_APP_CONFIG, DEFAULT_THEME_NAME, type ThemeMode } from './config/types'
 import { type AppKeymapMode } from './lib/keymap-mode'
 import { overlayMode } from './lib/overlay-mode'
 import './lib/opentui-text-table'
@@ -15,29 +15,37 @@ import { refreshThemeCatalog, resolveConfiguredThemeName } from './theme/catalog
 
 export type { AppOptions }
 
+type BootstrappedTheme = {
+  theme: string
+  mode: ThemeMode
+}
+
 /**
  * Resolve theme before first React paint (config + catalog only; no providers yet).
  */
-async function bootstrapThemeSelection(): Promise<string> {
+async function bootstrapThemeSelection(): Promise<BootstrappedTheme> {
   try {
     const appConfig = await loadAppConfig()
     const catalog = await refreshThemeCatalog()
     const selectedTheme = resolveConfiguredThemeName(catalog, appConfig.theme)
-    useTheme.getState().hydrate(selectedTheme)
+    useTheme.getState().hydrate({ theme: selectedTheme, mode: appConfig.mode })
     enableThemeConfigPersistence()
-    return selectedTheme
+    return { theme: selectedTheme, mode: appConfig.mode }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     // oxlint-disable-next-line no-console -- OpenTUI console overlay; boot fallback
     console.warn(`Theme bootstrap failed; falling back to ${DEFAULT_THEME_NAME}: ${message}`)
-    useTheme.getState().hydrate(DEFAULT_THEME_NAME)
+    useTheme.getState().hydrate({
+      theme: DEFAULT_THEME_NAME,
+      mode: DEFAULT_APP_CONFIG.mode,
+    })
     // Persistence left disabled so a broken bootstrap cannot write config.json.
-    return DEFAULT_THEME_NAME
+    return { theme: DEFAULT_THEME_NAME, mode: DEFAULT_APP_CONFIG.mode }
   }
 }
 
 export async function start(options: AppOptions) {
-  const selectedTheme = await bootstrapThemeSelection()
+  const { theme: selectedTheme, mode } = await bootstrapThemeSelection()
 
   const renderer = await createCliRenderer()
   const keymap = createDefaultOpenTuiKeymap(renderer)
@@ -53,7 +61,7 @@ export async function start(options: AppOptions) {
 
   createRoot(renderer).render(
     <KeymapProvider keymap={keymap}>
-      <ThemeProvider mode="dark" theme={selectedTheme}>
+      <ThemeProvider mode={mode} theme={selectedTheme}>
         <QueryProvider>
           <App options={options} />
         </QueryProvider>
