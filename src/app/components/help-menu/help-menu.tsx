@@ -1,6 +1,7 @@
 import { TextAttributes } from '@opentui/core'
 import { useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef } from 'react'
+import { renderMnemonicLabel, renderMnemonicSegments } from '../../lib/mnemonic-label'
 import { HELP_SECTIONS, type HelpBinding } from '../../shortcuts'
 import { useFooter, type FooterKeybinding } from '../../stores/footer'
 import { useTheme } from '../../stores/theme'
@@ -93,9 +94,15 @@ function HelpBindingRow({ binding }: HelpBindingRowProps) {
       <text fg={theme.text} attributes={TextAttributes.BOLD} width={14} flexShrink={0}>
         {binding.keys}
       </text>
-      <text fg={theme.textMuted} flexGrow={1}>
-        {binding.label}
-      </text>
+      <text
+        fg={theme.textMuted}
+        flexGrow={1}
+        content={
+          binding.segments != null
+            ? renderMnemonicSegments(binding.segments)
+            : renderMnemonicLabel(binding.label, binding.keys)
+        }
+      />
     </box>
   )
 }

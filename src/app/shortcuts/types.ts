@@ -3,17 +3,24 @@ export type ShortcutBinding = {
   cmd: string
 }
 
+export type MnemonicSegment = {
+  key: string
+  text: string
+}
+
 export type Shortcut = {
   keys: string
   helpLabel: string
   footerLabel?: string
   footerKeys?: string
+  helpSegments?: readonly MnemonicSegment[]
   bindings: ReadonlyArray<ShortcutBinding>
 }
 
 export type HelpBinding = {
   keys: string
   label: string
+  segments?: readonly MnemonicSegment[]
 }
 
 export type HelpSection = {
@@ -24,6 +31,7 @@ export type HelpSection = {
 export type FooterChip = {
   keys: string
   label: string
+  segments?: readonly MnemonicSegment[]
 }
 
 export function toFooter(shortcuts: ReadonlyArray<Shortcut>): FooterChip[] {
@@ -44,6 +52,7 @@ export function toHelpSection(title: string, shortcuts: ReadonlyArray<Shortcut>)
     bindings: shortcuts.map((shortcut) => ({
       keys: shortcut.keys,
       label: shortcut.helpLabel,
+      ...(shortcut.helpSegments != null ? { segments: shortcut.helpSegments } : {}),
     })),
   }
 }

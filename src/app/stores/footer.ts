@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { GLOBAL_FOOTER_SHORTCUTS } from '../shortcuts/global'
-import { toFooter } from '../shortcuts/types'
+import { toFooter, type MnemonicSegment } from '../shortcuts/types'
 
 export type FooterKeybinding = {
   keys: string
   label: string
+  segments?: readonly MnemonicSegment[]
 }
 
 type FooterKeybindingScope = {

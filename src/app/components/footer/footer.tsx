@@ -1,6 +1,7 @@
-import { bold, fg, t } from '@opentui/core'
+import { bold, fg, StyledText, type RGBA, type TextChunk } from '@opentui/core'
 import { useEffect, useState } from 'react'
-import { useFooter } from '../../stores/footer'
+import { renderMnemonicLabel, renderMnemonicSegments } from '../../lib/mnemonic-label'
+import { useFooter, type FooterKeybinding } from '../../stores/footer'
 import { useTheme } from '../../stores/theme'
 
 /** Cap mid-footer status so long log paths don't crowd keybindings on narrow terminals. */
@@ -71,7 +72,8 @@ export function Footer() {
         {keybindings.map((binding) => (
           <text
             key={`${binding.keys}:${binding.label}`}
-            content={t`${bold(fg(theme.text)(binding.keys))} ${fg(theme.textMuted)(binding.label)}`}
+            fg={theme.textMuted}
+            content={footerChipText(binding, theme.text)}
             flexShrink={overlayActive ? 0 : 1}
             wrapMode="none"
             truncate={!overlayActive}
@@ -80,4 +82,17 @@ export function Footer() {
       </box>
     </box>
   )
+}
+
+function footerChipText(binding: FooterKeybinding, keyColor: RGBA): StyledText {
+  const label =
+    binding.segments != null
+      ? renderMnemonicSegments(binding.segments)
+      : renderMnemonicLabel(binding.label, binding.keys)
+  const chunks: TextChunk[] = [
+    bold(fg(keyColor)(binding.keys)),
+    { __isChunk: true, text: ' ', attributes: 0 },
+    ...label.chunks,
+  ]
+  return new StyledText(chunks)
 }
