@@ -3,12 +3,14 @@
 **See which MongoDB queries are killing your latency—without leaving the terminal.**
 
 ```bash
-bun install && bun start
+curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope-v2/main/install.sh | bash
 ```
 
-Pick a log file. Hit Enter. You get slow-query patterns, live ops, replica lag, indexes, and log tails in one keyboard-driven TUI.
+Then run `mongoscope`. Pick a log file. Hit Enter. You get slow-query patterns, live ops, replica lag, indexes, and log tails in one keyboard-driven TUI.
 
 Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui). Needs a real interactive TTY (don't pipe stdout).
+
+Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are attached to [GitHub Releases](https://github.com/prodioslabs/mongoscope-v2/releases) (the curl installer is Unix-only, same as Cellar).
 
 ## What you get
 
@@ -22,7 +24,17 @@ Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/open
 
 Connections land in your OS keychain (`Bun.secrets`). Themes (gruvbox, catppuccin, nord, …) persist under `~/.config/mongoscope/`.
 
-## Quick Start
+## Install options
+
+| Method | Command / notes |
+| --- | --- |
+| **curl (recommended)** | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope-v2/main/install.sh \| bash` |
+| Pin a version | `MONGOSCOPE_VERSION=v0.1.0 curl -fsSL … \| bash` |
+| Custom prefix | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash` |
+
+The installer downloads the matching archive from GitHub Releases, verifies `checksums.txt`, installs to `/usr/local/bin` (Linux) or `~/.local/bin` (macOS), and runs `mongoscope --version`.
+
+## For contributors
 
 Needs [Bun](https://bun.sh). Optional: a MongoDB log and/or a reachable instance.
 
@@ -33,14 +45,24 @@ bun install
 bun start
 ```
 
-For a global `mongoscope` command during development (uses the same `bin/mongoscope` entry as `bun start`):
+For a global `mongoscope` during development (script entry — requires Bun on PATH):
 
 ```bash
 bun link
 mongoscope --help
 ```
 
-That is separate from the packaged binary: `bun run build` writes a standalone executable to `dist/mongoscope`.
+That is separate from release binaries:
+
+| Script | Purpose |
+| --- | --- |
+| `bun start` | Launch the TUI from source |
+| `bun link` | Expose `mongoscope` on PATH for local dev |
+| `bun run build` | Native-platform binary → `dist/mongoscope` |
+| `bun run build:release` | All five targets + archives + `checksums.txt` under `dist/release/` |
+| `bun run typecheck` | Typecheck |
+| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check |
+| `bun run test` | Vitest |
 
 On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`). Enter parses the last 100k lines and opens the dashboard.
 
@@ -55,17 +77,6 @@ On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (d
 | `q`           | Quit                                           |
 
 Deeper reference lives in [`docs/`](./docs) — `cd docs && bun install && bun run dev`.
-
-## Scripts
-
-| Script                               | Purpose                                                                 |
-| ------------------------------------ | ----------------------------------------------------------------------- |
-| `bun start`                          | Launch the TUI                                                          |
-| `bun link`                           | Expose `mongoscope` on PATH for local dev (same entry as `bun start`)   |
-| `bun run typecheck`                  | Typecheck                                                               |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                                                     |
-| `bun run test`                       | Vitest                                                                  |
-| `bun run build`                      | Standalone binary → `dist/mongoscope` (distinct from the `bun link` bin) |
 
 ## CLI flags
 
