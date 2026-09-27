@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { GitHubStarLink } from '@/components/github-star'
-import { InstallSection } from '@/components/home/install-section'
-import { TuiMockup } from '@/components/home/tui-mockup'
+import { InstallSection } from './_components/install-section'
+import { TuiMockup } from './_components/tui-mockup'
 import { MongoScopeMark } from '@/components/mongoscope-mark'
 import { appName, docsRoute } from '@/lib/shared'
 

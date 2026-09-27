@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 
 /** Static Slow Queries mockup — update when TUI columns change. */
 export function TuiMockup() {

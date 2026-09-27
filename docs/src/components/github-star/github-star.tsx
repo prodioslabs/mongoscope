@@ -1,6 +1,6 @@
 import { Star } from 'lucide-react'
 import { Suspense, use } from 'react'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 import { getGitHubStars } from '@/lib/github-stars'
 import { appName, githubRepoUrl } from '@/lib/shared'
 

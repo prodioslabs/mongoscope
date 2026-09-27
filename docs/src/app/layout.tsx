@@ -1,5 +1,5 @@
 import { RootProvider } from 'fumadocs-ui/provider/next';
-import './global.css';
+import '../styles/globals.css';
 import { Inter } from 'next/font/google';
 
 const inter = Inter({
