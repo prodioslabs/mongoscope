@@ -200,6 +200,15 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
     }
   }
 
+  function retrySudoForSection(section: number) {
+    if (parsing || elevatePendingRef.current) {
+      return
+    }
+    activeSectionRef.current = section
+    setActiveSection(section)
+    requestSudoForActiveSection()
+  }
+
   useBindings(
     function createWelcomeScreenLayer() {
       function logFilesForSection(section: number) {
@@ -388,20 +397,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
             setSelectedIndexes((indexes) => [index, indexes[1]])
           }}
           onRetrySudo={() => {
-            if (parsing || elevatePending) {
-              return
-            }
-            setActiveSection(0)
-            if (mongoList.status === 'permission_denied') {
-              openConfirm(MONGODB_DEFAULT_LOG_DIR, 'list', null)
-              return
-            }
-            if (parseError != null && isPermissionDeniedMessage(parseError)) {
-              const name = mongoLogs[selectedIndexes[0] ?? 0]
-              if (name) {
-                openConfirm(MONGODB_DEFAULT_LOG_DIR, 'read', join(MONGODB_DEFAULT_LOG_DIR, name))
-              }
-            }
+            retrySudoForSection(0)
           }}
         />
         <LogFileSection
@@ -420,20 +416,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
             setSelectedIndexes((indexes) => [indexes[0], index])
           }}
           onRetrySudo={() => {
-            if (parsing || elevatePending) {
-              return
-            }
-            setActiveSection(1)
-            if (dirList.status === 'permission_denied') {
-              openConfirm(logDir, 'list', null)
-              return
-            }
-            if (parseError != null && isPermissionDeniedMessage(parseError)) {
-              const name = dirLogs[selectedIndexes[1] ?? 0]
-              if (name) {
-                openConfirm(logDir, 'read', join(logDir, name))
-              }
-            }
+            retrySudoForSection(1)
           }}
         />
         {parseProgress !== null ? (

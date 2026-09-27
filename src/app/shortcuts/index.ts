@@ -25,7 +25,6 @@ export {
 } from './slow-queries'
 export { toBindings, toFooter, type HelpBinding, type HelpSection } from './types'
 export {
-  WELCOME_ELEVATED_CONFIRM_FOOTER,
   WELCOME_PARSING_FOOTER,
   WELCOME_PERMISSION_FOOTER,
   WELCOME_SHORTCUTS,

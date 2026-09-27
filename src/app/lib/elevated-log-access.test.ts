@@ -362,11 +362,11 @@ describe('listLogFilesElevated', () => {
 
   it('rejects relative paths before spawn (no suspend/resume)', async () => {
     const renderer = createMockRenderer()
-    const spawn = vi.fn()
+    const spawn = vi.fn<ElevatedSpawn>()
     const result = await listLogFilesElevated({
       renderer,
       dir: 'var/log/mongodb',
-      spawn: spawn as unknown as ElevatedSpawn,
+      spawn,
     })
     expect(result.ok).toBe(false)
     if (!result.ok) {
@@ -378,11 +378,11 @@ describe('listLogFilesElevated', () => {
 
   it('rejects paths containing .. before spawn (no suspend/resume)', async () => {
     const renderer = createMockRenderer()
-    const spawn = vi.fn()
+    const spawn = vi.fn<ElevatedSpawn>()
     const result = await listLogFilesElevated({
       renderer,
       dir: '/var/log/../mongodb',
-      spawn: spawn as unknown as ElevatedSpawn,
+      spawn,
     })
     expect(result.ok).toBe(false)
     expect(spawn).not.toHaveBeenCalled()
@@ -516,19 +516,19 @@ describe('materializeLogFileTailElevated', () => {
 
   it('rejects relative and .. file paths before spawn', async () => {
     const renderer = createMockRenderer()
-    const spawn = vi.fn()
+    const spawn = vi.fn<ElevatedSpawn>()
     await expect(
       materializeLogFileTailElevated({
         renderer,
         path: 'mongod.log',
-        spawn: spawn as unknown as ElevatedSpawn,
+        spawn,
       }),
     ).resolves.toMatchObject({ ok: false, kind: 'invalid_path' })
     await expect(
       materializeLogFileTailElevated({
         renderer,
         path: '/var/log/../mongodb/mongod.log',
-        spawn: spawn as unknown as ElevatedSpawn,
+        spawn,
       }),
     ).resolves.toMatchObject({ ok: false, kind: 'invalid_path' })
     expect(spawn).not.toHaveBeenCalled()

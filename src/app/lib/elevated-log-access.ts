@@ -6,8 +6,8 @@ import { basename, dirname, isAbsolute, join, normalize } from 'node:path'
 import { MAX_READ_BYTES } from '../../parser'
 import { isMongoLogFile, type ListLogFilesResult } from './list-log-files'
 
-/** Hard timeout while waiting on an interactive sudo prompt (Step 2/4). */
-export const SUDO_TIMEOUT_MS = 90_000
+/** Hard timeout while waiting on an interactive sudo prompt. */
+const SUDO_TIMEOUT_MS = 90_000
 
 export type ElevatedFailureKind =
   | 'cancelled'
@@ -17,18 +17,9 @@ export type ElevatedFailureKind =
   | 'invalid_path'
   | 'other'
 
-export type ElevatedFailure = {
-  ok: false
-  kind: ElevatedFailureKind
-  message: string
-}
-
-export type ElevatedSuccess<T> = {
-  ok: true
-  value: T
-}
-
-export type ElevatedResult<T> = ElevatedSuccess<T> | ElevatedFailure
+export type ElevatedResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; kind: ElevatedFailureKind; message: string }
 
 export type SuspendableRenderer = Pick<CliRenderer, 'suspend' | 'resume'>
 
@@ -90,7 +81,7 @@ export function isDirectorySessionElevated(dir: string): boolean {
   return sessionElevatedDirectories.has(validated.value)
 }
 
-export function markDirectorySessionElevated(dir: string): void {
+function markDirectorySessionElevated(dir: string): void {
   const validated = validateElevatedPath(dir)
   if (!validated.ok) {
     return
@@ -104,11 +95,7 @@ export function clearSessionElevatedDirectories(): void {
 }
 
 export function isFsPermissionDeniedError(error: unknown): boolean {
-  if (typeof error !== 'object' || error == null || !('code' in error)) {
-    return false
-  }
-  const code = (error as { code?: unknown }).code
-  return code === 'EACCES' || code === 'EPERM'
+  return isNodeErrnoException(error) && (error.code === 'EACCES' || error.code === 'EPERM')
 }
 
 export function isPermissionDeniedMessage(message: string): boolean {
@@ -333,10 +320,9 @@ function defaultBunSpawn(
 }
 
 function isEnoent(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error != null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === 'ENOENT'
-  )
+  return isNodeErrnoException(error) && error.code === 'ENOENT'
+}
+
+function isNodeErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error != null && 'code' in error
 }
