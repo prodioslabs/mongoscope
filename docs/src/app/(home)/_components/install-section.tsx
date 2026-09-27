@@ -4,11 +4,7 @@ import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import {
-  docsRoute,
-  githubRepoUrl,
-  installCurlCommand,
-} from '@/lib/shared'
+import { docsRoute, githubRepoUrl, installCurlCommand } from '@/lib/shared'
 
 type InstallSectionProps = {
   className?: string
@@ -17,10 +13,7 @@ type InstallSectionProps = {
 export function InstallSection({ className }: InstallSectionProps) {
   return (
     <section
-      className={cn(
-        'mx-auto w-full max-w-(--fd-layout-width) min-w-0 px-4 sm:px-6',
-        className,
-      )}
+      className={cn('mx-auto w-full max-w-(--fd-layout-width) min-w-0 px-4 sm:px-6', className)}
       aria-labelledby="install-heading"
     >
       <div className="rounded-2xl border border-fd-border bg-fd-card px-4 py-6 sm:px-6 sm:py-8">
@@ -34,13 +27,18 @@ export function InstallSection({ className }: InstallSectionProps) {
           <ul className="flex flex-wrap items-center gap-2">
             <OsChip brand="apple" icon={<AppleMark className="size-4" />} label="macOS" />
             <OsChip brand="linux" icon={<LinuxMark className="size-4" />} label="Linux" />
-            <OsChip brand="windows" icon={<WindowsMark className="size-4" />} label="Windows" muted />
+            <OsChip
+              brand="windows"
+              icon={<WindowsMark className="size-4" />}
+              label="Windows"
+              muted
+            />
           </ul>
         </div>
 
         <p className="mb-4 max-w-2xl text-sm text-pretty text-fd-muted-foreground">
-          One command for macOS and Linux — the installer detects your OS and architecture.
-          Windows builds ship on{' '}
+          One command for macOS and Linux — the installer detects your OS and architecture. Windows
+          builds ship on{' '}
           <a
             href={`${githubRepoUrl}/releases`}
             className="font-medium text-fd-primary underline-offset-4 hover:underline"
@@ -99,8 +97,7 @@ const osChipBrandHover: Record<OsBrand, string> = {
   linux:
     'hover:border-[#e5a800] hover:bg-[#fcc624] hover:text-neutral-900 hover:shadow-[#fcc624]/35',
   // Windows / Microsoft blue
-  windows:
-    'hover:border-[#0078d4] hover:bg-[#00a4ef] hover:text-white hover:shadow-[#00a4ef]/35',
+  windows: 'hover:border-[#0078d4] hover:bg-[#00a4ef] hover:text-white hover:shadow-[#00a4ef]/35',
 }
 
 function OsChip({ brand, icon, label, muted = false }: OsChipProps) {

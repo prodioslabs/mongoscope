@@ -28,7 +28,7 @@ type DocsPagePath = {
   locale?: string
 }
 
- type DocsPageAssetUrl = {
+type DocsPageAssetUrl = {
   segments: string[]
   url: string
 }

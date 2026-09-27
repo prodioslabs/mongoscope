@@ -21,16 +21,8 @@ export function MongoScopeMark({ className }: MongoScopeMarkProps) {
         stroke="currentColor"
         strokeWidth={markLens.strokeWidth}
       />
-      <path
-        d={markHandle.d}
-        stroke="currentColor"
-        strokeWidth={markHandle.strokeWidth}
-      />
-      <path
-        d={markPulse.d}
-        stroke="var(--ms-accent)"
-        strokeWidth={markPulse.strokeWidth}
-      />
+      <path d={markHandle.d} stroke="currentColor" strokeWidth={markHandle.strokeWidth} />
+      <path d={markPulse.d} stroke="var(--ms-accent)" strokeWidth={markPulse.strokeWidth} />
     </svg>
   )
 }

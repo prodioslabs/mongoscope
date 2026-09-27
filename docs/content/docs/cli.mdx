@@ -10,12 +10,12 @@ mongoscope --help
 
 During development, `bun link` exposes the `mongoscope` command on your PATH (same entry as `bun start`). `bun run build` produces a separate standalone binary at `dist/mongoscope`.
 
-| Flag | Description |
-| --- | --- |
-| `-h`, `--help` / `-v`, `--version` | Print and exit immediately (version from `package.json`) |
-| `--log-dir` | Welcome screen’s second log list (default `.`) |
-| `--log-path` | Parse that log file on startup (skips picker; invalid path exits 1) |
-| `--uri` | Ephemeral live connect for this session (**not** saved to the OS keychain) |
+| Flag                                                        | Description                                                                           |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `-h`, `--help` / `-v`, `--version`                          | Print and exit immediately (version from `package.json`)                              |
+| `--log-dir`                                                 | Welcome screen’s second log list (default `.`)                                        |
+| `--log-path`                                                | Parse that log file on startup (skips picker; invalid path exits 1)                   |
+| `--uri`                                                     | Ephemeral live connect for this session (**not** saved to the OS keychain)            |
 | `--host`, `--port`, `--username`, `--password`, `--auth-db` | Build a URI and ephemeral-connect (do not combine with `--uri`; default port `27017`) |
 
 Live-only startup (connection flags without `--log-path`) opens the dashboard with Slow Queries / Logs in live mode. Combining `--log-path` with live flags parses the log (static sources) and connects in parallel.

@@ -15,17 +15,17 @@ curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope-v2/main/inst
 
 The script detects your OS and architecture (`linux`/`darwin` × `amd64`/`arm64`), downloads the matching archive from the latest GitHub Release, verifies it against `checksums.txt`, installs the binary onto your PATH, and runs `mongoscope --version`.
 
-| Platform | Default install path |
-| --- | --- |
-| Linux | `/usr/local/bin/mongoscope` |
-| macOS | `~/.local/bin/mongoscope` |
+| Platform | Default install path        |
+| -------- | --------------------------- |
+| Linux    | `/usr/local/bin/mongoscope` |
+| macOS    | `~/.local/bin/mongoscope`   |
 
 Optional environment variables:
 
-| Variable | Effect |
-| --- | --- |
-| `MONGOSCOPE_VERSION` | Pin a release tag (e.g. `v0.1.0`). Default: `latest`. |
-| `MONGOSCOPE_PREFIX` | Install under `$MONGOSCOPE_PREFIX/bin` instead of the platform default. |
+| Variable             | Effect                                                                  |
+| -------------------- | ----------------------------------------------------------------------- |
+| `MONGOSCOPE_VERSION` | Pin a release tag (e.g. `v0.1.0`). Default: `latest`.                   |
+| `MONGOSCOPE_PREFIX`  | Install under `$MONGOSCOPE_PREFIX/bin` instead of the platform default. |
 
 ```bash
 MONGOSCOPE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope-v2/main/install.sh | bash
@@ -41,13 +41,13 @@ Prefer not to pipe a script into bash? Download the archive for your platform fr
 
 Asset names use the **version without the `v` prefix** (tag `v0.1.0` → `0.1.0` in the filename):
 
-| Platform | Archive |
-| --- | --- |
-| Linux x86_64 | `mongoscope_<version>_linux_amd64.tar.gz` |
-| Linux arm64 | `mongoscope_<version>_linux_arm64.tar.gz` |
-| macOS Intel | `mongoscope_<version>_darwin_amd64.tar.gz` |
+| Platform            | Archive                                    |
+| ------------------- | ------------------------------------------ |
+| Linux x86_64        | `mongoscope_<version>_linux_amd64.tar.gz`  |
+| Linux arm64         | `mongoscope_<version>_linux_arm64.tar.gz`  |
+| macOS Intel         | `mongoscope_<version>_darwin_amd64.tar.gz` |
 | macOS Apple Silicon | `mongoscope_<version>_darwin_arm64.tar.gz` |
-| Windows x86_64 | `mongoscope_<version>_windows_amd64.zip` |
+| Windows x86_64      | `mongoscope_<version>_windows_amd64.zip`   |
 
 Each release also publishes `checksums.txt`. Example URLs for tag `v0.1.0`:
 
@@ -159,15 +159,15 @@ mongoscope --help
 
 That is separate from release binaries:
 
-| Script | Purpose |
-| --- | --- |
-| `bun start` | Launch the TUI from source |
-| `bun link` | Expose `mongoscope` on PATH for local dev |
-| `bun run build` | Native-platform binary → `dist/mongoscope` |
-| `bun run build:release` | All five targets + archives + `checksums.txt` under `dist/release/` |
-| `bun run typecheck` | Typecheck |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check |
-| `bun run test` | Vitest |
+| Script                               | Purpose                                                             |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `bun start`                          | Launch the TUI from source                                          |
+| `bun link`                           | Expose `mongoscope` on PATH for local dev                           |
+| `bun run build`                      | Native-platform binary → `dist/mongoscope`                          |
+| `bun run build:release`              | All five targets + archives + `checksums.txt` under `dist/release/` |
+| `bun run typecheck`                  | Typecheck                                                           |
+| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                                                 |
+| `bun run test`                       | Vitest                                                              |
 
 Docs site (this site): `cd docs && bun install && bun run dev`.
 
