@@ -35,6 +35,8 @@ MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL https://raw.githubusercontent.com/prod
 
 Requires `bash`, `curl`, `tar`, and either `sha256sum` or `shasum`. Pipe into `bash`, not `sh`.
 
+Runtime note: MongoScope itself does not require `sudo`. If you need to read a root-owned log directory from Welcome (e.g. `/var/log/mongodb`), `sudo` must be installed and available on `PATH` for the optional elevated-access retry — see [Getting started → Permissions and elevated access](/docs/getting-started#permissions-and-elevated-access).
+
 ## Manual install
 
 Prefer not to pipe a script into bash? Download the archive for your platform from the [Releases](https://github.com/prodioslabs/mongoscope/releases) page, verify against `checksums.txt` if you want, extract, and place the binary on your PATH.

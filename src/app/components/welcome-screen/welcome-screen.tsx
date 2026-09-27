@@ -328,8 +328,7 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
     setPendingReadPath(null)
 
     if (result !== 'ok') {
-      const message =
-        useSession.getState().parseError ?? elevatedFailureMessage('other')
+      const message = useSession.getState().parseError ?? elevatedFailureMessage('other')
       if (directory === MONGODB_DEFAULT_LOG_DIR) {
         setMongoElevateError(message)
       } else {

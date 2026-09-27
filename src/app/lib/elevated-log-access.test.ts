@@ -473,7 +473,7 @@ describe('materializeLogFileTailElevated', () => {
         expectKill: true,
         spawn: (() => {
           let resolveExited: ((code: number) => void) | null = null
-          const killFn = vi.fn((signal?: number | NodeJS.Signals) => {
+          const killFn = vi.fn((_signal?: number | NodeJS.Signals) => {
             resolveExited?.(137)
             return true
           })

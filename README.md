@@ -66,6 +66,8 @@ That is separate from release binaries:
 
 On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`). Enter parses the last 100k lines and opens the dashboard.
 
+If a log directory (or selected file) is unreadable due to permissions, Welcome shows a permission error and offers **retry with sudo** (`r`). Confirming runs a short-lived elevated `ls` / `tail` — the app itself does **not** run as root — and your password may be requested. Elevation is scoped to Welcome log listing and file read only (not live connect, secrets, kill-op, profiler, or config). `sudo` is optional: without it the app still runs, but protected directories stay inaccessible.
+
 | Key           | Action                                         |
 | ------------- | ---------------------------------------------- |
 | `1`–`5` / Tab | Switch tabs                                    |

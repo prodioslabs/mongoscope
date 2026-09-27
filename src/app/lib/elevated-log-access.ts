@@ -191,7 +191,9 @@ export async function runElevatedCommand(
     }
 
     const stdout =
-      proc.stdout != null ? new Uint8Array(await new Response(proc.stdout).arrayBuffer()) : new Uint8Array()
+      proc.stdout != null
+        ? new Uint8Array(await new Response(proc.stdout).arrayBuffer())
+        : new Uint8Array()
     return { ok: true, value: stdout }
   } finally {
     if (timer !== null) {

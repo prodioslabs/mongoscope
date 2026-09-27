@@ -236,8 +236,7 @@ async function runTailParse(
           set({
             parseProgress: null,
             parseDurationMs: null,
-            parseError:
-              'Permission denied reading this log file — press r to retry with sudo',
+            parseError: 'Permission denied reading this log file — press r to retry with sudo',
             logStore: null,
             queryPatterns: null,
           })

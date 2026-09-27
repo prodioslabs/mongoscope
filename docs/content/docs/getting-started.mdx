@@ -16,6 +16,49 @@ There is no separate full-screen connections flow — switching, adding, editing
 
 Saved connections need an OS credential store (`Bun.secrets`): macOS Keychain, or Linux Secret Service (GNOME Keyring, KWallet, etc.).
 
+### Permissions and elevated access
+
+MongoDB’s default log directory (`/var/log/mongodb`) is often root-owned. Welcome lists each directory with an ordinary (non-root) process. Distinct empty-state messages:
+
+| State                                  | Message shown                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Empty (readable, no MongoDB-like logs) | `No log files found`                                                                                |
+| Directory missing                      | `Directory does not exist — pick a different path or confirm MongoDB's log location on this system` |
+| Permission denied (directory)          | `Permission denied — cannot read this directory`                                                    |
+| Other I/O failure                      | The underlying error message from the filesystem                                                    |
+
+When a selected **file** is unreadable, Welcome shows:
+
+`Permission denied reading this log file — press r to retry with sudo`
+
+On a permission-denied directory (or after that file message), press **`r`** (footer: `sudo`) to retry with elevated permissions. Focus the section first if needed (`tab`, or the hint `select section, then r for sudo`).
+
+Confirm dialog (exact copy):
+
+- Title: `Read with elevated permissions?`
+- The directory path
+- List: `Will run a short-lived sudo command to list this directory.`
+- Read: `Will run a short-lived sudo command to read a log file from this directory.`
+- `Your password may be requested.`
+- `The app itself will not run as root.`
+- Prompt: `enter confirm · esc cancel` (while waiting: `waiting for sudo…`)
+
+Enter confirms; Esc cancels. Confirming suspends the TUI briefly, runs `sudo -- ls …` or `sudo -- tail …` with an interactive password prompt on the terminal, then resumes. Approval is **session-scoped per directory**: after a successful elevate for that directory, further list/read retries in the same process skip the confirm dialog (password may still be required by `sudo` itself if the OS credential cache expired).
+
+Elevation applies only to Welcome’s log-directory listing and log-file read path. Live connect, keychain secrets, kill-op, profiler, and config do **not** request elevation.
+
+Failure messages after a sudo attempt (shown under the section):
+
+| Situation                             | Message                                                             | What to do                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Wrong password / sudo policy deny     | `Incorrect password or sudo denied.`                                | Press `r` again, or fix sudoers / use a readable `--log-dir`                                         |
+| Esc / cancel before or during elevate | `Elevated access cancelled.`                                        | Press `r` when ready to try again                                                                    |
+| `sudo` not on `PATH`                  | `sudo is not available on this system.`                             | Install `sudo`, or copy/symlink logs into a user-readable `--log-dir` (common on minimal containers) |
+| No response within ~90s               | `Timed out waiting for sudo. Try again.`                            | Press `r` and complete the password prompt promptly                                                  |
+| Other elevate failure                 | `Elevated access failed.` (or a more specific error when available) | Retry, or use an accessible log path                                                                 |
+
+`sudo` is an **optional** runtime dependency for this feature only — MongoScope runs without it; protected directories simply stay unreadable.
+
 ## Global keys
 
 | Key      | Action              |
