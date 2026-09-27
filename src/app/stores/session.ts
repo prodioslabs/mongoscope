@@ -20,6 +20,9 @@ type AppScreen = 'welcome' | 'dashboard'
 
 export type AppTab = 'slow-queries' | 'live-ops' | 'replication' | 'indexes' | 'logs'
 
+/** Session-only live connection from CLI flags — never persisted to the keychain. */
+export const CLI_EPHEMERAL_CONNECTION_ID = 'cli-ephemeral'
+
 type DataSourceMode = 'static' | 'live'
 
 type SlowQueriesPendingNavigation = {
@@ -82,6 +85,10 @@ type SessionState = {
   activeTab: AppTab
   /** Selected connection for Live Ops / Replication / Indexes (session-only; not persisted). */
   activeConnectionId: string | null
+  /**
+   * URI for {@link CLI_EPHEMERAL_CONNECTION_ID} only. Never logged; cleared when leaving ephemeral.
+   */
+  ephemeralLiveUri: string | null
   /** Selected MongoDB database for Indexes (session-only; cleared on connection change). */
   selectedDatabase: string | null
   /** Consumed once when Slow Queries tab mounts after cross-tab navigation. */
@@ -115,6 +122,8 @@ type SessionState = {
   alignIndexesSuggestion: (database: string, collection: string) => void
   setScreen: (screen: AppScreen) => void
   setActiveConnectionId: (id: string | null) => void
+  /** Activate a one-shot CLI live connection without writing to the OS keychain. */
+  activateEphemeralLiveConnection: (uri: string) => void
   setSelectedDatabase: (database: string | null) => void
   setSlowQueriesSource: (source: DataSourceMode) => void
   setLogsSource: (source: DataSourceMode) => void
@@ -200,6 +209,7 @@ export const useSession = create<SessionState>((set, get) => ({
   screen: 'welcome',
   activeTab: 'slow-queries',
   activeConnectionId: null,
+  ephemeralLiveUri: null,
   selectedDatabase: null,
   pendingSlowQueriesNav: null,
   pendingIndexesNav: null,
@@ -289,13 +299,30 @@ export const useSession = create<SessionState>((set, get) => ({
     if (id == null) {
       set({
         activeConnectionId: null,
+        ephemeralLiveUri: null,
         selectedDatabase: null,
         slowQueriesSource: 'static',
         logsSource: 'static',
       })
       return
     }
-    set({ activeConnectionId: id, selectedDatabase: null })
+    set({
+      activeConnectionId: id,
+      ephemeralLiveUri: null,
+      selectedDatabase: null,
+    })
+  },
+
+  activateEphemeralLiveConnection(uri) {
+    const trimmed = uri.trim()
+    if (trimmed === '') {
+      throw new Error('uri must be a non-empty string')
+    }
+    set({
+      activeConnectionId: CLI_EPHEMERAL_CONNECTION_ID,
+      ephemeralLiveUri: trimmed,
+      selectedDatabase: null,
+    })
   },
 
   setSelectedDatabase(database) {
@@ -366,6 +393,7 @@ export const useSession = create<SessionState>((set, get) => ({
       screen: 'welcome',
       activeTab: 'slow-queries',
       activeConnectionId: null,
+      ephemeralLiveUri: null,
       selectedDatabase: null,
       pendingSlowQueriesNav: null,
       pendingIndexesNav: null,

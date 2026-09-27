@@ -4,6 +4,7 @@ import { useRenderer } from '@opentui/react'
 import { type ConnectionProfile } from '../../../connections'
 import { formatConnectionError } from '../../../connections/format-connection-error'
 import { displayText } from '../../../lib/display-text'
+import { hostLabelFromUri } from '../../../lib/mongodb-uri'
 import { type LiveConnectionStatus } from '../../../live-connection'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
 import { whenNotEditing } from '../../lib/when-not-editing'
@@ -12,7 +13,7 @@ import { CONNECTIONS_TAB_FOOTER, CONNECTIONS_TAB_SHORTCUTS, toBindings } from '.
 import { useConnectionsUi } from '../../stores/connections-ui'
 import { type FooterKeybinding } from '../../stores/footer'
 import { useLiveConnection } from '../../stores/live-connection'
-import { useSession } from '../../stores/session'
+import { CLI_EPHEMERAL_CONNECTION_ID, useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { type Theme } from '../../theme'
 import { AddConnectionForm } from '../connections/add-connection-form'
@@ -25,6 +26,7 @@ export function DbSelector() {
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const activeConnectionId = useSession((s) => s.activeConnectionId)
+  const ephemeralLiveUri = useSession((s) => s.ephemeralLiveUri)
   const setActiveConnectionId = useSession((s) => s.setActiveConnectionId)
   const openManage = useConnectionsUi((s) => s.openManage)
   const dialogOpen = useConnectionsUi((s) => s.dialogOpen)
@@ -35,11 +37,21 @@ export function DbSelector() {
   const { data, isPending, isError, error } = useConnectionsList()
   const profiles: ConnectionProfile[] = data ?? []
   const hasSavedConnections = profiles.length > 0
+  const hasEphemeralConnection =
+    activeConnectionId === CLI_EPHEMERAL_CONNECTION_ID &&
+    ephemeralLiveUri != null &&
+    ephemeralLiveUri.trim() !== ''
 
   const activeProfile =
     activeConnectionId == null
       ? null
       : (profiles.find((profile) => profile.id === activeConnectionId) ?? null)
+
+  const ephemeralHostLabel =
+    hasEphemeralConnection && ephemeralLiveUri != null
+      ? safeHostLabel(ephemeralLiveUri)
+      : null
+  const hasSelection = activeProfile != null || hasEphemeralConnection
 
   useFooterKeybindings(
     hasSavedConnections && !dialogOpen ? CONNECTIONS_TAB_FOOTER : EMPTY_FOOTER_KEYBINDINGS,
@@ -82,7 +94,7 @@ export function DbSelector() {
     )
   }
 
-  if (!hasSavedConnections) {
+  if (!hasSavedConnections && !hasEphemeralConnection) {
     return (
       <box flexShrink={0} paddingLeft={1} paddingTop={1} paddingRight={1} paddingBottom={1}>
         <AddConnectionForm
@@ -104,9 +116,11 @@ export function DbSelector() {
   const label =
     activeProfile != null
       ? `${activeProfile.name} · ${activeProfile.hostLabel}`
-      : 'no connection selected'
+      : ephemeralHostLabel != null
+        ? `CLI · ${ephemeralHostLabel}`
+        : 'no connection selected'
 
-  const statusLabel = liveStatusLabel(liveStatus, liveErrorMessage, activeProfile != null)
+  const statusLabel = liveStatusLabel(liveStatus, liveErrorMessage, hasSelection)
   const statusFg = liveStatusColor(liveStatus, theme)
 
   return (
@@ -123,16 +137,21 @@ export function DbSelector() {
       }}
     >
       <text content="DB" fg={theme.textMuted} attributes={TextAttributes.BOLD} flexShrink={0} />
-      <text
-        content={displayText(label)}
-        fg={activeProfile != null ? theme.text : theme.textMuted}
-      />
+      <text content={displayText(label)} fg={hasSelection ? theme.text : theme.textMuted} />
       {statusLabel != null ? (
         <text content={displayText(statusLabel)} fg={statusFg} flexShrink={0} />
       ) : null}
       <text content="[c]" fg={theme.textMuted} flexShrink={0} />
     </box>
   )
+}
+
+function safeHostLabel(uri: string): string {
+  try {
+    return hostLabelFromUri(uri)
+  } catch {
+    return 'connection'
+  }
 }
 
 function liveStatusLabel(
