@@ -3,9 +3,22 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import { startCommand } from './commands/start'
 
-const { version } = createRequire(import.meta.url)('../../package.json') as {
-  version: string
+/**
+ * Compiled binaries embed the version via Bun `define` (see scripts/build.ts).
+ * Dev / bun-link falls back to package.json so the string cannot drift.
+ */
+function resolveCliVersion(): string {
+  const embedded = process.env.MONGOSCOPE_EMBEDDED_VERSION
+  if (typeof embedded === 'string' && embedded.trim() !== '') {
+    return embedded.trim()
+  }
+  const { version } = createRequire(import.meta.url)('../../package.json') as {
+    version: string
+  }
+  return version
 }
+
+const version = resolveCliVersion()
 
 export async function parseCli(argv: string[] = process.argv): Promise<void> {
   await yargs(hideBin(argv))
