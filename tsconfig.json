@@ -31,4 +31,3 @@
   },
   "exclude": ["docs", "node_modules", "dist", ".worktrees"]
 }
-

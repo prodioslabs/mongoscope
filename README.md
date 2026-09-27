@@ -26,11 +26,11 @@ Connections land in your OS keychain (`Bun.secrets`). Themes (gruvbox, catppucci
 
 ## Install options
 
-| Method | Command / notes |
-| --- | --- |
+| Method                 | Command / notes                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------ |
 | **curl (recommended)** | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope-v2/main/install.sh \| bash` |
-| Pin a version | `MONGOSCOPE_VERSION=v0.1.0 curl -fsSL … \| bash` |
-| Custom prefix | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash` |
+| Pin a version          | `MONGOSCOPE_VERSION=v0.1.0 curl -fsSL … \| bash`                                                 |
+| Custom prefix          | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                            |
 
 The installer downloads the matching archive from GitHub Releases, verifies `checksums.txt`, installs to `/usr/local/bin` (Linux) or `~/.local/bin` (macOS), and runs `mongoscope --version`.
 
@@ -54,15 +54,15 @@ mongoscope --help
 
 That is separate from release binaries:
 
-| Script | Purpose |
-| --- | --- |
-| `bun start` | Launch the TUI from source |
-| `bun link` | Expose `mongoscope` on PATH for local dev |
-| `bun run build` | Native-platform binary → `dist/mongoscope` |
-| `bun run build:release` | All five targets + archives + `checksums.txt` under `dist/release/` |
-| `bun run typecheck` | Typecheck |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check |
-| `bun run test` | Vitest |
+| Script                               | Purpose                                                             |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `bun start`                          | Launch the TUI from source                                          |
+| `bun link`                           | Expose `mongoscope` on PATH for local dev                           |
+| `bun run build`                      | Native-platform binary → `dist/mongoscope`                          |
+| `bun run build:release`              | All five targets + archives + `checksums.txt` under `dist/release/` |
+| `bun run typecheck`                  | Typecheck                                                           |
+| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                                                 |
+| `bun run test`                       | Vitest                                                              |
 
 On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`). Enter parses the last 100k lines and opens the dashboard.
 
@@ -85,10 +85,10 @@ mongoscope --help
 # or: bun start --help
 ```
 
-| Flag                                                                               | Status                                                                                          |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `-h`, `--help` / `-v`, `--version`                                                 | Print and exit immediately (version from `package.json`)                                        |
-| `--log-dir`                                                                        | Welcome screen’s second log list (default `.`)                                                  |
-| `--log-path`                                                                       | Parse that log file on startup (skips picker; invalid path exits 1)                             |
-| `--uri`                                                                            | Ephemeral live connect for this session (not saved to keychain)                                 |
-| `--host`, `--port`, `--username`, `--password`, `--auth-db`                        | Build a URI and ephemeral-connect (do not combine with `--uri`; default port 27017)             |
+| Flag                                                        | Status                                                                              |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `-h`, `--help` / `-v`, `--version`                          | Print and exit immediately (version from `package.json`)                            |
+| `--log-dir`                                                 | Welcome screen’s second log list (default `.`)                                      |
+| `--log-path`                                                | Parse that log file on startup (skips picker; invalid path exits 1)                 |
+| `--uri`                                                     | Ephemeral live connect for this session (not saved to keychain)                     |
+| `--host`, `--port`, `--username`, `--password`, `--auth-db` | Build a URI and ephemeral-connect (do not combine with `--uri`; default port 27017) |
