@@ -16,6 +16,7 @@ import {
   computeTableCapacity,
   headerCell,
   padTableRows,
+  planSeverity,
   severityColor,
   tableCell,
 } from '../../../lib/text-table-content'
@@ -29,7 +30,6 @@ import { useTheme } from '../../../stores/theme'
 import { type Theme } from '../../../theme'
 import { DataTextTable } from '../../data-text-table'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
-import { planSeverity } from '../../slow-queries/format'
 import { KillOpConfirmDialog } from '../kill-op-confirm-dialog'
 
 type CurrentOpsTableProps = {

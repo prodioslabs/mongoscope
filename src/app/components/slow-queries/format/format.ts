@@ -1,9 +1,10 @@
 import type { Severity } from '../../../lib/text-table-content'
+import { planSeverity } from '../../../lib/text-table-content'
 import { formatCount } from '../../../../lib/format-count'
 import { truncateText } from '../../../../lib/truncate-text'
 
 export type { Severity } from '../../../lib/text-table-content'
-export { formatCount }
+export { formatCount, planSeverity }
 
 const SPARK_CHARS = '▁▂▃▄▅▆▇█'
 
@@ -31,34 +32,48 @@ export function formatWindowLabel(startMs: number, endMs: number): string {
 
   const spanMs = endMs - startMs
   const seconds = spanMs / 1000
-  if (seconds < 90) return `${Math.max(1, Math.round(seconds))}s window`
+  if (seconds < 90) {
+    return `${Math.max(1, Math.round(seconds))}s window`
+  }
 
   const minutes = seconds / 60
-  if (minutes < 90) return `${Math.max(1, Math.round(minutes))}m window`
+  if (minutes < 90) {
+    return `${Math.max(1, Math.round(minutes))}m window`
+  }
 
   const hours = minutes / 60
-  if (hours < 36) return `${Math.max(1, Math.round(hours))}h window`
+  if (hours < 36) {
+    return `${Math.max(1, Math.round(hours))}h window`
+  }
 
   const days = hours / 24
   return `${Math.max(1, Math.round(days))}d window`
 }
 
 export function sparkline(trend: Uint16Array, width: number = SPARKLINE_WIDTH): string {
-  if (trend.length === 0 || width <= 0) return ''
+  if (trend.length === 0 || width <= 0) {
+    return ''
+  }
 
   const pooled = new Uint16Array(width)
   for (let i = 0; i < trend.length; i++) {
     const bucket = Math.min(width - 1, Math.floor((i / trend.length) * width))
     const v = trend[i] ?? 0
-    if (v > (pooled[bucket] ?? 0)) pooled[bucket] = v
+    if (v > (pooled[bucket] ?? 0)) {
+      pooled[bucket] = v
+    }
   }
 
   let max = 0
   for (let i = 0; i < pooled.length; i++) {
     const v = pooled[i] ?? 0
-    if (v > max) max = v
+    if (v > max) {
+      max = v
+    }
   }
-  if (max === 0) return SPARK_CHARS[0]!.repeat(width)
+  if (max === 0) {
+    return SPARK_CHARS[0]!.repeat(width)
+  }
 
   let out = ''
   const last = SPARK_CHARS.length - 1
@@ -71,23 +86,24 @@ export function sparkline(trend: Uint16Array, width: number = SPARKLINE_WIDTH): 
 }
 
 export function avgMsSeverity(avgMs: number): Severity {
-  if (avgMs >= 500) return 'error'
-  if (avgMs >= 100) return 'warning'
+  if (avgMs >= 500) {
+    return 'error'
+  }
+  if (avgMs >= 100) {
+    return 'warning'
+  }
   return 'muted'
 }
 
 export function examinedSeverity(examined: number, returned: number): Severity {
   const ratio = examined / Math.max(returned, 1)
-  if (ratio >= 500) return 'error'
-  if (ratio >= 20) return 'warning'
+  if (ratio >= 500) {
+    return 'error'
+  }
+  if (ratio >= 20) {
+    return 'warning'
+  }
   return 'success'
-}
-
-export function planSeverity(plan: string): Severity {
-  if (plan === 'COLLSCAN') return 'error'
-  if (plan === 'IXSCAN+SORT') return 'warning'
-  if (plan === 'IXSCAN') return 'success'
-  return 'muted'
 }
 
 /** Lower rank sorts first (worst plans first). */

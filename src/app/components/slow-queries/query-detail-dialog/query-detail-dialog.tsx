@@ -14,6 +14,7 @@ import { getPatternExplainFromSample } from '../../../../profiler'
 import { errorMessageText } from '../../../../lib/error-message'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { overlayMode } from '../../../lib/overlay-mode'
+import { severityColor } from '../../../lib/text-table-content'
 import { QUERY_DETAIL_SHORTCUTS, queryDetailFooter, toBindings } from '../../../shortcuts'
 import { useFooter } from '../../../stores/footer'
 import { useSession } from '../../../stores/session'
@@ -27,7 +28,6 @@ import {
   formatExaminedRet,
   planSeverity,
   sparkline,
-  type Severity,
 } from '../format'
 
 type QueryDetailDialogProps = {
@@ -67,7 +67,9 @@ export function QueryDetailDialog({
 
   useEffect(
     function syncQueryDetailOverlayMode() {
-      if (!open) return
+      if (!open) {
+        return
+      }
       overlayMode.acquire('query-detail', keymap)
       return function restoreQueryDetailOverlayMode() {
         overlayMode.release('query-detail', keymap)
@@ -78,7 +80,9 @@ export function QueryDetailDialog({
 
   useEffect(
     function syncDetailFooterOverlay() {
-      if (!open) return
+      if (!open) {
+        return
+      }
       pushOverlayKeybindings('query-detail', queryDetailFooter(showRaw))
       return function clearDetailFooterOverlay() {
         popOverlayKeybindings('query-detail')
@@ -89,7 +93,9 @@ export function QueryDetailDialog({
 
   useEffect(
     function resetDetailViewWhenClosed() {
-      if (open) return
+      if (open) {
+        return
+      }
       setShowRaw(false)
     },
     [open],
@@ -97,7 +103,9 @@ export function QueryDetailDialog({
 
   useEffect(
     function resetScrollOnContentChange() {
-      if (!open) return
+      if (!open) {
+        return
+      }
       scrollRef.current?.scrollTo(0)
     },
     [open, showRaw, pattern?.id],
@@ -434,7 +442,9 @@ function WorkMetricsSection({ explain, theme }: WorkMetricsSectionProps) {
     })
   }
 
-  if (rows.length === 0) return null
+  if (rows.length === 0) {
+    return null
+  }
 
   return (
     <DetailSection title="Work" theme={theme}>
@@ -485,7 +495,9 @@ function DetailRow({ label, value, valueColor }: DetailRowProps) {
 }
 
 function prettyDisplay(value: string): string {
-  if (value === 'n/a') return value
+  if (value === 'n/a') {
+    return value
+  }
   try {
     return JSON.stringify(JSON.parse(value), null, 2)
   } catch {
@@ -494,7 +506,9 @@ function prettyDisplay(value: string): string {
 }
 
 function formatTimestamp(timestampMs: number): string {
-  if (!Number.isFinite(timestampMs)) return 'n/a'
+  if (!Number.isFinite(timestampMs)) {
+    return 'n/a'
+  }
   return new Date(timestampMs).toISOString()
 }
 
@@ -506,17 +520,4 @@ function formatCpu(cpuNanos: number): string {
     return `${(cpuNanos / 1_000).toFixed(0)} µs`
   }
   return `${formatCount(cpuNanos)} ns`
-}
-
-function severityColor(theme: Theme, severity: Severity): RGBA {
-  switch (severity) {
-    case 'error':
-      return theme.error
-    case 'warning':
-      return theme.warning
-    case 'success':
-      return theme.success
-    case 'muted':
-      return theme.textMuted
-  }
 }

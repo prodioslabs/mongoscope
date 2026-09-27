@@ -14,6 +14,7 @@ import {
 } from '../../../../profiler'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { type SortDirection } from '../../../lib/sort-direction'
+import { severityColor, type Severity } from '../../../lib/text-table-content'
 import { useEnableProfiling, useProfilerSlowQueriesSnapshot } from '../../../queries/slow-queries'
 import {
   SLOW_QUERIES_LIVE_FOOTER,
@@ -40,7 +41,6 @@ import {
   planSortRank,
   sparkline,
   truncateCell,
-  type Severity,
 } from '../format'
 import { QueryDetailDialog } from '../query-detail-dialog'
 import { StatsCard } from '../stats-card'
@@ -1212,17 +1212,4 @@ function headerCell(label: string, theme: Theme, active = false): TextChunk[] {
 
 function cell(text: string, color: RGBA): TextChunk[] {
   return [fg(color)(text)]
-}
-
-function severityColor(theme: Theme, severity: Severity): RGBA {
-  switch (severity) {
-    case 'error':
-      return theme.error
-    case 'warning':
-      return theme.warning
-    case 'success':
-      return theme.success
-    case 'muted':
-      return theme.textMuted
-  }
 }
