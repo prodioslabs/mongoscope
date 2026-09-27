@@ -3,8 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
+    "generate:icon": "bun run scripts/generate-icon.ts",
+    "build": "bun run generate:icon && next build",
+    "dev": "bun run generate:icon && next dev",
     "start": "next start",
     "types:check": "next typegen && tsc --noEmit",
     "lint": "oxlint -c oxlint.json"
