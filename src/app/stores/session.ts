@@ -1,7 +1,13 @@
-import { stat } from 'node:fs/promises'
+import { access, constants, stat } from 'node:fs/promises'
 import { match } from 'ts-pattern'
 import { create } from 'zustand'
-import { DEFAULT_LOG_TAIL_LINES, LogStore, clampLogTailLines, parseLogFileTail } from '../../parser'
+import {
+  DEFAULT_LOG_TAIL_LINES,
+  LogStore,
+  MAX_READ_BYTES,
+  clampLogTailLines,
+  parseLogFileTail,
+} from '../../parser'
 import {
   DEFAULT_PROFILE_FETCH_LIMIT,
   MAX_PROFILE_FETCH_LIMIT,
@@ -9,6 +15,12 @@ import {
 } from '../../profiler'
 import { buildQueryPatternStore, type QueryPatternStore } from '../../query-patterns'
 import { errorMessageText } from '../../lib/error-message'
+import {
+  isFsPermissionDeniedError,
+  materializeLogFileTailElevated,
+  unlinkElevatedTempFile,
+  type SuspendableRenderer,
+} from '../lib/elevated-log-access'
 import { useLogTailStore } from './log-tail'
 
 type AppScreen = 'welcome' | 'dashboard'
@@ -108,6 +120,8 @@ type SessionState = {
   /** Wall-clock ms for the last successful parse; null until then */
   parseDurationMs: number | null
   parseError: string | null
+  /** Temp copy from elevated sudo read; unlinked on next parse / reset. */
+  elevatedTempPath: string | null
   setTab: (tab: AppTab) => void
   navigateToTab: (tab: AppTab, context?: TabNavigationContext) => void
   consumePendingSlowQueriesNav: () => SlowQueriesPendingNavigation | null
@@ -125,7 +139,10 @@ type SessionState = {
   setLogTailLines: (lines: number) => Promise<void>
   setProfilerFetchLimit: (limit: number) => void
   goToWelcome: () => void
-  startParse: (path: string) => Promise<void>
+  startParse: (
+    path: string,
+    options?: { elevatedRenderer?: SuspendableRenderer },
+  ) => Promise<'ok' | 'permission_denied' | 'error'>
   resetToWelcome: () => void
 }
 
@@ -155,11 +172,22 @@ function progressPercent(bytesRead: number, fileSize: number): number {
   return Math.min(100, Math.round((bytesRead / fileSize) * 100))
 }
 
+async function clearElevatedTemp(
+  get: () => SessionState,
+  set: (partial: Partial<SessionState>) => void,
+): Promise<void> {
+  const previous = get().elevatedTempPath
+  set({ elevatedTempPath: null })
+  await unlinkElevatedTempFile(previous)
+}
+
 async function runTailParse(
   path: string,
   maxLines: number,
+  get: () => SessionState,
   set: (partial: Partial<SessionState>) => void,
-): Promise<void> {
+  elevatedRenderer?: SuspendableRenderer,
+): Promise<'ok' | 'permission_denied' | 'error'> {
   const startedAt = performance.now()
   set({
     logPath: path,
@@ -170,9 +198,57 @@ async function runTailParse(
     parseError: null,
   })
 
+  let readPath = path
+  let createdTemp: string | null = null
+  const existingTemp = get().elevatedTempPath
+
   try {
-    const { size } = await stat(path)
-    const store = await parseLogFileTail(path, {
+    if (elevatedRenderer != null) {
+      await clearElevatedTemp(get, set)
+      const materialized = await materializeLogFileTailElevated({
+        renderer: elevatedRenderer,
+        path,
+        maxBytes: MAX_READ_BYTES,
+      })
+      if (!materialized.ok) {
+        set({
+          parseProgress: null,
+          parseDurationMs: null,
+          parseError: materialized.message,
+          logStore: null,
+          queryPatterns: null,
+        })
+        return materialized.kind === 'denied' || materialized.kind === 'cancelled'
+          ? 'permission_denied'
+          : 'error'
+      }
+      createdTemp = materialized.value
+      readPath = materialized.value
+      set({ elevatedTempPath: createdTemp })
+    } else if (existingTemp != null) {
+      // Re-parse (e.g. log-tail size change) from the elevated temp copy.
+      readPath = existingTemp
+    } else {
+      try {
+        await access(path, constants.R_OK)
+      } catch (error) {
+        if (isFsPermissionDeniedError(error)) {
+          set({
+            parseProgress: null,
+            parseDurationMs: null,
+            parseError:
+              'Permission denied reading this log file — press r to retry with sudo',
+            logStore: null,
+            queryPatterns: null,
+          })
+          return 'permission_denied'
+        }
+        throw error
+      }
+    }
+
+    const { size } = await stat(readPath)
+    const store = await parseLogFileTail(readPath, {
       maxLines,
       onProgress({ bytesRead }) {
         set({ parseProgress: progressPercent(bytesRead, size) })
@@ -180,6 +256,7 @@ async function runTailParse(
     })
     const queryPatterns = await buildQueryPatternStore(store)
     set({
+      logPath: path,
       logStore: store,
       queryPatterns,
       parseProgress: null,
@@ -188,7 +265,22 @@ async function runTailParse(
       screen: 'dashboard',
       activeTab: 'slow-queries',
     })
+    return 'ok'
   } catch (error) {
+    if (createdTemp != null) {
+      await unlinkElevatedTempFile(createdTemp)
+      set({ elevatedTempPath: null })
+    }
+    if (isFsPermissionDeniedError(error)) {
+      set({
+        parseProgress: null,
+        parseDurationMs: null,
+        parseError: 'Permission denied reading this log file — press r to retry with sudo',
+        logStore: null,
+        queryPatterns: null,
+      })
+      return 'permission_denied'
+    }
     const message = errorMessageText(error)
     set({
       parseProgress: null,
@@ -197,6 +289,7 @@ async function runTailParse(
       logStore: null,
       queryPatterns: null,
     })
+    return 'error'
   }
 }
 
@@ -219,6 +312,7 @@ export const useSession = create<SessionState>((set, get) => ({
   parseProgress: null,
   parseDurationMs: null,
   parseError: null,
+  elevatedTempPath: null,
 
   setTab(tab) {
     if (tab === 'indexes') {
@@ -352,7 +446,7 @@ export const useSession = create<SessionState>((set, get) => ({
       return
     }
     useLogTailStore.getState().teardown()
-    await runTailParse(path, next, set)
+    await runTailParse(path, next, get, set)
   },
 
   setProfilerFetchLimit(limit) {
@@ -370,19 +464,20 @@ export const useSession = create<SessionState>((set, get) => ({
     set({ screen: 'welcome' })
   },
 
-  async startParse(path) {
+  async startParse(path, options) {
     if (get().parseProgress !== null) {
-      return
+      return 'error'
     }
     useLogTailStore.getState().teardown()
     set({
       slowQueriesSource: 'static',
       logsSource: 'static',
     })
-    await runTailParse(path, get().logTailLines, set)
+    return await runTailParse(path, get().logTailLines, get, set, options?.elevatedRenderer)
   },
 
   resetToWelcome() {
+    const previousTemp = get().elevatedTempPath
     useLogTailStore.getState().teardown()
     set({
       screen: 'welcome',
@@ -403,6 +498,8 @@ export const useSession = create<SessionState>((set, get) => ({
       parseProgress: null,
       parseDurationMs: null,
       parseError: null,
+      elevatedTempPath: null,
     })
+    void unlinkElevatedTempFile(previousTemp)
   },
 }))

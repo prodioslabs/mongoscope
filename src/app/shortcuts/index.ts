@@ -24,7 +24,12 @@ export {
   SLOW_QUERIES_SHORTCUTS,
 } from './slow-queries'
 export { toBindings, toFooter, type HelpBinding, type HelpSection } from './types'
-export { WELCOME_PARSING_FOOTER, WELCOME_SHORTCUTS } from './welcome'
+export {
+  WELCOME_ELEVATED_CONFIRM_FOOTER,
+  WELCOME_PARSING_FOOTER,
+  WELCOME_PERMISSION_FOOTER,
+  WELCOME_SHORTCUTS,
+} from './welcome'
 
 export const HELP_SECTIONS: HelpSection[] = [
   toHelpSection('Global', GLOBAL_SHORTCUTS),
