@@ -16,11 +16,7 @@ export function isMongoLogFile(name: string): boolean {
   return lower.endsWith('.log') || lower.startsWith('mongod.log') || lower.startsWith('mongos.log')
 }
 
-/**
- * Non-recursive listing of MongoDB-like log filenames, newest mtime first.
- * Returns a discriminated result so callers can show distinct messages for
- * missing dirs, permission errors, empty dirs, and other I/O failures.
- */
+/** Non-recursive listing of MongoDB-like log filenames, newest mtime first. */
 export async function listLogFiles(dir: string): Promise<ListLogFilesResult> {
   let entries: Dirent[]
   try {

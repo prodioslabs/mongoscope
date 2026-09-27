@@ -6,7 +6,6 @@ import { basename, dirname, isAbsolute, join, normalize } from 'node:path'
 import { MAX_READ_BYTES } from '../../parser'
 import { isMongoLogFile, type ListLogFilesResult } from './list-log-files'
 
-/** Hard timeout while waiting on an interactive sudo prompt. */
 const SUDO_TIMEOUT_MS = 90_000
 
 export type ElevatedFailureKind =
@@ -195,8 +194,6 @@ type ListLogFilesElevatedOptions = {
   dir: string
   timeoutMs?: number
   spawn?: ElevatedSpawn
-  /** When true, mark the directory session-elevated after a successful list. Default true. */
-  markApproved?: boolean
 }
 
 /**
@@ -230,10 +227,7 @@ export async function listLogFilesElevated(
   const list: ListLogFilesResult =
     names.length === 0 ? { status: 'empty' } : { status: 'ok', files: names }
 
-  if (options.markApproved !== false) {
-    markDirectorySessionElevated(validated.value)
-  }
-
+  markDirectorySessionElevated(validated.value)
   return { ok: true, value: list }
 }
 
