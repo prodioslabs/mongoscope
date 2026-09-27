@@ -20,4 +20,4 @@ Saved connections use `Bun.secrets`:
 
 ## CLI connection flags
 
-`--log-path`, `--uri`, `--host`, `--port`, `--username`, `--password`, and `--auth-db` are parsed by yargs but **not wired** into the app yet — use the welcome picker and in-app connections dialog. See [CLI flags](/docs/cli).
+`--uri` or `--host` / `--port` / `--username` / `--password` / `--auth-db` activate an **ephemeral** live connection for this session only — credentials are **not** written to the OS keychain. Use the in-app connections dialog to save a profile. See [CLI flags](/docs/cli).

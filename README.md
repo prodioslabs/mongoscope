@@ -33,6 +33,15 @@ bun install
 bun start
 ```
 
+For a global `mongoscope` command during development (uses the same `bin/mongoscope` entry as `bun start`):
+
+```bash
+bun link
+mongoscope --help
+```
+
+That is separate from the packaged binary: `bun run build` writes a standalone executable to `dist/mongoscope`.
+
 On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`). Enter parses the last 100k lines and opens the dashboard.
 
 | Key           | Action                                         |
@@ -49,21 +58,26 @@ Deeper reference lives in [`docs/`](./docs) — `cd docs && bun install && bun r
 
 ## Scripts
 
-| Script                               | Purpose                               |
-| ------------------------------------ | ------------------------------------- |
-| `bun start`                          | Launch the TUI                        |
-| `bun run typecheck`                  | Typecheck                             |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                   |
-| `bun run test`                       | Vitest                                |
-| `bun run build`                      | Standalone binary → `dist/mongoscope` |
+| Script                               | Purpose                                                                 |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `bun start`                          | Launch the TUI                                                          |
+| `bun link`                           | Expose `mongoscope` on PATH for local dev (same entry as `bun start`)   |
+| `bun run typecheck`                  | Typecheck                                                               |
+| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                                                     |
+| `bun run test`                       | Vitest                                                                  |
+| `bun run build`                      | Standalone binary → `dist/mongoscope` (distinct from the `bun link` bin) |
 
 ## CLI flags
 
 ```bash
-bun start --help
+mongoscope --help
+# or: bun start --help
 ```
 
-| Flag                                                                               | Status                                                                |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `--log-dir`                                                                        | Wired — welcome screen’s second log list (default `.`)                |
-| `--log-path`, `--uri`, `--host`, `--port`, `--username`, `--password`, `--auth-db` | Parsed, not wired yet — use the welcome picker and in-app connections |
+| Flag                                                                               | Status                                                                                          |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `-h`, `--help` / `-v`, `--version`                                                 | Print and exit immediately (version from `package.json`)                                        |
+| `--log-dir`                                                                        | Welcome screen’s second log list (default `.`)                                                  |
+| `--log-path`                                                                       | Parse that log file on startup (skips picker; invalid path exits 1)                             |
+| `--uri`                                                                            | Ephemeral live connect for this session (not saved to keychain)                                 |
+| `--host`, `--port`, `--username`, `--password`, `--auth-db`                        | Build a URI and ephemeral-connect (do not combine with `--uri`; default port 27017)             |
