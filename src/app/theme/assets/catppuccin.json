@@ -67,6 +67,8 @@
     "background": { "dark": "darkBase", "light": "lightBase" },
     "backgroundPanel": { "dark": "darkMantle", "light": "lightMantle" },
     "backgroundElement": { "dark": "darkCrust", "light": "lightCrust" },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": { "dark": "darkSurface0", "light": "lightSurface0" },
     "borderActive": { "dark": "darkSurface1", "light": "lightSurface1" },
     "borderSubtle": { "dark": "darkSurface2", "light": "lightSurface2" },

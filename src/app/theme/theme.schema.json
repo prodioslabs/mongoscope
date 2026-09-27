@@ -37,6 +37,14 @@
         "backgroundPanel": { "$ref": "#/definitions/colorValue" },
         "backgroundElement": { "$ref": "#/definitions/colorValue" },
         "backgroundMenu": { "$ref": "#/definitions/colorValue" },
+        "transparent": {
+          "$ref": "#/definitions/colorValue",
+          "description": "Fully transparent cell background (e.g. inactive list selection)"
+        },
+        "overlayScrim": {
+          "$ref": "#/definitions/colorValue",
+          "description": "Dimmed fullscreen overlay behind dialogs and palettes"
+        },
         "border": { "$ref": "#/definitions/colorValue" },
         "borderActive": { "$ref": "#/definitions/colorValue" },
         "borderSubtle": { "$ref": "#/definitions/colorValue" },

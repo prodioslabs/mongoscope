@@ -67,6 +67,8 @@
       "dark": "nord2",
       "light": "nord4"
     },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": {
       "dark": "nord2",
       "light": "nord3"

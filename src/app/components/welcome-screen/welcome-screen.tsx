@@ -1,4 +1,4 @@
-import { RGBA, ScrollBoxRenderable, TextAttributes, type CliRenderer } from '@opentui/core'
+import { ScrollBoxRenderable, TextAttributes, type CliRenderer } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
 import { join } from 'node:path'
@@ -32,7 +32,6 @@ import { ElevatedLogAccessDialog } from './elevated-log-access-dialog'
 const MAX_VISIBLE_FILES = 5
 const MAX_SECTION_WIDTH = 80
 const PROGRESS_BAR_WIDTH = 24
-const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 
 const WELCOME_IDLE_KEYBINDINGS = toFooter(WELCOME_SHORTCUTS)
 
@@ -553,7 +552,7 @@ function LogFileSection({
             id={`${sectionId}-file-${index}`}
             flexDirection="row"
             gap={1}
-            backgroundColor={highlighted ? theme.primary : TRANSPARENT}
+            backgroundColor={highlighted ? theme.primary : theme.transparent}
             onMouseOver={() => onSelectIndex(index)}
             onMouseDown={() => onSelectIndex(index)}
             paddingLeft={1}

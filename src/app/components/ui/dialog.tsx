@@ -1,4 +1,3 @@
-import { RGBA } from '@opentui/core'
 import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -32,7 +31,9 @@ export function Dialog({
 
   useEffect(
     function syncDialogKeymapMode() {
-      if (!open) return
+      if (!open) {
+        return
+      }
 
       overlayMode.acquire(overlayId, keymap)
       return function restoreDialogKeymapMode() {
@@ -61,7 +62,9 @@ export function Dialog({
     [open, overlayId],
   )
 
-  if (!open) return null
+  if (!open) {
+    return null
+  }
 
   const width = widthProp ?? Math.min(60, dimensions.width - 2)
   const paddingTop = paddingTopProp ?? Math.floor(dimensions.height / 4)
@@ -76,7 +79,7 @@ export function Dialog({
       paddingTop={paddingTop}
       left={0}
       top={0}
-      backgroundColor={RGBA.fromInts(0, 0, 0, 150)}
+      backgroundColor={theme.overlayScrim}
       onMouseDown={() => {
         dismissRef.current = !!renderer.getSelection()
       }}
@@ -94,7 +97,9 @@ export function Dialog({
         backgroundColor={theme.backgroundPanel}
         paddingTop={1}
         onMouseUp={(event: { stopPropagation(): void }) => {
-          if (renderer.getSelection()?.getSelectedText()) return
+          if (renderer.getSelection()?.getSelectedText()) {
+            return
+          }
           dismissRef.current = false
           event.stopPropagation()
         }}

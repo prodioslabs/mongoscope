@@ -1,4 +1,4 @@
-import { InputRenderable, RGBA, ScrollBoxRenderable, TextAttributes } from '@opentui/core'
+import { InputRenderable, ScrollBoxRenderable, TextAttributes } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { matchSorter } from 'match-sorter'
@@ -29,75 +29,6 @@ type CommandOption = {
   category?: string
   footer?: ReactNode | string
   disabled?: boolean
-}
-
-type CommandOptionRowProps = {
-  option: CommandOption
-  active: boolean
-  current: boolean
-  onMouseMove: () => void
-  onMouseOver: () => void
-  onMouseDown: () => void
-  onSelect: () => void
-}
-
-type PaletteView = 'commands' | 'themes'
-
-function CommandOptionRow({
-  option,
-  active,
-  current,
-  onMouseMove,
-  onMouseOver,
-  onMouseDown,
-  onSelect,
-}: CommandOptionRowProps) {
-  const theme = useTheme((s) => s.theme)
-  const fg = selectedForeground(theme)
-  const textColor = active ? fg : current ? theme.primary : theme.text
-  const mutedColor = active ? fg : theme.textMuted
-
-  return (
-    <box
-      id={`command-option-${option.value}`}
-      flexDirection="column"
-      onMouseMove={onMouseMove}
-      onMouseOver={onMouseOver}
-      onMouseDown={onMouseDown}
-      onMouseUp={onSelect}
-    >
-      <box
-        flexDirection="row"
-        paddingLeft={current ? 1 : 3}
-        paddingRight={3}
-        gap={1}
-        backgroundColor={active ? theme.primary : RGBA.fromInts(0, 0, 0, 0)}
-      >
-        {current ? (
-          <text flexShrink={0} fg={textColor} marginRight={0}>
-            ●
-          </text>
-        ) : null}
-        <text
-          flexGrow={1}
-          fg={textColor}
-          attributes={active ? TextAttributes.BOLD : undefined}
-          overflow="hidden"
-          wrapMode="none"
-        >
-          {option.title}
-          {option.description ? (
-            <span style={{ fg: mutedColor }}> {option.description}</span>
-          ) : null}
-        </text>
-        {option.footer != null ? (
-          <box flexShrink={0}>
-            <text fg={mutedColor}>{option.footer}</text>
-          </box>
-        ) : null}
-      </box>
-    </box>
-  )
 }
 
 export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPaletteProps) {
@@ -184,7 +115,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
   )
 
   const filtered = useMemo(() => {
-    if (!filter) return enabledOptions
+    if (!filter) {
+      return enabledOptions
+    }
     return matchSorter(enabledOptions, filter, {
       keys: ['title', 'category'],
     })
@@ -205,7 +138,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
 
   const rows = useMemo(() => {
     const headers = grouped.reduce((acc, [category], index) => {
-      if (!category) return acc
+      if (!category) {
+        return acc
+      }
       return acc + (index > 0 ? 2 : 1)
     }, 0)
     return flat.length + headers
@@ -218,7 +153,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
 
   useEffect(
     function resetPaletteWhenClosed() {
-      if (open) return
+      if (open) {
+        return
+      }
       setView('commands')
       setFilter('')
       setSelected(0)
@@ -229,7 +166,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
 
   useEffect(
     function syncFooterOverlayKeybindings() {
-      if (!open) return
+      if (!open) {
+        return
+      }
       pushOverlayKeybindings('command-palette', PALETTE_OVERLAY_KEYBINDINGS)
       return function clearFooterOverlayKeybindings() {
         popOverlayKeybindings('command-palette')
@@ -259,10 +198,14 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
 
   useEffect(
     function focusFilterInput() {
-      if (!open) return
+      if (!open) {
+        return
+      }
       const timer = setTimeout(() => {
         const input = inputRef.current
-        if (!input || input.isDestroyed) return
+        if (!input || input.isDestroyed) {
+          return
+        }
         input.focus()
       }, 1)
       return () => clearTimeout(timer)
@@ -274,7 +217,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
     function scrollSelectedIntoView() {
       const scroll = scrollRef.current
       const option = flat[selected]
-      if (!scroll || !option) return
+      if (!scroll || !option) {
+        return
+      }
       scroll.scrollChildIntoView(`command-option-${option.value}`)
     },
     [flat, selected],
@@ -334,7 +279,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
 
   function submitCurrent() {
     const option = flatRef.current[selectedRef.current]
-    if (!option) return
+    if (!option) {
+      return
+    }
     runCommand(option.value)
   }
 
@@ -351,7 +298,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
             name: 'palette.navigate-up',
             run() {
               const items = flatRef.current
-              if (items.length === 0) return
+              if (items.length === 0) {
+                return
+              }
               setInputMode('keyboard')
               setSelected((index) => (index - 1 + items.length) % items.length)
             },
@@ -360,7 +309,9 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
             name: 'palette.navigate-down',
             run() {
               const items = flatRef.current
-              if (items.length === 0) return
+              if (items.length === 0) {
+                return
+              }
               setInputMode('keyboard')
               setSelected((index) => (index + 1) % items.length)
             },
@@ -441,12 +392,18 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
                         current={isCurrent}
                         onMouseMove={() => setInputMode('mouse')}
                         onMouseOver={() => {
-                          if (inputMode !== 'mouse') return
-                          if (optionIndex >= 0) setSelected(optionIndex)
+                          if (inputMode !== 'mouse') {
+                            return
+                          }
+                          if (optionIndex >= 0) {
+                            setSelected(optionIndex)
+                          }
                         }}
                         onMouseDown={() => {
                           setInputMode('mouse')
-                          if (optionIndex >= 0) setSelected(optionIndex)
+                          if (optionIndex >= 0) {
+                            setSelected(optionIndex)
+                          }
                         }}
                         onSelect={() => runCommand(option.value)}
                       />
@@ -464,5 +421,74 @@ export function CommandPalette({ open, onOpenChange, onOpenHelpMenu }: CommandPa
         <box flexShrink={0} />
       </box>
     </Dialog>
+  )
+}
+
+type CommandOptionRowProps = {
+  option: CommandOption
+  active: boolean
+  current: boolean
+  onMouseMove: () => void
+  onMouseOver: () => void
+  onMouseDown: () => void
+  onSelect: () => void
+}
+
+type PaletteView = 'commands' | 'themes'
+
+function CommandOptionRow({
+  option,
+  active,
+  current,
+  onMouseMove,
+  onMouseOver,
+  onMouseDown,
+  onSelect,
+}: CommandOptionRowProps) {
+  const theme = useTheme((s) => s.theme)
+  const fg = selectedForeground(theme)
+  const textColor = active ? fg : current ? theme.primary : theme.text
+  const mutedColor = active ? fg : theme.textMuted
+
+  return (
+    <box
+      id={`command-option-${option.value}`}
+      flexDirection="column"
+      onMouseMove={onMouseMove}
+      onMouseOver={onMouseOver}
+      onMouseDown={onMouseDown}
+      onMouseUp={onSelect}
+    >
+      <box
+        flexDirection="row"
+        paddingLeft={current ? 1 : 3}
+        paddingRight={3}
+        gap={1}
+        backgroundColor={active ? theme.primary : theme.transparent}
+      >
+        {current ? (
+          <text flexShrink={0} fg={textColor} marginRight={0}>
+            ●
+          </text>
+        ) : null}
+        <text
+          flexGrow={1}
+          fg={textColor}
+          attributes={active ? TextAttributes.BOLD : undefined}
+          overflow="hidden"
+          wrapMode="none"
+        >
+          {option.title}
+          {option.description ? (
+            <span style={{ fg: mutedColor }}> {option.description}</span>
+          ) : null}
+        </text>
+        {option.footer != null ? (
+          <box flexShrink={0}>
+            <text fg={mutedColor}>{option.footer}</text>
+          </box>
+        ) : null}
+      </box>
+    </box>
   )
 }

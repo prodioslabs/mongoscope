@@ -86,6 +86,8 @@
       "dark": "darkBg2",
       "light": "lightBg2"
     },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": {
       "dark": "darkBg3",
       "light": "lightBg3"
