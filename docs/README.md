@@ -3,7 +3,7 @@
 **The docs site for MongoScope—browse features, shortcuts, and CLI flags in the browser.**
 
 ```bash
-bun install && bun run dev
+cd docs && bun install && bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Pages live under `/docs`. Stack: Next.js + [Fumadocs](https://fumadocs.dev).

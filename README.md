@@ -87,10 +87,10 @@ mongoscope --help
 # or: bun start --help
 ```
 
-| Flag                                                        | Status                                                                              |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `-h`, `--help` / `-v`, `--version`                          | Print and exit immediately (version from `package.json`)                            |
-| `--log-dir`                                                 | Welcome screen’s second log list (default `.`)                                      |
-| `--log-path`                                                | Parse that log file on startup (skips picker; invalid path exits 1)                 |
-| `--uri`                                                     | Ephemeral live connect for this session (not saved to keychain)                     |
-| `--host`, `--port`, `--username`, `--password`, `--auth-db` | Build a URI and ephemeral-connect (do not combine with `--uri`; default port 27017) |
+| Flag                                                        | Status                                                                                                |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `-h`, `--help` / `-v`, `--version`                          | Print and exit immediately (`package.json` in dev; `MONGOSCOPE_EMBEDDED_VERSION` in release binaries) |
+| `--log-dir`                                                 | Welcome screen’s second log list (default `.`)                                                        |
+| `--log-path`                                                | Parse that log file on startup (skips picker; invalid path exits 1)                                   |
+| `--uri`                                                     | Ephemeral live connect for this session (not saved to keychain)                                       |
+| `--host`, `--port`, `--username`, `--password`, `--auth-db` | Build a URI and ephemeral-connect (do not combine with `--uri`; default port 27017)                   |
