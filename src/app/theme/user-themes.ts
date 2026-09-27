@@ -64,9 +64,7 @@ export async function loadUserThemes(
       }
       themes[themeName] = validateUserThemeJson(parsed)
     } catch (error) {
-      warnings.push(
-        `Skipped user theme "${themeName}" (${filePath}): ${errorMessageText(error)}`,
-      )
+      warnings.push(`Skipped user theme "${themeName}" (${filePath}): ${errorMessageText(error)}`)
     }
   }
 

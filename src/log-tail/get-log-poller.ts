@@ -6,11 +6,7 @@ import { extractGetLogLines } from './get-log-lines'
 import { buildLogTailStats, createIngestRateTracker } from './ingest-rate'
 import { parseTailLogLineFromText } from './parse-tail-line'
 import { LogLineRingBuffer } from './ring-buffer'
-import {
-  LOG_TAIL_RING_CAPACITY,
-  type LogTailStats,
-  type TailLogLine,
-} from './types'
+import { LOG_TAIL_RING_CAPACITY, type LogTailStats, type TailLogLine } from './types'
 
 /** Default poll interval for getLog (heavier than file stat polls). */
 const GET_LOG_POLL_INTERVAL_MS = 1000
