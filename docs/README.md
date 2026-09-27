@@ -24,6 +24,7 @@ Product install and TUI quickstart stay in the [root README](../README.md). This
 | `bun run build`       | Production build           |
 | `bun run start`       | Serve the production build |
 | `bun run lint`        | Oxlint                     |
+| `bun run format`      | Oxfmt write                |
 | `bun run types:check` | Next typegen + `tsc`       |
 
 ## Quick Start
