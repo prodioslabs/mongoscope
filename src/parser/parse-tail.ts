@@ -5,11 +5,16 @@ import { LogStore } from './store'
 /** Rough average bytes per mongod JSON log line for EOF window sizing. */
 const AVG_BYTES_PER_LINE = 256
 /** Cap a single read attempt so huge presets do not allocate unbounded buffers. */
-const MAX_READ_BYTES = 128 * 1024 * 1024
+export const MAX_READ_BYTES = 128 * 1024 * 1024
 
 export type ParseLogFileTailOptions = {
   maxLines: number
   onProgress?: (progress: { bytesRead: number; rowCount: number }) => void
+  /**
+   * Path recorded on the {@link LogStore} (defaults to the path being read).
+   * Use when reading a temp copy but displaying/tracking the original log path.
+   */
+  storePath?: string
 }
 
 export const LOG_TAIL_LINE_PRESETS = [10_000, 25_000, 50_000, 100_000, 250_000] as const
@@ -28,11 +33,12 @@ export async function parseLogFileTail(
 ): Promise<LogStore> {
   const maxLines = Math.max(0, Math.floor(options.maxLines))
   const onProgress = options.onProgress
+  const storePath = options.storePath ?? path
   const info = await stat(path)
   const size = info.size
 
   if (maxLines === 0 || size === 0) {
-    const empty = new LogStore(path)
+    const empty = new LogStore(storePath)
     empty.byteLength = size
     onProgress?.({ bytesRead: size, rowCount: 0 })
     return empty
@@ -43,7 +49,7 @@ export async function parseLogFileTail(
 
   // Expand once if the first window under-delivers (long lines / sparse newlines).
   for (let attempt = 0; attempt < 2; attempt++) {
-    const store = await readTailWindow(path, size, windowBytes, onProgress)
+    const store = await readTailWindow(path, size, windowBytes, storePath, onProgress)
     if (store.rowCount >= maxLines || windowBytes >= size) {
       store.retainTail(maxLines)
       onProgress?.({ bytesRead: size, rowCount: store.rowCount })
@@ -52,7 +58,13 @@ export async function parseLogFileTail(
     windowBytes = Math.min(size, Math.min(MAX_READ_BYTES, windowBytes * 2))
   }
 
-  const store = await readTailWindow(path, size, Math.min(size, MAX_READ_BYTES), onProgress)
+  const store = await readTailWindow(
+    path,
+    size,
+    Math.min(size, MAX_READ_BYTES),
+    storePath,
+    onProgress,
+  )
   store.retainTail(maxLines)
   onProgress?.({ bytesRead: size, rowCount: store.rowCount })
   return store
@@ -62,9 +74,10 @@ async function readTailWindow(
   path: string,
   fileSize: number,
   windowBytes: number,
+  storePath: string,
   onProgress?: (progress: { bytesRead: number; rowCount: number }) => void,
 ): Promise<LogStore> {
-  const store = new LogStore(path)
+  const store = new LogStore(storePath)
   const start = Math.max(0, fileSize - windowBytes)
   const length = fileSize - start
   if (length <= 0) {
