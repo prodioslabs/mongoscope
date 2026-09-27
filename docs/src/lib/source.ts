@@ -1,11 +1,12 @@
 import { llms, loader } from 'fumadocs-core/source';
 import { lucideIconsPlugin } from 'fumadocs-core/source/lucide-icons';
-import { docsContentDir, docsRoute } from './shared';
+import { docsRoute } from './shared';
 import { defineDocs } from 'fumadocs-mdx/macro';
 import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
 
+// `dir` must be a string literal — fumadocs-mdx macros resolve content at bundle time.
 const docs = defineDocs({
-  dir: docsContentDir,
+  dir: 'content/docs',
   docs: {
     schema: pageSchema,
     postprocess: {
