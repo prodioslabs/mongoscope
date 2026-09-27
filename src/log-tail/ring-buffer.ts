@@ -14,7 +14,7 @@ export class LogLineRingBuffer {
       throw new RangeError('LogLineRingBuffer capacity must be >= 1')
     }
     this.capacity = capacity
-    this.slots = new Array(capacity)
+    this.slots = Array.from({ length: capacity })
   }
 
   get size(): number {
@@ -50,7 +50,7 @@ export class LogLineRingBuffer {
 
   /** Oldest → newest snapshot (copies references, not deep-cloned). */
   toArray(): TailLogLine[] {
-    const out: TailLogLine[] = new Array(this.length)
+    const out: TailLogLine[] = Array.from({ length: this.length })
     for (let i = 0; i < this.length; i++) {
       out[i] = this.slots[(this.start + i) % this.capacity]!
     }

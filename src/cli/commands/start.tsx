@@ -41,7 +41,9 @@ function applyOptions(args: Argv) {
 }
 
 function reportCliStartupError(message: string): never {
+  // oxlint-disable-next-line no-console -- CLI stderr for user-facing startup errors
   console.error(`mongoscope: ${message}`)
+  // oxlint-disable-next-line no-console -- CLI stderr for user-facing startup errors
   console.error('Try `mongoscope --help` for usage.')
   process.exit(1)
 }

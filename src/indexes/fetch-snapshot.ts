@@ -193,7 +193,7 @@ async function mapWithConcurrency<T, R>(
   if (items.length === 0) {
     return []
   }
-  const results: R[] = new Array<R>(items.length)
+  const results: R[] = Array.from({ length: items.length })
   let nextIndex = 0
 
   async function worker() {

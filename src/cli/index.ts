@@ -35,7 +35,9 @@ export async function parseCli(argv: string[] = process.argv): Promise<void> {
         throw error
       }
       const detail = message?.trim() || 'Unknown CLI error'
+      // oxlint-disable-next-line no-console -- CLI stderr for user-facing parse errors
       console.error(`mongoscope: ${detail}`)
+      // oxlint-disable-next-line no-console -- CLI stderr for user-facing parse errors
       console.error('Try `mongoscope --help` for usage.')
       process.exit(1)
     })
