@@ -4,17 +4,18 @@
 
 Put code next to its only consumer; promote on a second real consumer. Domain stays outside `app/`; React/OpenTUI stays inside `app/`.
 
-| Kind of code                                                 | Where it goes                                                                | Must not                        |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------- |
-| Domain logic (pure, no OpenTUI)                              | Top-level `src/<domain>/` — today: `connections`, `parser`, `query-patterns` | Import from `app/`              |
-| Cross-domain pure utils                                      | `src/lib/` by concern                                                        | Import domain modules           |
-| OpenTUI shell, screens, stores, shortcuts, theme, app config | `src/app/`                                                                   | Own domain business rules       |
-| TUI-only helpers                                             | `src/app/lib/`                                                               | Live in `src/lib/`              |
-| React Query / UI data hooks                                  | `src/app/queries/`                                                           | Sit at top-level `src/queries/` |
-| Feature screens + feature-private presentation               | `src/app/components/<feature>/<name>/`                                       | Premature extract to shared     |
-| Shared widgets / primitives (2+ features)                    | `src/app/components/<name>/` or `ui/`                                        | Feature-private helpers         |
-| Process entry (yargs)                                        | `src/cli/`                                                                   | App UI                          |
-| Tests                                                        | Colocated `*.test.ts` next to source                                         | Separate `tests/` tree          |
+| Kind of code                                                 | Where it goes                                                                                                                                                 | Must not                        |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| Domain logic (pure, no OpenTUI)                              | Top-level `src/<domain>/` — today: `connections`, `parser`, `query-patterns`, `indexes`, `live-ops`, `live-connection`, `log-tail`, `profiler`, `replication` | Import from `app/`              |
+| Domain types                                                 | Colocated `types.ts` in that domain folder (e.g. `src/connections/types.ts`)                                                                                  | Central `lib/types.ts` dump     |
+| Cross-domain pure utils                                      | `src/lib/` by concern                                                                                                                                         | Import domain modules           |
+| OpenTUI shell, screens, stores, shortcuts, theme, app config | `src/app/`                                                                                                                                                    | Own domain business rules       |
+| TUI-only helpers                                             | `src/app/lib/`                                                                                                                                                | Live in `src/lib/`              |
+| React Query / UI data hooks                                  | `src/app/queries/`                                                                                                                                            | Sit at top-level `src/queries/` |
+| Feature screens + feature-private presentation               | `src/app/components/<feature>/<name>/`                                                                                                                        | Premature extract to shared     |
+| Shared widgets / primitives (2+ features)                    | `src/app/components/<name>/` or `ui/`                                                                                                                         | Feature-private helpers         |
+| Process entry (yargs)                                        | `src/cli/`                                                                                                                                                    | App UI                          |
+| Tests                                                        | Colocated `*.test.ts` next to source                                                                                                                          | Separate `tests/` tree          |
 
 Reuse ladder:
 
@@ -117,6 +118,10 @@ function LogFileSection({ ... }: LogFileSectionProps) {
 }
 ```
 
+## Docs site exemption
+
+`docs/` is a separate Next.js / Fumadocs site. It is **exempt** from the TUI-authored component-folder, props-destructure, and named-`useEffect` rules above — those target React/OpenTUI under `src/app/`. Docs follows framework-native conventions instead: default exports for Next-generated layout/page props, flat route-private `_components/`, and Tailwind (including fixed OS-brand color identifiers where those colors are not themeable UI tokens). Shared docs widgets under `docs/src/components/` may still use kebab folders + barrels when that fits, but that is optional style for the docs package, not the TUI reuse ladder.
+
 ## Cursor Cloud specific instructions
 
 MongoScope is a single-package **terminal UI (TUI)** CLI for visualizing MongoDB logs. It has no HTTP server or network port. The toolchain is [Bun](https://bun.sh) (runtime + package manager); Bun lives at `~/.bun/bin` and is on `PATH` via `~/.bashrc`. All commands are defined in `package.json` `scripts`.
@@ -125,6 +130,6 @@ Non-obvious caveats for running/testing:
 
 - `bun start` (alias for `bun bin/mongoscope`) renders a full-screen OpenTUI interface and **requires a real interactive TTY**. It will not render correctly if stdout is piped or run non-interactively; test it from an actual terminal (e.g. the Desktop pane). Key bindings: `Ctrl+K` command palette, `m` toggle light/dark, `t` cycle themes, `q` quit.
 - The `--uri` / `--host` / `--port` / `--log-path` etc. flags are parsed but **not yet wired into the app**, so no MongoDB instance is needed to run or test the current UI.
-- `bun run test` runs Vitest, but there are currently **no test files**, so it exits with code 1 and "No test files found" — this is expected, not an environment failure.
+- `bun run test` runs Vitest against colocated `*.test.ts` files next to their source (see folder placement table). Prefer `bun run test` for the full suite.
 - The `lint` and `format` scripts mutate files (`oxlint --fix`, `oxfmt --write`). For check-only runs use `bunx oxlint` and `bunx oxfmt --check`.
 - `bun run build` compiles a standalone binary to `dist/mongoscope` (~110MB, gitignored).
