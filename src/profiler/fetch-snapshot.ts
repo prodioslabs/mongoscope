@@ -23,9 +23,6 @@ export type FetchProfilerSnapshotResult = {
   snapshot: ProfilerSlowQueriesSnapshot
 }
 
-/**
- * Fetch listDatabases + profiling status + newest system.profile docs for one DB.
- */
 export async function fetchProfilerSlowQueriesSnapshot(
   client: ProfilerClient,
   selectedDatabase: string | null,

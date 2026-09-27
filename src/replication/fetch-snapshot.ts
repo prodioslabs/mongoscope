@@ -2,7 +2,7 @@ import { asDriverErrorLike } from '../lib/driver-error'
 import { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
 import type { MongoDbClient } from '../live-connection'
 import { normalizeHeartbeats } from './heartbeats'
-import { buildOplogWindow } from './oplog'
+import { buildOplogWindow, type OplogEdgeDoc, type OplogStatsInput } from './oplog'
 import { normalizeRecentReplicationEvents } from './recent-events'
 import { normalizeReplicationTopology } from './normalize'
 import { normalizeWriteConcern } from './write-concern'
@@ -118,14 +118,12 @@ async function fetchOplogWindow(client: ReplicationAdminClient): Promise<OplogWi
     local.collection('oplog.rs').find({}).sort({ $natural: -1 }).limit(1).toArray(),
   ])
 
-  const first =
-    Array.isArray(firstDocs) && firstDocs.length > 0 ? (firstDocs[0] as { ts?: unknown }) : null
-  const last =
-    Array.isArray(lastDocs) && lastDocs.length > 0 ? (lastDocs[0] as { ts?: unknown }) : null
+  const first: OplogEdgeDoc =
+    Array.isArray(firstDocs) && firstDocs.length > 0 ? (firstDocs[0] as OplogEdgeDoc) : null
+  const last: OplogEdgeDoc =
+    Array.isArray(lastDocs) && lastDocs.length > 0 ? (lastDocs[0] as OplogEdgeDoc) : null
   return buildOplogWindow(
-    stats != null && typeof stats === 'object'
-      ? (stats as { size?: unknown; maxSize?: unknown })
-      : null,
+    stats != null && typeof stats === 'object' ? (stats as OplogStatsInput) : null,
     first,
     last,
   )

@@ -1,5 +1,7 @@
-import { normalizePlanSummary } from '../lib/plan-summary'
 import { isRecord } from '../lib/is-record'
+import { optionalNumber } from '../lib/optional-number'
+import { normalizePlanSummary } from '../lib/plan-summary'
+import { stringOrEmpty } from '../lib/string-or-empty'
 import type {
   ConnectionStats,
   CurrentOpRow,
@@ -227,27 +229,4 @@ function formatClient(doc: RawCurrentOpDoc): string {
     return appName
   }
   return EMPTY_CELL
-}
-
-function stringOrEmpty(value: unknown): string {
-  if (typeof value === 'string') {
-    return value
-  }
-  return ''
-}
-
-function optionalNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'bigint') {
-    return Number(value)
-  }
-  if (value != null && typeof value === 'object' && 'toNumber' in value) {
-    const maybe = (value as { toNumber: () => number }).toNumber()
-    if (typeof maybe === 'number' && Number.isFinite(maybe)) {
-      return maybe
-    }
-  }
-  return null
 }

@@ -8,10 +8,8 @@ export {
   formatGrowthRate,
   formatHeartbeatEdge,
   formatLagSeconds,
-  formatMemberLabel,
   formatMemberMeta,
   formatPingMs,
-  formatPriorityVotes,
   formatShortHost,
   formatWindowHours,
   horizontalBarString,
@@ -22,13 +20,8 @@ export {
   appendLagSample,
   buildLagTrendView,
   emptyLagHistory,
-  LAG_CHART_BAR_COUNT,
-  LAG_HISTORY_WINDOW_MS,
   pickLagTrendMember,
-  poolLagSamples,
-  pruneLagHistory,
   type LagHistoryState,
-  type LagSample,
   type LagTrendView,
 } from './lag-history'
 export {
@@ -44,7 +37,7 @@ export {
   type OplogEdgeDoc,
   type OplogStatsInput,
 } from './oplog'
-export { normalizeRecentReplicationEvents, RECENT_EVENTS_LIMIT } from './recent-events'
+export { normalizeRecentReplicationEvents } from './recent-events'
 export { formatDefaultWriteConcern, normalizeWriteConcern } from './write-concern'
 export type {
   HeartbeatEdge,

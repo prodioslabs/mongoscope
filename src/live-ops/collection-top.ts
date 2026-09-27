@@ -1,4 +1,5 @@
-import { isRecord } from '../lib/is-record'
+import { asRecord, isRecord } from '../lib/is-record'
+import { optionalNumber } from '../lib/optional-number'
 import type { CollectionTopRow, TopSample } from './types'
 
 const MICROSECONDS_PER_MILLISECOND = 1000
@@ -38,8 +39,8 @@ export function parseTopCommandResult(result: unknown): TopSample {
     if (namespace === 'note' || !isRecord(entry)) {
       continue
     }
-    const readLock = asOptionalRecord(entry.readLock)
-    const writeLock = asOptionalRecord(entry.writeLock)
+    const readLock = asRecord(entry.readLock)
+    const writeLock = asRecord(entry.writeLock)
     const readLockMicros = toNonNegativeNumber(readLock?.time)
     const writeLockMicros = toNonNegativeNumber(writeLock?.time)
     byNamespace[namespace] = { readLockMicros, writeLockMicros }
@@ -100,22 +101,6 @@ export function buildCollectionTopRows(
   }
 }
 
-function asOptionalRecord(value: unknown): Record<string, unknown> | null {
-  return isRecord(value) ? value : null
-}
-
 function toNonNegativeNumber(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return Math.max(0, value)
-  }
-  if (typeof value === 'bigint') {
-    return Math.max(0, Number(value))
-  }
-  if (isRecord(value) && typeof value.toNumber === 'function') {
-    const maybe = value.toNumber()
-    if (typeof maybe === 'number' && Number.isFinite(maybe)) {
-      return Math.max(0, maybe)
-    }
-  }
-  return 0
+  return Math.max(0, optionalNumber(value) ?? 0)
 }

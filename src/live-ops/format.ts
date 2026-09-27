@@ -29,7 +29,6 @@ const TRACK_EMPTY = ' '
 /** Partial block glyphs: empty (0) through nearly-full (8). */
 const PARTIAL_BLOCKS = ['', '▏', '▎', '▍', '▌', '▋', '▊', '▉'] as const
 
-/** Fill level for one character cell in [0, fillEnd). */
 function barCharAt(index: number, fillEnd: number, emptyChar: string): string {
   if (index < 0 || fillEnd <= 0) {
     return emptyChar

@@ -38,36 +38,6 @@ export function formatGrowthRate(bytesPerHour: number | null): string {
   return `~${formatBytes(bytesPerHour)}/hr`
 }
 
-/**
- * Hostname label: drop port for DNS hosts; keep `host:port` for bare IPs.
- */
-export function formatMemberLabel(hostPort: string): string {
-  const trimmed = hostPort.trim()
-  if (trimmed === '') {
-    return '—'
-  }
-  const lastColon = trimmed.lastIndexOf(':')
-  if (lastColon <= 0) {
-    return trimmed
-  }
-  const host = trimmed.slice(0, lastColon)
-  // IPv4 — keep host:port
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
-    return trimmed
-  }
-  // Bracketed IPv6 — keep host:port
-  if (host.startsWith('[')) {
-    return trimmed
-  }
-  return host
-}
-
-export function formatPriorityVotes(priority: number | null, votes: number | null): string {
-  const p = priority == null ? '—' : String(priority)
-  const v = votes == null ? '—' : String(votes)
-  return `${p} / ${v}`
-}
-
 /** Member meta line, e.g. `priority 2 • votes 1`. */
 export function formatMemberMeta(priority: number | null, votes: number | null): string {
   const p = priority == null ? '—' : String(priority)

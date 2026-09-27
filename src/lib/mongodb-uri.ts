@@ -1,6 +1,6 @@
 export const DEFAULT_LOCAL_MONGODB_URI = 'mongodb://localhost:27017'
 
-export const DEFAULT_MONGODB_PORT = 27017
+const DEFAULT_MONGODB_PORT = 27017
 
 export type MongoDbUriParts = {
   host: string

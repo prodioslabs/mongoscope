@@ -1,16 +1,13 @@
 import { hostLabelFromUri } from '../lib/mongodb-uri'
 import { defaultSecretStore, type SecretStore } from './secret-store'
-import type { ConnectionProfile, ConnectionsBlob, StoredConnection } from './types'
+import type {
+  AddConnectionInput,
+  ConnectionProfile,
+  ConnectionsBlob,
+  StoredConnection,
+  UpdateConnectionInput,
+} from './types'
 import { toConnectionProfile } from './validate'
-
-export type AddConnectionInput = {
-  name: string
-  /** Full MongoDB connection URI — stored only inside the OS keychain blob. */
-  uri: string
-  tags?: string[]
-}
-
-export type UpdateConnectionInput = AddConnectionInput
 
 export type ConnectionStore = {
   list(): Promise<ConnectionProfile[]>

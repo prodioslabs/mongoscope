@@ -1,3 +1,5 @@
+import { optionalNumber } from '../lib/optional-number'
+import { stringOrEmpty } from '../lib/string-or-empty'
 import type { MemberSeverity, ReplicationTopology, TopologyMember } from './types'
 
 /** Lag at or above this many seconds marks a reachable secondary as warning. */
@@ -181,32 +183,12 @@ function dateToMs(value: unknown): number | null {
   return null
 }
 
-function optionalNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'bigint') {
-    return Number(value)
-  }
-  if (value != null && typeof value === 'object' && 'toNumber' in value) {
-    const maybe = (value as { toNumber: () => number }).toNumber()
-    if (typeof maybe === 'number' && Number.isFinite(maybe)) {
-      return maybe
-    }
-  }
-  return null
-}
-
 function optionalInt(value: unknown): number | null {
   const n = optionalNumber(value)
   if (n == null) {
     return null
   }
   return Math.trunc(n)
-}
-
-function stringOrEmpty(value: unknown): string {
-  return typeof value === 'string' ? value : ''
 }
 
 function stringOrNull(value: unknown): string | null {

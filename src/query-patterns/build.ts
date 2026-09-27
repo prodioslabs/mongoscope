@@ -20,9 +20,6 @@ type MutablePattern = {
   trend: Uint16Array
 }
 
-/**
- * Aggregate Slow query rows from a {@link LogStore} into shape-grouped patterns.
- */
 export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatternStore> {
   const startedAt = performance.now()
 

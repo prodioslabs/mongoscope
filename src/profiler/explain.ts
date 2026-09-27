@@ -13,9 +13,6 @@ import {
 } from '../query-patterns/explain-shared'
 import { profileDocToAttr } from './profile-doc'
 
-/**
- * Build PatternExplain from an in-memory system.profile sample document.
- */
 export function getPatternExplainFromSample(
   pattern: QueryPattern,
   sampleDoc: Record<string, unknown>,

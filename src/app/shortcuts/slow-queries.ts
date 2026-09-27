@@ -87,13 +87,11 @@ const sortCountAvgPlanChip: FooterChip = {
   ],
 }
 
-/** Footer for static mode (default). */
 export const SLOW_QUERIES_STATIC_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   sortCountAvgPlanChip,
 ]
 
-/** Footer for live profiler mode. */
 export const SLOW_QUERIES_LIVE_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   sortCountAvgPlanChip,

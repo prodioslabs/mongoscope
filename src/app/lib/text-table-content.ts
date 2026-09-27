@@ -39,7 +39,6 @@ export function emptyTableRow(columnCount: number): TextChunk[][] {
   return Array.from({ length: columnCount }, () => [])
 }
 
-/** Pad data rows (excluding header) to fill the visible table capacity. */
 export function padTableRows(rows: TextTableContent, rowCapacity: number): TextTableContent {
   const padded = [...rows]
   while (padded.length - 1 < rowCapacity) {

@@ -1,13 +1,13 @@
 import { open, stat } from 'node:fs/promises'
 import { errorMessageText } from '../lib/error-message'
 import { appendTailChunk, skipPartialLeadingLine } from './append-chunk'
+import { buildLogTailStats, createIngestRateTracker } from './ingest-rate'
 import { LogLineRingBuffer } from './ring-buffer'
 import {
   LOG_TAIL_POLL_INTERVAL_MS,
   LOG_TAIL_RING_CAPACITY,
   LOG_TAIL_SEED_BYTE_WINDOW,
   LOG_TAIL_SEED_LINE_TARGET,
-  type LogTailFormat,
   type LogTailStats,
   type TailLogLine,
 } from './types'
@@ -61,7 +61,7 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
 
   let running = false
   let seeded = false
-  let timer: ReturnType<typeof setInterval> | null = null
+  let timer: NodeJS.Timeout | null = null
   let tickInFlight = false
   let offset = 0
   let carry: Uint8Array | null = null
@@ -70,7 +70,7 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
   let restartsDetected = 0
   let seenJson = false
   let error: string | null = null
-  const ingestTimestamps: number[] = []
+  const { recordIngest, linesPerSec } = createIngestRateTracker(now)
 
   function emit(): void {
     for (const listener of listeners) {
@@ -78,44 +78,13 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
     }
   }
 
-  function recordIngest(count: number): void {
-    if (count <= 0) {
-      return
-    }
-    const t = now()
-    for (let i = 0; i < count; i++) {
-      ingestTimestamps.push(t)
-    }
-    const cutoff = t - 1000
-    while (ingestTimestamps.length > 0 && ingestTimestamps[0]! < cutoff) {
-      ingestTimestamps.shift()
-    }
-  }
-
-  function linesPerSec(): number {
-    const t = now()
-    const cutoff = t - 1000
-    let count = 0
-    for (let i = ingestTimestamps.length - 1; i >= 0; i--) {
-      if (ingestTimestamps[i]! < cutoff) {
-        break
-      }
-      count++
-    }
-    return count
-  }
-
-  function formatLabel(): LogTailFormat {
-    return seenJson ? 'JSON (4.4+)' : 'raw/legacy'
-  }
-
   function buildStats(): LogTailStats {
-    return {
-      format: formatLabel(),
+    return buildLogTailStats({
+      seenJson,
       linesPerSec: linesPerSec(),
       restartsDetected,
       bufferedCount: ring.size,
-    }
+    })
   }
 
   function markJsonFromRecent(linesAdded: number): void {
@@ -138,8 +107,7 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
 
   async function readIdentity(): Promise<FileIdentity> {
     const info = await stat(path)
-    const ino =
-      typeof (info as { ino?: unknown }).ino === 'number' ? (info as { ino: number }).ino : null
+    const ino = typeof info.ino === 'number' ? info.ino : null
     return { size: info.size, ino }
   }
 
@@ -260,9 +228,7 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
       timer = setInterval(() => {
         void pollTick()
       }, pollIntervalMs)
-      if (typeof timer === 'object' && timer !== null && 'unref' in timer) {
-        ;(timer as { unref: () => void }).unref()
-      }
+      timer.unref()
     },
 
     stop() {

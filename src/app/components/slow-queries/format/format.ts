@@ -43,7 +43,6 @@ export function formatWindowLabel(startMs: number, endMs: number): string {
   return `${Math.max(1, Math.round(days))}d window`
 }
 
-/** Max-pool a trend series into a fixed-width block sparkline. */
 export function sparkline(trend: Uint16Array, width: number = SPARKLINE_WIDTH): string {
   if (trend.length === 0 || width <= 0) return ''
 

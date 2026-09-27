@@ -158,7 +158,6 @@ function expectBytes(buf: Uint8Array, i: number, end: number, expected: number[]
   return i + expected.length
 }
 
-/** Find closing unescaped double-quote; returns index of quote or -1. */
 function findStringEnd(buf: Uint8Array, start: number, end: number): number {
   let i = start
   while (i < end) {
@@ -282,14 +281,14 @@ type MongoLine = {
 }
 
 function parseTimestampFromJson(t: MongoLine['t']): number {
-  if (t == null) return Number.NaN
+  if (t == null) {
+    return Number.NaN
+  }
   if (typeof t === 'string') {
-    const ms = Date.parse(t)
-    return Number.isNaN(ms) ? Number.NaN : ms
+    return Date.parse(t)
   }
   if (typeof t === 'object' && typeof t.$date === 'string') {
-    const ms = Date.parse(t.$date)
-    return Number.isNaN(ms) ? Number.NaN : ms
+    return Date.parse(t.$date)
   }
   return Number.NaN
 }

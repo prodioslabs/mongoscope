@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "bin/mongoscope",
+    "src/cli/index.ts",
+    "scripts/**/*.{ts,tsx}",
+    "src/**/*.test.{ts,tsx}",
+    "vitest.config.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,tsx}", "bin/**/*"],
+  "ignore": ["docs/**"]
+}

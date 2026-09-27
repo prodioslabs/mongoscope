@@ -1,12 +1,12 @@
 import type { TopologyMember } from './types'
 
 /** Keep lag samples covering this wall-clock window (session-only; no backfill). */
-export const LAG_HISTORY_WINDOW_MS = 10 * 60 * 1000
+const LAG_HISTORY_WINDOW_MS = 10 * 60 * 1000
 
 /** Number of vertical bars rendered in the lag trend chart. */
-export const LAG_CHART_BAR_COUNT = 28
+const LAG_CHART_BAR_COUNT = 28
 
-export type LagSample = {
+type LagSample = {
   t: number
   lagSeconds: number
 }
@@ -126,7 +126,6 @@ export function buildLagTrendView(
   }
 }
 
-/** Max-pool a sample series into a fixed number of chart columns. */
 export function poolLagSamples(values: readonly number[], barCount: number): number[] {
   const count = Math.max(0, Math.floor(barCount))
   if (count === 0) {

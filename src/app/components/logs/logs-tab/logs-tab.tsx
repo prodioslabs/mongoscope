@@ -34,9 +34,9 @@ import { DataTextTable } from '../../data-text-table'
 import { DbSelector } from '../../db-selector'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 
-/** Tab bar, title, pills, optional filter input, parser status, app footer. */
+/** Rows reserved for chrome when sizing the table (static file source). */
 const LOGS_CHROME_ROWS_STATIC = 14
-/** Extra rows for fidelity note + db selector chrome. */
+/** Extra chrome when live (fidelity note + DbSelector). */
 const LOGS_CHROME_ROWS_LIVE = 16
 
 const GET_LOG_FIDELITY_NOTE = 'getLog RAM buffer (~1024 events) — not a durable on-disk log'
@@ -621,13 +621,13 @@ function buildLogRow(
   const sevColor = severityFg(sev, theme)
   const needle = search.trim().toLowerCase()
 
-  const msg = truncateLogCell(line.msg, 36)
+  const msg = truncateText(line.msg, 36)
   const msgMatches = needle.length > 0 && line.msg.toLowerCase().includes(needle)
   const msgLabel = selected ? `${msg} ●` : msg
   const msgColor = selected ? theme.primary : msgMatches ? theme.warning : theme.text
 
   const namespace = line.namespace ?? '—'
-  const nsLabel = truncateLogCell(namespace, 20)
+  const nsLabel = truncateText(namespace, 20)
   const nsMatches =
     needle.length > 0 && line.namespace != null && line.namespace.toLowerCase().includes(needle)
   const nsColor = namespace === '—' ? theme.textMuted : nsMatches ? theme.warning : theme.text
@@ -635,13 +635,13 @@ function buildLogRow(
   const duration = line.durationMillis != null ? `${Math.round(line.durationMillis)}ms` : '—'
   const durationColor = line.durationMillis == null ? theme.textMuted : theme.error
 
-  const plan = line.planSummary != null ? truncateLogCell(line.planSummary, 16) : '—'
+  const plan = line.planSummary != null ? truncateText(line.planSummary, 16) : '—'
   const planColor = line.planSummary == null ? theme.textMuted : theme.accent
 
   return [
     tableCell(formatLogTimestamp(line.timestamp), theme.textMuted),
     tableCell(sev, sevColor),
-    tableCell(truncateLogCell(line.component || 'RAW', 10), sevColor),
+    tableCell(truncateText(line.component || 'RAW', 10), sevColor),
     tableCell(msgLabel, msgColor),
     tableCell(nsLabel, nsColor),
     tableCell(duration, durationColor),
@@ -673,8 +673,4 @@ function formatLogTimestamp(ms: number): string {
   const ss = String(d.getSeconds()).padStart(2, '0')
   const mss = String(d.getMilliseconds()).padStart(3, '0')
   return `${hh}:${mm}:${ss}.${mss}`
-}
-
-function truncateLogCell(value: string, maxLen: number): string {
-  return truncateText(value, maxLen)
 }

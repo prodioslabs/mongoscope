@@ -1,4 +1,5 @@
 import type { MongoClientLike } from '../live-connection'
+import { errorMessageText } from '../lib/error-message'
 import { isUnauthorizedError } from './permissions'
 import type { KillOpResult } from './types'
 
@@ -44,7 +45,7 @@ export function mapKillOpError(error: unknown): Extract<KillOpResult, { ok: fals
     }
   }
 
-  const message = errorMessage(error).toLowerCase()
+  const message = errorMessageText(error).toLowerCase()
 
   if (
     message.includes('no such operation') ||
@@ -76,17 +77,4 @@ export function mapKillOpError(error: unknown): Extract<KillOpResult, { ok: fals
     reason: 'unknown',
     message: 'could not kill operation',
   }
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-  if (error != null && typeof error === 'object' && 'message' in error) {
-    const maybe = (error as { message?: string }).message
-    if (typeof maybe === 'string') {
-      return maybe
-    }
-  }
-  return String(error)
 }
