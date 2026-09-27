@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "mongoscope-v2",
+      "name": "mongoscope",
       "dependencies": {
         "@clack/prompts": "1.7.0",
         "@opentui/core": "0.4.5",

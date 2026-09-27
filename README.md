@@ -3,14 +3,14 @@
 **See which MongoDB queries are killing your latency—without leaving the terminal.**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope-v2/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
 ```
 
 Then run `mongoscope`. Pick a log file. Hit Enter. You get slow-query patterns, live ops, replica lag, indexes, and log tails in one keyboard-driven TUI.
 
 Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui). Needs a real interactive TTY (don't pipe stdout).
 
-Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are attached to [GitHub Releases](https://github.com/prodioslabs/mongoscope-v2/releases) (the curl installer is Unix-only, same as Cellar).
+Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are attached to [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases) (the curl installer is Unix-only, same as Cellar).
 
 ## What you get
 
@@ -26,11 +26,11 @@ Connections land in your OS keychain (`Bun.secrets`). Themes (gruvbox, catppucci
 
 ## Install options
 
-| Method                 | Command / notes                                                                                  |
-| ---------------------- | ------------------------------------------------------------------------------------------------ |
-| **curl (recommended)** | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope-v2/main/install.sh \| bash` |
-| Pin a version          | `MONGOSCOPE_VERSION=v0.1.0 curl -fsSL … \| bash`                                                 |
-| Custom prefix          | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                            |
+| Method                 | Command / notes                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| **curl (recommended)** | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh \| bash` |
+| Pin a version          | `MONGOSCOPE_VERSION=v0.1.0 curl -fsSL … \| bash`                                              |
+| Custom prefix          | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                         |
 
 The installer downloads the matching archive from GitHub Releases, verifies `checksums.txt`, installs to `/usr/local/bin` (Linux) or `~/.local/bin` (macOS), and runs `mongoscope --version`.
 
@@ -39,8 +39,8 @@ The installer downloads the matching archive from GitHub Releases, verifies `che
 Needs [Bun](https://bun.sh). Optional: a MongoDB log and/or a reachable instance.
 
 ```bash
-git clone https://github.com/prodioslabs/mongoscope-v2.git
-cd mongoscope-v2
+git clone https://github.com/prodioslabs/mongoscope.git
+cd mongoscope
 bun install
 bun start
 ```

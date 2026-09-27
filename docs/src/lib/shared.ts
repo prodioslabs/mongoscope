@@ -8,7 +8,7 @@ const docsContentDir = 'content/docs'
 
 export const gitConfig = {
   user: 'prodioslabs',
-  repo: 'mongoscope-v2',
+  repo: 'mongoscope',
   branch: 'main',
 }
 

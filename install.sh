@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-REPOSITORY="prodioslabs/mongoscope-v2"
+REPOSITORY="prodioslabs/mongoscope"
 VERSION="${MONGOSCOPE_VERSION:-latest}"
 
 fail() {
