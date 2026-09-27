@@ -14,10 +14,6 @@ type InstallSectionProps = {
   className?: string
 }
 
-/**
- * Landing-page install CTA. install.sh detects OS/arch itself, so one curl
- * command covers macOS + Linux; Windows is release-download only.
- */
 export function InstallSection({ className }: InstallSectionProps) {
   return (
     <section
@@ -130,7 +126,6 @@ type OsMarkProps = {
   className?: string
 }
 
-/** Brand marks (Simple Icons paths, currentColor). */
 function AppleMark({ className }: OsMarkProps) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>

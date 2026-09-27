@@ -12,11 +12,11 @@ Product install and TUI quickstart stay in the [root README](../README.md). This
 
 ## What’s here
 
-| Path            | Role                                           |
-| --------------- | ---------------------------------------------- |
-| `content/docs/` | MDX pages (getting started, tabs, themes, CLI) |
-| `src/`          | App Router, layouts, search, UI components     |
-| `lib/source.ts` | Fumadocs MDX content source                    |
+| Path                | Role                                           |
+| ------------------- | ---------------------------------------------- |
+| `content/docs/`     | MDX pages (getting started, tabs, themes, CLI) |
+| `src/`              | App Router, layouts, search, UI components     |
+| `src/lib/source.ts` | Fumadocs MDX content source                    |
 
 | Script                | Purpose                    |
 | --------------------- | -------------------------- |

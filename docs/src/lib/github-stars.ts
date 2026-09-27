@@ -6,9 +6,8 @@ type GitHubRepoResponse = {
 }
 
 /**
- * Cached GitHub star count (hourly revalidate).
- * Returns null when the repo is missing/private, unauthenticated, or the request fails —
- * so local docs keep working before the GitHub repo is public.
+ * Hourly-cached star count. Returns null on any fetch/API failure so the docs
+ * shell stays up when the repo is private or GitHub is unreachable.
  */
 export const getGitHubStars = cache(async (): Promise<number | null> => {
   try {
@@ -27,7 +26,6 @@ export const getGitHubStars = cache(async (): Promise<number | null> => {
     )
 
     if (!response.ok) {
-      // 404 is expected for private or not-yet-published repos without a token.
       return null
     }
 
