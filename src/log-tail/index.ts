@@ -16,7 +16,12 @@ export {
 } from './get-log-poller'
 export { parseTailLogLineFromText } from './parse-tail-line'
 export { LogLineRingBuffer } from './ring-buffer'
-export { createLogTailer, type LogTailer, type LogTailerOptions, type LogTailSnapshot } from './tailer'
+export {
+  createLogTailer,
+  type LogTailer,
+  type LogTailerOptions,
+  type LogTailSnapshot,
+} from './tailer'
 export {
   DEFAULT_ENABLED_CATEGORIES,
   LOG_CATEGORY_COMPONENTS,

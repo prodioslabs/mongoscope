@@ -88,7 +88,11 @@ export function EnableProfilingDialog({
   return (
     <Dialog open onClose={onCancel} width={62}>
       <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-        <text content="Enable database profiler?" fg={theme.text} attributes={TextAttributes.BOLD} />
+        <text
+          content="Enable database profiler?"
+          fg={theme.text}
+          attributes={TextAttributes.BOLD}
+        />
         <text content={displayText(`database:  ${database}`)} fg={theme.textMuted} />
         <text
           content={displayText(`current:   level ${currentLevel} · slowms ${currentSlowms}`)}
@@ -102,9 +106,7 @@ export function EnableProfilingDialog({
           content="writes profiling config; brief DB lock; capped system.profile overhead"
           fg={theme.warning}
         />
-        {errorMessage !== '' ? (
-          <text content={displayText(errorMessage)} fg={theme.error} />
-        ) : null}
+        {errorMessage !== '' ? <text content={displayText(errorMessage)} fg={theme.error} /> : null}
         <text
           content={isPending ? 'enabling…' : 'enter confirm · esc cancel'}
           fg={theme.textMuted}

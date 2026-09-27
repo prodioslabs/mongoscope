@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  buildMongoDbUri,
-  hostLabelFromUri,
-  resolveCliMongoUri,
-} from './mongodb-uri'
+import { buildMongoDbUri, hostLabelFromUri, resolveCliMongoUri } from './mongodb-uri'
 
 describe('hostLabelFromUri', () => {
   it('extracts host and port from mongodb:// URIs', () => {

@@ -38,7 +38,11 @@ function createFakeClient(handlers: {
           throw new Error(`unexpected db command ${JSON.stringify(command)}`)
         },
         aggregate() {
-          return { async toArray() { return [] } }
+          return {
+            async toArray() {
+              return []
+            },
+          }
         },
         collection(name): CollectionLike {
           return {
@@ -63,7 +67,11 @@ function createFakeClient(handlers: {
               return []
             },
             aggregate() {
-              return { async toArray() { return [] } }
+              return {
+                async toArray() {
+                  return []
+                },
+              }
             },
           }
         },

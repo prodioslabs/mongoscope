@@ -167,4 +167,3 @@ function userMessageForSecretError(
 
   return `Failed to ${actionVerb} connections via the OS credential store.`
 }
-

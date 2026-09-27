@@ -1,9 +1,6 @@
 import type { MongoDbClient } from '../live-connection'
 import { isRecord } from '../lib/is-record'
-import {
-  filterPickerDatabases,
-  parseListDatabasesResult,
-} from '../indexes/normalize'
+import { filterPickerDatabases, parseListDatabasesResult } from '../indexes/normalize'
 import { buildPatternsFromSamples } from './build-patterns'
 import {
   databasesErrorFromUnknown,
@@ -34,10 +31,7 @@ export async function fetchProfilerSlowQueriesSnapshot(
   selectedDatabase: string | null,
   options?: { limit?: number },
 ): Promise<FetchProfilerSnapshotResult> {
-  const fetchLimit = Math.max(
-    1,
-    Math.floor(options?.limit ?? PROFILE_FETCH_LIMIT),
-  )
+  const fetchLimit = Math.max(1, Math.floor(options?.limit ?? PROFILE_FETCH_LIMIT))
   const databasesResult = await settle(async function loadDatabases() {
     return client.db('admin').admin().command({ listDatabases: 1, nameOnly: true })
   })
@@ -72,12 +66,7 @@ export async function fetchProfilerSlowQueriesSnapshot(
       return db.command({ profile: -1 })
     }),
     settle(async function loadProfileDocs() {
-      return db
-        .collection('system.profile')
-        .find({})
-        .sort({ ts: -1 })
-        .limit(fetchLimit)
-        .toArray()
+      return db.collection('system.profile').find({}).sort({ ts: -1 }).limit(fetchLimit).toArray()
     }),
   ])
 

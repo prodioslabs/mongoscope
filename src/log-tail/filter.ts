@@ -147,10 +147,7 @@ function match(
   }
 }
 
-function lineMatchesCategories(
-  line: TailLogLine,
-  enabled: ReadonlySet<string>,
-): boolean {
+function lineMatchesCategories(line: TailLogLine, enabled: ReadonlySet<string>): boolean {
   if (enabled.size === 0) {
     return true
   }

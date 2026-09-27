@@ -52,8 +52,7 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
   },
   {
     keys: 'l',
-    helpLabel:
-      'Toggle Static log file / Live system.profile (when a connection is selected)',
+    helpLabel: 'Toggle Static log file / Live system.profile (when a connection is selected)',
     footerLabel: 'source',
     bindings: [{ key: 'l', cmd: 'slow-queries.toggle-source' }],
   },

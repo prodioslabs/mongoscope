@@ -1,9 +1,4 @@
-import {
-  encodeSeverity,
-  scanHotFields,
-  severityLabel,
-  SEVERITY_RAW,
-} from '../parser'
+import { encodeSeverity, scanHotFields, severityLabel, SEVERITY_RAW } from '../parser'
 import { isRecord } from '../lib/is-record'
 import { extractLogLineAttrFields } from './attr-fields'
 import type { TailLogLine } from './types'

@@ -66,7 +66,6 @@ describe('formatIndexFlags', () => {
   })
 })
 
-
 describe('formatBuildProgress', () => {
   it('formats percent, building, and idle', () => {
     expect(formatBuildProgress({ building: false, buildPercent: null })).toBe('—')

@@ -1,12 +1,7 @@
 import { stat } from 'node:fs/promises'
 import { match } from 'ts-pattern'
 import { create } from 'zustand'
-import {
-  DEFAULT_LOG_TAIL_LINES,
-  LogStore,
-  clampLogTailLines,
-  parseLogFileTail,
-} from '../../parser'
+import { DEFAULT_LOG_TAIL_LINES, LogStore, clampLogTailLines, parseLogFileTail } from '../../parser'
 import {
   DEFAULT_PROFILE_FETCH_LIMIT,
   MAX_PROFILE_FETCH_LIMIT,

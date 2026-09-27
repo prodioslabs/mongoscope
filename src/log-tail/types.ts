@@ -1,13 +1,7 @@
 import type { LogKind, SeverityCode } from '../parser'
 
 /** MongoDB structured-log components exposed as Logs category pills. */
-export const LOG_CATEGORY_COMPONENTS = [
-  'COMMAND',
-  'WRITE',
-  'REPL',
-  'NETWORK',
-  'STORAGE',
-] as const
+export const LOG_CATEGORY_COMPONENTS = ['COMMAND', 'WRITE', 'REPL', 'NETWORK', 'STORAGE'] as const
 
 export type LogCategoryComponent = (typeof LOG_CATEGORY_COMPONENTS)[number]
 
@@ -45,12 +39,7 @@ export type LogTailStats = {
   bufferedCount: number
 }
 
-export type CustomFilterField =
-  | 'durationMillis'
-  | 'namespace'
-  | 'planSummary'
-  | 'msg'
-  | 'component'
+export type CustomFilterField = 'durationMillis' | 'namespace' | 'planSummary' | 'msg' | 'component'
 
 export type CustomFilterOperator = '>' | '<' | '>=' | '<=' | '=' | 'contains'
 

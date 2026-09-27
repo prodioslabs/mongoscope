@@ -1,5 +1,10 @@
 import { basename } from 'node:path'
-import { InputRenderable, TextAttributes, type TextChunk, type TextTableContent } from '@opentui/core'
+import {
+  InputRenderable,
+  TextAttributes,
+  type TextChunk,
+  type TextTableContent,
+} from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -446,7 +451,14 @@ function LogsView({ mode, title }: LogsViewProps) {
         {mode === 'live' ? <text content={GET_LOG_FIDELITY_NOTE} fg={theme.warning} /> : null}
       </box>
 
-      <box flexDirection="row" gap={1} flexShrink={0} flexWrap="wrap" paddingTop={1} paddingBottom={1}>
+      <box
+        flexDirection="row"
+        gap={1}
+        flexShrink={0}
+        flexWrap="wrap"
+        paddingTop={1}
+        paddingBottom={1}
+      >
         {LOG_CATEGORY_COMPONENTS.map((component) => (
           <CategoryPill
             key={component}

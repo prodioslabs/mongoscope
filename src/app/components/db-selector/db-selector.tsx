@@ -48,9 +48,7 @@ export function DbSelector() {
       : (profiles.find((profile) => profile.id === activeConnectionId) ?? null)
 
   const ephemeralHostLabel =
-    hasEphemeralConnection && ephemeralLiveUri != null
-      ? safeHostLabel(ephemeralLiveUri)
-      : null
+    hasEphemeralConnection && ephemeralLiveUri != null ? safeHostLabel(ephemeralLiveUri) : null
   const hasSelection = activeProfile != null || hasEphemeralConnection
 
   useFooterKeybindings(

@@ -96,8 +96,7 @@ function adaptDb(db: Db): MongoDbLike {
 
 function adaptCollection(collection: Collection): CollectionLike {
   return {
-    find: (filter) =>
-      adaptFindCursor(collection.find(asDriverFilter(filter))),
+    find: (filter) => adaptFindCursor(collection.find(asDriverFilter(filter))),
     indexes: () => collection.indexes(),
     aggregate: (pipeline) =>
       adaptAggregateCursor(collection.aggregate(pipeline.map(asDriverDocument))),

@@ -12,11 +12,7 @@ export {
   PROFILE_FETCH_LIMIT,
   PROFILE_FETCH_LIMIT_PRESETS,
 } from './types'
-export {
-  profileDocToAttr,
-  profileDocTimestampMs,
-  toProfileSample,
-} from './profile-doc'
+export { profileDocToAttr, profileDocTimestampMs, toProfileSample } from './profile-doc'
 export { buildPatternsFromSamples, type BuildPatternsResult } from './build-patterns'
 export {
   fetchProfilerSlowQueriesSnapshot,

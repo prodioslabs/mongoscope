@@ -56,11 +56,7 @@ describe('createLogTailer', () => {
 
     const snap = tailer.getSnapshot()
     expect(snap.stats.restartsDetected).toBe(1)
-    expect(snap.lines.map((entry) => entry.msg)).toEqual([
-      'before-1',
-      'before-2',
-      'after-rotate',
-    ])
+    expect(snap.lines.map((entry) => entry.msg)).toEqual(['before-1', 'before-2', 'after-rotate'])
     expect(snap.offset).toBeGreaterThan(0)
     tailer.stop()
   })

@@ -185,13 +185,7 @@ export function createLogTailer(options: LogTailerOptions): LogTailer {
     }
 
     const seedRing = new LogLineRingBuffer(Math.max(seedLineTarget, ring.maxCapacity))
-    const seeded = appendTailChunk(
-      seedRing,
-      seedBytes,
-      fileOffsetOfBytes,
-      null,
-      fileOffsetOfBytes,
-    )
+    const seeded = appendTailChunk(seedRing, seedBytes, fileOffsetOfBytes, null, fileOffsetOfBytes)
     const all = seedRing.toArray()
     const keep = all.length > seedLineTarget ? all.slice(all.length - seedLineTarget) : all
     ring.clear()
