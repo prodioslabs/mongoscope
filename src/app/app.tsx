@@ -153,7 +153,9 @@ export function App({ options }: AppProps) {
               const names = Object.keys(allRef.current())
               const index = names.indexOf(selectedRef.current)
               const next = names[(index + 1) % names.length]
-              if (next) setRef.current(next)
+              if (next) {
+                setRef.current(next)
+              }
             },
           },
         ],

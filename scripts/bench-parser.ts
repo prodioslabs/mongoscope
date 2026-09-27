@@ -68,7 +68,9 @@ function generateSynthetic(path: string, lineCount: number): number {
   let first = true
 
   const flush = (): void => {
-    if (chunks.length === 0) return
+    if (chunks.length === 0) {
+      return
+    }
     const block = `${chunks.join('\n')}\n`
     if (first) {
       writeFileSync(path, block)
@@ -82,7 +84,9 @@ function generateSynthetic(path: string, lineCount: number): number {
 
   for (let i = 0; i < lineCount; i++) {
     chunks.push(makeLine(i))
-    if (chunks.length >= batchSize) flush()
+    if (chunks.length >= batchSize) {
+      flush()
+    }
   }
   flush()
   return total
@@ -104,7 +108,9 @@ async function benchScanner(
   }
 
   const ms = performance.now() - t0
-  if (!store) throw new Error('parseLogFile yielded no batches')
+  if (!store) {
+    throw new Error('parseLogFile yielded no batches')
+  }
 
   // Keep a live reference so GC cannot collect the store before we measure.
   const keep = store

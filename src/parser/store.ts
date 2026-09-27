@@ -55,7 +55,9 @@ class StringInterner {
 
   intern(value: string): number {
     const existing = this.map.get(value)
-    if (existing !== undefined) return existing
+    if (existing !== undefined) {
+      return existing
+    }
     const id = this.values.length
     this.map.set(value, id)
     this.values.push(value)
@@ -181,7 +183,9 @@ export class LogStore {
   }
 
   private ensureCapacity(needed: number): void {
-    if (needed <= this.capacity) return
+    if (needed <= this.capacity) {
+      return
+    }
     let next = this.capacity
     while (next < needed) next *= 2
 

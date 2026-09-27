@@ -48,7 +48,9 @@ function isLeapYear(year: number): boolean {
 
 function digit(buf: Uint8Array, i: number): number {
   const b = buf[i]!
-  if (b < CHAR_0 || b > CHAR_9) return -1
+  if (b < CHAR_0 || b > CHAR_9) {
+    return -1
+  }
   return b - CHAR_0
 }
 
@@ -56,7 +58,9 @@ function parseNDigits(buf: Uint8Array, i: number, n: number): number {
   let v = 0
   for (let k = 0; k < n; k++) {
     const d = digit(buf, i + k)
-    if (d < 0) return -1
+    if (d < 0) {
+      return -1
+    }
     v = v * 10 + d
   }
   return v
@@ -70,20 +74,34 @@ function parseNDigits(buf: Uint8Array, i: number, n: number): number {
  */
 export function parseIsoTimestampBytes(buf: Uint8Array, start: number, end: number): number {
   // Minimum: YYYY-MM-DDTHH:mm:ssZ = 20 chars
-  if (end - start < 20) return Number.NaN
+  if (end - start < 20) {
+    return Number.NaN
+  }
 
   const year = parseNDigits(buf, start, 4)
-  if (year < 0 || buf[start + 4] !== CHAR_MINUS) return Number.NaN
+  if (year < 0 || buf[start + 4] !== CHAR_MINUS) {
+    return Number.NaN
+  }
   const month = parseNDigits(buf, start + 5, 2)
-  if (month < 1 || month > 12 || buf[start + 7] !== CHAR_MINUS) return Number.NaN
+  if (month < 1 || month > 12 || buf[start + 7] !== CHAR_MINUS) {
+    return Number.NaN
+  }
   const day = parseNDigits(buf, start + 8, 2)
-  if (day < 1 || day > 31 || buf[start + 10] !== CHAR_T) return Number.NaN
+  if (day < 1 || day > 31 || buf[start + 10] !== CHAR_T) {
+    return Number.NaN
+  }
   const hour = parseNDigits(buf, start + 11, 2)
-  if (hour < 0 || hour > 23 || buf[start + 13] !== CHAR_COLON) return Number.NaN
+  if (hour < 0 || hour > 23 || buf[start + 13] !== CHAR_COLON) {
+    return Number.NaN
+  }
   const minute = parseNDigits(buf, start + 14, 2)
-  if (minute < 0 || minute > 59 || buf[start + 16] !== CHAR_COLON) return Number.NaN
+  if (minute < 0 || minute > 59 || buf[start + 16] !== CHAR_COLON) {
+    return Number.NaN
+  }
   const second = parseNDigits(buf, start + 17, 2)
-  if (second < 0 || second > 60) return Number.NaN
+  if (second < 0 || second > 60) {
+    return Number.NaN
+  }
 
   let i = start + 19
   let millis = 0
@@ -93,7 +111,9 @@ export function parseIsoTimestampBytes(buf: Uint8Array, start: number, end: numb
     let value = 0
     while (i < end && n < 3) {
       const d = digit(buf, i)
-      if (d < 0) break
+      if (d < 0) {
+        break
+      }
       value = value * 10 + d
       n++
       i++
@@ -101,12 +121,18 @@ export function parseIsoTimestampBytes(buf: Uint8Array, start: number, end: numb
     // Skip extra fractional digits
     while (i < end) {
       const d = digit(buf, i)
-      if (d < 0) break
+      if (d < 0) {
+        break
+      }
       i++
     }
-    if (n === 1) millis = value * 100
-    else if (n === 2) millis = value * 10
-    else millis = value
+    if (n === 1) {
+      millis = value * 100
+    } else if (n === 2) {
+      millis = value * 10
+    } else {
+      millis = value
+    }
   }
 
   let offsetMinutes = 0
@@ -115,18 +141,26 @@ export function parseIsoTimestampBytes(buf: Uint8Array, start: number, end: numb
   } else if (i < end && (buf[i] === CHAR_PLUS || buf[i] === CHAR_MINUS)) {
     const sign = buf[i] === CHAR_MINUS ? -1 : 1
     i++
-    if (i + 5 > end) return Number.NaN
+    if (i + 5 > end) {
+      return Number.NaN
+    }
     const oh = parseNDigits(buf, i, 2)
-    if (oh < 0 || buf[i + 2] !== CHAR_COLON) return Number.NaN
+    if (oh < 0 || buf[i + 2] !== CHAR_COLON) {
+      return Number.NaN
+    }
     const om = parseNDigits(buf, i + 3, 2)
-    if (om < 0 || om > 59) return Number.NaN
+    if (om < 0 || om > 59) {
+      return Number.NaN
+    }
     offsetMinutes = sign * (oh * 60 + om)
     i += 5
   } else {
     return Number.NaN
   }
 
-  if (i !== end) return Number.NaN
+  if (i !== end) {
+    return Number.NaN
+  }
 
   // Days since Unix epoch (1970-01-01)
   let days = 0
@@ -134,7 +168,9 @@ export function parseIsoTimestampBytes(buf: Uint8Array, start: number, end: numb
     days += isLeapYear(y) ? 366 : 365
   }
   days += DAYS_BEFORE_MONTH[month - 1]!
-  if (month > 2 && isLeapYear(year)) days += 1
+  if (month > 2 && isLeapYear(year)) {
+    days += 1
+  }
   days += day - 1
 
   const totalMinutes = days * 24 * 60 + hour * 60 + minute - offsetMinutes
@@ -144,16 +180,22 @@ export function parseIsoTimestampBytes(buf: Uint8Array, start: number, end: numb
 function skipWs(buf: Uint8Array, i: number, end: number): number {
   while (i < end) {
     const b = buf[i]!
-    if (b !== CHAR_SPACE && b !== CHAR_TAB) break
+    if (b !== CHAR_SPACE && b !== CHAR_TAB) {
+      break
+    }
     i++
   }
   return i
 }
 
 function expectBytes(buf: Uint8Array, i: number, end: number, expected: number[]): number {
-  if (i + expected.length > end) return -1
+  if (i + expected.length > end) {
+    return -1
+  }
   for (let k = 0; k < expected.length; k++) {
-    if (buf[i + k] !== expected[k]) return -1
+    if (buf[i + k] !== expected[k]) {
+      return -1
+    }
   }
   return i + expected.length
 }
@@ -162,7 +204,9 @@ function findStringEnd(buf: Uint8Array, start: number, end: number): number {
   let i = start
   while (i < end) {
     const b = buf[i]!
-    if (b === CHAR_QUOTE) return i
+    if (b === CHAR_QUOTE) {
+      return i
+    }
     if (b === CHAR_BACKSLASH) {
       i += 2
       continue
@@ -193,78 +237,116 @@ export function scanHotFields(buf: Uint8Array, start: number, end: number): HotF
   let i = start
 
   // {"t":{"$date":"
-  if (i + PREFIX_BYTES.length > end) return null
+  if (i + PREFIX_BYTES.length > end) {
+    return null
+  }
   for (let k = 0; k < PREFIX_BYTES.length; k++) {
-    if (buf[i + k] !== PREFIX_BYTES[k]) return null
+    if (buf[i + k] !== PREFIX_BYTES[k]) {
+      return null
+    }
   }
   i += PREFIX_BYTES.length
 
   const tsStart = i
   const tsEnd = findStringEnd(buf, i, end)
-  if (tsEnd < 0) return null
+  if (tsEnd < 0) {
+    return null
+  }
   const timestamp = parseIsoTimestampBytes(buf, tsStart, tsEnd)
-  if (Number.isNaN(timestamp)) return null
+  if (Number.isNaN(timestamp)) {
+    return null
+  }
   // Timestamp closing quote already at tsEnd; next bytes are },"s":"
   i = tsEnd + 1
   i = expectBytes(buf, i, end, [0x7d, 0x2c, 0x22, CHAR_s, 0x22, CHAR_COLON, 0x22])
-  if (i < 0) return null
+  if (i < 0) {
+    return null
+  }
 
   const sevStart = i
   const sevEnd = findStringEnd(buf, i, end)
-  if (sevEnd < 0) return null
+  if (sevEnd < 0) {
+    return null
+  }
   const severity = encodeSeverity(decodeSlice(buf, sevStart, sevEnd))
   i = sevEnd + 1
 
   // ,"c":"  (with optional spaces after comma)
-  if (i >= end || buf[i] !== CHAR_COMMA) return null
+  if (i >= end || buf[i] !== CHAR_COMMA) {
+    return null
+  }
   i = skipWs(buf, i + 1, end)
   i = expectBytes(buf, i, end, [0x22, CHAR_c, 0x22, CHAR_COLON, 0x22])
-  if (i < 0) return null
+  if (i < 0) {
+    return null
+  }
 
   const compStart = i
   const compEnd = findStringEnd(buf, i, end)
-  if (compEnd < 0) return null
+  if (compEnd < 0) {
+    return null
+  }
   const component = decodeSlice(buf, compStart, compEnd)
   i = compEnd + 1
 
   // ,"id":
-  if (i >= end || buf[i] !== CHAR_COMMA) return null
+  if (i >= end || buf[i] !== CHAR_COMMA) {
+    return null
+  }
   i = skipWs(buf, i + 1, end)
   i = expectBytes(buf, i, end, [0x22, CHAR_i, CHAR_d, 0x22, CHAR_COLON])
-  if (i < 0) return null
+  if (i < 0) {
+    return null
+  }
   i = skipWs(buf, i, end)
 
   let id = 0
   const idStart = i
   while (i < end) {
     const d = digit(buf, i)
-    if (d < 0) break
+    if (d < 0) {
+      break
+    }
     id = id * 10 + d
     i++
   }
-  if (i === idStart) return null
+  if (i === idStart) {
+    return null
+  }
 
   // ,"ctx":"
-  if (i >= end || buf[i] !== CHAR_COMMA) return null
+  if (i >= end || buf[i] !== CHAR_COMMA) {
+    return null
+  }
   i = skipWs(buf, i + 1, end)
   i = expectBytes(buf, i, end, [0x22, CHAR_c, CHAR_t, CHAR_x, 0x22, CHAR_COLON, 0x22])
-  if (i < 0) return null
+  if (i < 0) {
+    return null
+  }
 
   const ctxStart = i
   const ctxEnd = findStringEnd(buf, i, end)
-  if (ctxEnd < 0) return null
+  if (ctxEnd < 0) {
+    return null
+  }
   const ctx = decodeSlice(buf, ctxStart, ctxEnd)
   i = ctxEnd + 1
 
   // ,"msg":"
-  if (i >= end || buf[i] !== CHAR_COMMA) return null
+  if (i >= end || buf[i] !== CHAR_COMMA) {
+    return null
+  }
   i = skipWs(buf, i + 1, end)
   i = expectBytes(buf, i, end, [0x22, CHAR_m, CHAR_s, CHAR_g, 0x22, CHAR_COLON, 0x22])
-  if (i < 0) return null
+  if (i < 0) {
+    return null
+  }
 
   const msgStart = i
   const msgEnd = findStringEnd(buf, i, end)
-  if (msgEnd < 0) return null
+  if (msgEnd < 0) {
+    return null
+  }
   const msg = decodeSlice(buf, msgStart, msgEnd)
 
   return { timestamp, severity, component, id, ctx, msg }
@@ -305,11 +387,19 @@ function tryJsonFallback(buf: Uint8Array, start: number, end: number): HotFields
     return null
   }
   const obj = parsed as MongoLine
-  if (typeof obj.s !== 'string' || typeof obj.c !== 'string') return null
-  if (typeof obj.id !== 'number' || typeof obj.ctx !== 'string') return null
-  if (typeof obj.msg !== 'string') return null
+  if (typeof obj.s !== 'string' || typeof obj.c !== 'string') {
+    return null
+  }
+  if (typeof obj.id !== 'number' || typeof obj.ctx !== 'string') {
+    return null
+  }
+  if (typeof obj.msg !== 'string') {
+    return null
+  }
   const timestamp = parseTimestampFromJson(obj.t)
-  if (Number.isNaN(timestamp)) return null
+  if (Number.isNaN(timestamp)) {
+    return null
+  }
   return {
     timestamp,
     severity: encodeSeverity(obj.s),
@@ -388,7 +478,9 @@ export function scanBuffer(
 
   let lineStart = 0
   for (let i = 0; i < buf.length; i++) {
-    if (buf[i] !== CHAR_LF) continue
+    if (buf[i] !== CHAR_LF) {
+      continue
+    }
 
     let lineEnd = i
     if (lineEnd > lineStart && buf[lineEnd - 1] === CHAR_CR) {
@@ -422,9 +514,13 @@ export function flushCarry(
   carry: Uint8Array | null,
   carryFileOffset: number,
 ): number {
-  if (!carry || carry.length === 0) return 0
+  if (!carry || carry.length === 0) {
+    return 0
+  }
   let end = carry.length
-  if (end > 0 && carry[end - 1] === CHAR_CR) end--
+  if (end > 0 && carry[end - 1] === CHAR_CR) {
+    end--
+  }
   const before = store.rowCount
   ingestLine(store, carry, 0, end, carryFileOffset)
   return store.rowCount - before
@@ -463,7 +559,9 @@ export function scanBytes(
 }
 
 function splitForTest(buf: Uint8Array, chunkSize: number): Uint8Array[] {
-  if (chunkSize <= 0 || chunkSize >= buf.length) return [buf]
+  if (chunkSize <= 0 || chunkSize >= buf.length) {
+    return [buf]
+  }
   const out: Uint8Array[] = []
   for (let i = 0; i < buf.length; i += chunkSize) {
     out.push(buf.subarray(i, Math.min(i + chunkSize, buf.length)))
@@ -520,7 +618,9 @@ export async function* parseLogFile(
           ? value
           : new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
 
-      if (chunk.length === 0) continue
+      if (chunk.length === 0) {
+        continue
+      }
 
       const result = scanBuffer(store, chunk, fileOffset, carry, carryFileOffset)
       carry = result.carry

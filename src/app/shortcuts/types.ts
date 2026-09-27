@@ -34,7 +34,9 @@ export type HelpSection = {
 export function toFooter(shortcuts: ReadonlyArray<Shortcut>): FooterChip[] {
   const result: FooterChip[] = []
   for (const shortcut of shortcuts) {
-    if (shortcut.footerLabel == null) continue
+    if (shortcut.footerLabel == null) {
+      continue
+    }
     result.push({
       keys: shortcut.footerKeys ?? shortcut.keys,
       label: shortcut.footerLabel,

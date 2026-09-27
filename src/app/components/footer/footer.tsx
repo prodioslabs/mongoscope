@@ -10,18 +10,6 @@ const STATUS_MAX_WIDTH = '45%'
 /** Cap keybinding scope hints so they stay visible alongside clock + status. */
 const SCOPE_MAX_WIDTH = '50%'
 
-function formatClock(date: Date): string {
-  const time = date.toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })
-  const parts = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).formatToParts(date)
-  const zone = parts.find((part) => part.type === 'timeZoneName')?.value ?? ''
-  return zone ? `${time} ${zone}` : time
-}
-
 export function Footer() {
   const theme = useTheme((s) => s.theme)
   const keybindings = useFooter((s) => s.keybindings)
@@ -82,6 +70,18 @@ export function Footer() {
       </box>
     </box>
   )
+}
+
+function formatClock(date: Date): string {
+  const time = date.toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+  const parts = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).formatToParts(date)
+  const zone = parts.find((part) => part.type === 'timeZoneName')?.value ?? ''
+  return zone ? `${time} ${zone}` : time
 }
 
 function footerChipText(binding: FooterKeybinding, keyColor: RGBA): StyledText {

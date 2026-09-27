@@ -24,7 +24,9 @@ export function HelpMenu({ open, onOpenChange }: HelpMenuProps) {
 
   useEffect(
     function syncFooterOverlayKeybindings() {
-      if (!open) return
+      if (!open) {
+        return
+      }
       pushOverlayKeybindings('help-menu', HELP_OVERLAY_KEYBINDINGS)
       return function clearFooterOverlayKeybindings() {
         popOverlayKeybindings('help-menu')

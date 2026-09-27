@@ -30,7 +30,9 @@ const tempDirs: string[] = []
 afterEach(async function cleanupTempDirs() {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop()
-    if (dir) await rm(dir, { recursive: true, force: true })
+    if (dir) {
+      await rm(dir, { recursive: true, force: true })
+    }
   }
 })
 

@@ -28,12 +28,18 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
   let windowEndMs = Number.NEGATIVE_INFINITY
 
   for (let row = 0; row < store.rowCount; row++) {
-    if (store.ids[row] !== SLOW_QUERY_ID) continue
+    if (store.ids[row] !== SLOW_QUERY_ID) {
+      continue
+    }
     slowRows.push(row)
     const ts = store.timestamps[row]!
     if (Number.isFinite(ts)) {
-      if (ts < windowStartMs) windowStartMs = ts
-      if (ts > windowEndMs) windowEndMs = ts
+      if (ts < windowStartMs) {
+        windowStartMs = ts
+      }
+      if (ts > windowEndMs) {
+        windowEndMs = ts
+      }
     }
   }
 
@@ -64,14 +70,18 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
       const attr = await readAttrAt(store, row, fh)
       if (attr == null) {
         processed++
-        if (processed % YIELD_EVERY === 0) await yieldEventLoop()
+        if (processed % YIELD_EVERY === 0) {
+          await yieldEventLoop()
+        }
         continue
       }
 
       const extracted = extractSlowQueryAttr(attr)
       if (extracted == null) {
         processed++
-        if (processed % YIELD_EVERY === 0) await yieldEventLoop()
+        if (processed % YIELD_EVERY === 0) {
+          await yieldEventLoop()
+        }
         continue
       }
 
@@ -116,7 +126,9 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
       }
 
       processed++
-      if (processed % YIELD_EVERY === 0) await yieldEventLoop()
+      if (processed % YIELD_EVERY === 0) {
+        await yieldEventLoop()
+      }
     }
   } finally {
     await fh?.close()
@@ -143,7 +155,9 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
   }
 
   finalized.sort(function comparePatterns(a, b) {
-    if (b.count !== a.count) return b.count - a.count
+    if (b.count !== a.count) {
+      return b.count - a.count
+    }
     return b.avgMs - a.avgMs
   })
 
