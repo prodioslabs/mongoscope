@@ -41,7 +41,7 @@ export function createIngestRateTracker(now: () => number): IngestRateTracker {
   return { recordIngest, linesPerSec }
 }
 
-export function logTailFormatLabel(seenJson: boolean): LogTailFormat {
+function logTailFormatLabel(seenJson: boolean): LogTailFormat {
   return seenJson ? 'JSON (4.4+)' : 'raw/legacy'
 }
 
