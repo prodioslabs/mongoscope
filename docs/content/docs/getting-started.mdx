@@ -1,34 +1,11 @@
 ---
 title: Getting started
-description: Prerequisites, install, welcome flow, and dashboard overview
+description: Welcome flow, dashboard tabs, connections, and global keys
 ---
 
-## Prerequisites
+Install the binary first — see [Installation](/docs/installation). Then run `mongoscope` in a real interactive TTY (do not pipe stdout).
 
-- **Bun** (runtime + package manager)
-- **OS credential store** for saved connections (`Bun.secrets`):
-  - macOS: Keychain
-  - Linux: Secret Service (GNOME Keyring, KWallet, etc.)
-- Optional: a MongoDB log file to analyze, and/or a reachable MongoDB instance for live tabs
-
-## Install & run
-
-```bash
-bun install
-bun start
-```
-
-Useful scripts:
-
-| Script | Purpose |
-| --- | --- |
-| `bun start` | Launch the TUI |
-| `bun run typecheck` | Typecheck |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check (non-mutating) |
-| `bun run test` | Vitest |
-| `bun run build` | Standalone binary → `dist/mongoscope` |
-
-## Getting started
+## Welcome flow
 
 1. **Welcome** — pick a MongoDB log from `/var/log/mongodb` or `--log-dir` (default `.`), then Enter to parse the last **100k** lines and open the dashboard.
 2. **Dashboard tabs** (`1`–`5`, or Tab / Shift+Tab): Slow Queries · Live Ops · Replication · Indexes · Logs.
@@ -37,4 +14,16 @@ Useful scripts:
 
 There is no separate full-screen connections flow — switching, adding, editing, and deleting happen through **DbSelector** + the connections dialog.
 
-Global keys: `?` help · `Ctrl+K` command palette · `m` light/dark · `t` cycle theme · `q` quit.
+Saved connections need an OS credential store (`Bun.secrets`): macOS Keychain, or Linux Secret Service (GNOME Keyring, KWallet, etc.).
+
+## Global keys
+
+| Key | Action |
+| --- | --- |
+| `?` | Help |
+| `Ctrl+K` | Command palette |
+| `m` | Toggle light / dark |
+| `t` | Cycle theme |
+| `q` | Quit |
+
+Full reference: [Keyboard shortcuts](/docs/shortcuts) · [CLI flags](/docs/cli) · [Connections](/docs/connections).

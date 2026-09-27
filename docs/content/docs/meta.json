@@ -2,6 +2,7 @@
   "title": "MongoScope",
   "pages": [
     "index",
+    "installation",
     "getting-started",
     "connections",
     "---Tabs---",
