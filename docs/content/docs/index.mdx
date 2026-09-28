@@ -5,21 +5,50 @@ description: Terminal UI for MongoDB slow queries, live ops, replication, indexe
 
 MongoScope is a terminal UI for inspecting MongoDB slow queries, live operations, replication, indexes, and logs. Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui).
 
-Requires a real interactive TTY (`bun start` will not render correctly if stdout is piped).
+Requires a real interactive TTY (do not pipe stdout).
 
 Dashboard tabs (`1`–`5`, or Tab / Shift+Tab): **Slow Queries** · **Live Ops** · **Replication** · **Indexes** · **Logs**.
 
-The root [README](https://github.com/prodioslabs/mongoscope-v2) remains the install and quickstart entry point. These pages are the deeper reference for each feature.
+Install with the curl one-liner or from [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases) — full steps in [Installation](/docs/installation). These pages are the deeper product reference.
 
 <Cards>
-  <Card title="Getting started" href="/docs/getting-started" description="Prerequisites, install, welcome flow, and global keys" />
-  <Card title="Connections" href="/docs/connections" description="DbSelector, connections dialog, and Static vs Live" />
-  <Card title="Slow Queries" href="/docs/slow-queries" description="Log patterns and live system.profile" />
-  <Card title="Live Ops" href="/docs/live-ops" description="currentOp, kill-op, and collection top" />
-  <Card title="Replication" href="/docs/replication" description="Topology, oplog, lag, heartbeats, elections" />
-  <Card title="Indexes" href="/docs/indexes" description="Inventory, builds, and suggested indexes" />
+  <Card
+    title="Installation"
+    href="/docs/installation"
+    description="Curl installer, release binaries, verify, update, uninstall"
+  />
+  <Card
+    title="Getting started"
+    href="/docs/getting-started"
+    description="Welcome flow, dashboard tabs, connections, and global keys"
+  />
+  <Card
+    title="Connections"
+    href="/docs/connections"
+    description="DbSelector, connections dialog, and Static vs Live"
+  />
+  <Card
+    title="Slow Queries"
+    href="/docs/slow-queries"
+    description="Log patterns and live system.profile"
+  />
+  <Card
+    title="Live Ops"
+    href="/docs/live-ops"
+    description="currentOp, kill-op, and collection top"
+  />
+  <Card
+    title="Replication"
+    href="/docs/replication"
+    description="Topology, oplog, lag, heartbeats, elections"
+  />
+  <Card
+    title="Indexes"
+    href="/docs/indexes"
+    description="Inventory, builds, and suggested indexes"
+  />
   <Card title="Logs" href="/docs/logs" description="File tail and getLog live buffer" />
   <Card title="Themes" href="/docs/themes" description="Built-ins, user themes, light/dark" />
-  <Card title="CLI flags" href="/docs/cli" description="Wired and unwired startup flags" />
+  <Card title="CLI flags" href="/docs/cli" description="Startup flags and local-dev entrypoints" />
   <Card title="Keyboard shortcuts" href="/docs/shortcuts" description="Global and per-tab keys" />
 </Cards>

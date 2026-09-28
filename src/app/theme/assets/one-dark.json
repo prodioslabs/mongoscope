@@ -39,6 +39,8 @@
     "background": { "dark": "darkBg", "light": "lightBg" },
     "backgroundPanel": { "dark": "darkBgAlt", "light": "lightBgAlt" },
     "backgroundElement": { "dark": "darkBgPanel", "light": "lightBgPanel" },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": { "dark": "#393f4a", "light": "#d1d1d2" },
     "borderActive": { "dark": "darkBlue", "light": "lightBlue" },
     "borderSubtle": { "dark": "#2c313a", "light": "#e0e0e1" },

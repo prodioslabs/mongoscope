@@ -18,7 +18,7 @@ export const DEFAULT_CONNECT_TIMEOUT_MS = 8000
  * Note: bson `Document` is `{ [key: string]: any }` — we keep the public seam on
  * `Record<string, unknown>` / `unknown` and only bridge at the adapter edge.
  */
-export type AggregateCursorLike = {
+type AggregateCursorLike = {
   toArray(): Promise<unknown[]>
 }
 
@@ -51,7 +51,7 @@ export type MongoClientLike = {
   off?(event: 'close', listener: () => void): void
 }
 
-/** Client seam that can open databases (`db()`). Shared by feature fetchers. */
+/** Client seam shared by feature fetchers (`db()` only). */
 export type MongoDbClient = Pick<MongoClientLike, 'db'>
 
 export type CreateMongoClient = (uri: string, options: MongoClientOptions) => MongoClientLike
@@ -96,8 +96,7 @@ function adaptDb(db: Db): MongoDbLike {
 
 function adaptCollection(collection: Collection): CollectionLike {
   return {
-    find: (filter) =>
-      adaptFindCursor(collection.find(asDriverFilter(filter))),
+    find: (filter) => adaptFindCursor(collection.find(asDriverFilter(filter))),
     indexes: () => collection.indexes(),
     aggregate: (pipeline) =>
       adaptAggregateCursor(collection.aggregate(pipeline.map(asDriverDocument))),

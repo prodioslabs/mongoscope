@@ -1,12 +1,7 @@
 import { appConfigFilePath } from '../../lib/config-paths'
 import { isRecord } from '../../lib/is-record'
 import { loadJsonConfigFile, saveJsonConfigFile } from '../../lib/json-config-file'
-import {
-  DEFAULT_APP_CONFIG,
-  isThemeMode,
-  type AppConfig,
-  type ThemeMode,
-} from './types'
+import { DEFAULT_APP_CONFIG, isThemeMode, type AppConfig, type ThemeMode } from './types'
 
 export function validateAppConfig(value: unknown): AppConfig {
   if (!isRecord(value)) {

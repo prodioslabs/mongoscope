@@ -3,8 +3,6 @@ import { isRecord } from '../lib/is-record'
 import { equalityFieldsOfFilter, shapeOfFilter, shapeOfPipeline } from './shape'
 import type { SlowQueryAttr } from './types'
 
-export { normalizePlanSummary } from '../lib/plan-summary'
-
 /**
  * Extract typed slow-query fields from a MongoDB log `attr` object.
  * Returns null when required fields are missing.
@@ -166,8 +164,7 @@ function numberOrZero(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0
 }
 
-/** Compact JSON for display (single-line, sorted keys not required). */
-export function formatJson(value: unknown): string | null {
+function formatJson(value: unknown): string | null {
   if (value === undefined) {
     return null
   }

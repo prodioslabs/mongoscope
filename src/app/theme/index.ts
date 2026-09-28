@@ -1,21 +1,7 @@
 import { getThemeCatalog } from './catalog'
-import {
-  DEFAULT_THEMES,
-  isTheme,
-  resolveTheme,
-  selectedForeground,
-  type Theme,
-  type ThemeJson,
-} from './default-themes'
+import { DEFAULT_THEMES, resolveTheme, selectedForeground, type Theme } from './default-themes'
 
-export {
-  DEFAULT_THEMES,
-  isTheme,
-  resolveTheme,
-  selectedForeground,
-  type Theme,
-  type ThemeJson,
-}
+export { DEFAULT_THEMES, resolveTheme, selectedForeground, type Theme }
 
 export function allThemes() {
   return getThemeCatalog()

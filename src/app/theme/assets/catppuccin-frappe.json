@@ -77,6 +77,8 @@
       "dark": "frappeCrust",
       "light": "frappeCrust"
     },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": {
       "dark": "frappeSurface0",
       "light": "frappeSurface0"

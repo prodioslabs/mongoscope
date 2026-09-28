@@ -1,5 +1,6 @@
 {
-  "name": "mongoscope-v2",
+  "name": "mongoscope",
+  "version": "0.1.0",
   "private": true,
   "bin": {
     "mongoscope": "./bin/mongoscope"
@@ -7,6 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "bun run scripts/build.ts",
+    "build:release": "TARGETS=all bun run scripts/build.ts",
     "format": "oxfmt --write",
     "lint": "oxlint --fix --fix-suggestions",
     "typecheck": "tsc --noEmit",

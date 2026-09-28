@@ -1,7 +1,7 @@
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
 import { GitHubStarLink } from '@/components/github-star'
 import { MongoScopeMark } from '@/components/mongoscope-mark'
-import { appName, docsRoute, githubRepoUrl } from './shared'
+import { appName, docsRoute } from './shared'
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -25,6 +25,5 @@ export function baseOptions(): BaseLayoutProps {
         children: <GitHubStarLink />,
       },
     ],
-    githubUrl: githubRepoUrl,
   }
 }

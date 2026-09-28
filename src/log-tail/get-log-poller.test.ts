@@ -42,18 +42,10 @@ describe('createGetLogPoller', () => {
     let call = 0
     const windows = [
       {
-        log: [
-          lineJson('COMMAND', 'a'),
-          lineJson('COMMAND', 'b'),
-          lineJson('COMMAND', 'c'),
-        ],
+        log: [lineJson('COMMAND', 'a'), lineJson('COMMAND', 'b'), lineJson('COMMAND', 'c')],
       },
       {
-        log: [
-          lineJson('COMMAND', 'b'),
-          lineJson('COMMAND', 'c'),
-          lineJson('COMMAND', 'd'),
-        ],
+        log: [lineJson('COMMAND', 'b'), lineJson('COMMAND', 'c'), lineJson('COMMAND', 'd')],
       },
     ]
 

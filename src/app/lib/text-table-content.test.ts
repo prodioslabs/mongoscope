@@ -1,11 +1,26 @@
 import { RGBA } from '@opentui/core'
 import { describe, expect, it } from 'vitest'
-import { computeTableCapacity, emptyTableRow, headerCell, padTableRows } from './text-table-content'
+import {
+  computeTableCapacity,
+  emptyTableRow,
+  headerCell,
+  padTableRows,
+  planSeverity,
+} from './text-table-content'
 
 describe('computeTableCapacity', () => {
   it('derives visible row count from terminal height and chrome budget', () => {
     expect(computeTableCapacity(5, 25)).toBe(10)
     expect(computeTableCapacity(5, 6)).toBe(1)
+  })
+})
+
+describe('planSeverity', () => {
+  it('classifies MongoDB plan summaries', () => {
+    expect(planSeverity('COLLSCAN')).toBe('error')
+    expect(planSeverity('IXSCAN+SORT')).toBe('warning')
+    expect(planSeverity('IXSCAN')).toBe('success')
+    expect(planSeverity('n/a')).toBe('muted')
   })
 })
 

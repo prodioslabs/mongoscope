@@ -1,19 +1,37 @@
 import { cache } from 'react'
-import { fetchRepositoryInfo } from 'fumadocs-ui/components/github-info'
 import { gitConfig } from '@/lib/shared'
 
-/** Cached GitHub star count (hourly revalidate). Returns null on failure. */
+type GitHubRepoResponse = {
+  stargazers_count?: number
+}
+
+/**
+ * Hourly-cached star count. Returns null on any fetch/API failure so the docs
+ * shell stays up when the repo is private or GitHub is unreachable.
+ */
 export const getGitHubStars = cache(async (): Promise<number | null> => {
   try {
-    const info = await fetchRepositoryInfo({
-      owner: gitConfig.user,
-      repo: gitConfig.repo,
-      token: process.env.GITHUB_TOKEN,
-      fetchOptions: { next: { revalidate: 3600 } },
-    })
-    return info.stars
-  } catch (error) {
-    console.error('Failed to fetch GitHub star count:', error)
+    const headers = new Headers({ Accept: 'application/vnd.github+json' })
+    const token = process.env.GITHUB_TOKEN
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${gitConfig.user}/${gitConfig.repo}`,
+      {
+        headers,
+        next: { revalidate: 3600 },
+      },
+    )
+
+    if (!response.ok) {
+      return null
+    }
+
+    const data = (await response.json()) as GitHubRepoResponse
+    return typeof data.stargazers_count === 'number' ? data.stargazers_count : null
+  } catch {
     return null
   }
 })

@@ -48,7 +48,7 @@ const EMPTY_ERRORS: IndexesSnapshot['errors'] = {
   builds: null,
 }
 
-/** Tab bar, footer, DbSelector, title, DB chips, suggestion banner, notes, table chrome. */
+/** Rows reserved for chrome when sizing the inventory table. */
 const INDEXES_CHROME_ROWS = 19
 const STATUS_CLEAR_MS = 4_000
 

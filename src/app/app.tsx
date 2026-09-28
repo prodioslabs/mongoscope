@@ -1,6 +1,6 @@
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer } from '@opentui/react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { match } from 'ts-pattern'
 import { CommandPalette } from './components/command-palette'
 import { ConnectionsDialog } from './components/connections/connections-dialog'
@@ -48,6 +48,29 @@ export function App({ options }: AppProps) {
   const notEditing = whenNotEditing(renderer)
 
   useSyncLiveConnection()
+
+  useEffect(
+    function applyCliBootOptions() {
+      const session = useSession.getState()
+      const liveUri = options.uri?.trim() ?? ''
+      const logPath = options.logPath?.trim() ?? ''
+
+      if (liveUri !== '') {
+        session.activateEphemeralLiveConnection(liveUri)
+      }
+
+      if (liveUri !== '' && logPath === '') {
+        session.setScreen('dashboard')
+        session.setSlowQueriesSource('live')
+        session.setLogsSource('live')
+      }
+
+      if (logPath !== '') {
+        void session.startParse(logPath)
+      }
+    },
+    [options.logPath, options.uri],
+  )
 
   const modeRef = useRef(mode)
   const selectedRef = useRef(selected)
@@ -130,7 +153,9 @@ export function App({ options }: AppProps) {
               const names = Object.keys(allRef.current())
               const index = names.indexOf(selectedRef.current)
               const next = names[(index + 1) % names.length]
-              if (next) setRef.current(next)
+              if (next) {
+                setRef.current(next)
+              }
             },
           },
         ],

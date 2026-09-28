@@ -13,10 +13,14 @@ export {
 export {
   connectionStore,
   createConnectionStore,
-  type AddConnectionInput,
   type ConnectionStore,
   type ConnectionStoreDeps,
-  type UpdateConnectionInput,
 } from './store'
-export type { ConnectionProfile, ConnectionsBlob, StoredConnection } from './types'
+export type {
+  AddConnectionInput,
+  ConnectionProfile,
+  ConnectionsBlob,
+  StoredConnection,
+  UpdateConnectionInput,
+} from './types'
 export { emptyConnectionsBlob, toConnectionProfile, validateConnectionsBlob } from './validate'

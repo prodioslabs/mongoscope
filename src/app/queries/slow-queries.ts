@@ -39,10 +39,7 @@ export function useProfilerSlowQueriesSnapshot(enabled: boolean) {
   const clearPatterns = useProfilerPatternsStore((s) => s.clear)
 
   const pollingEnabled =
-    enabled &&
-    liveStatus === 'connected' &&
-    activeTab === 'slow-queries' &&
-    connectionId != null
+    enabled && liveStatus === 'connected' && activeTab === 'slow-queries' && connectionId != null
 
   const query = useQuery({
     queryKey: slowQueriesKeys.snapshot(

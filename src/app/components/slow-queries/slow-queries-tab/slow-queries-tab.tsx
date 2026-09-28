@@ -14,10 +14,8 @@ import {
 } from '../../../../profiler'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { type SortDirection } from '../../../lib/sort-direction'
-import {
-  useEnableProfiling,
-  useProfilerSlowQueriesSnapshot,
-} from '../../../queries/slow-queries'
+import { severityColor, type Severity } from '../../../lib/text-table-content'
+import { useEnableProfiling, useProfilerSlowQueriesSnapshot } from '../../../queries/slow-queries'
 import {
   SLOW_QUERIES_LIVE_FOOTER,
   SLOW_QUERIES_SHORTCUTS,
@@ -43,7 +41,6 @@ import {
   planSortRank,
   sparkline,
   truncateCell,
-  type Severity,
 } from '../format'
 import { QueryDetailDialog } from '../query-detail-dialog'
 import { StatsCard } from '../stats-card'
@@ -536,8 +533,7 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
     detailPatternId == null
       ? null
       : (sortedPatterns.find((pattern) => pattern.id === detailPatternId) ?? null)
-  const detailSampleDoc =
-    detailPattern != null ? (samples[detailPattern.sampleRow] ?? null) : null
+  const detailSampleDoc = detailPattern != null ? (samples[detailPattern.sampleRow] ?? null) : null
 
   const capacity = Math.max(1, Math.floor((terminalHeight - CHROME_ROWS_LIVE) / ROW_STRIDE))
   const level = profiling?.level ?? null
@@ -545,9 +541,7 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const proposedSlowms = profiling?.slowms ?? DEFAULT_SLOWMS
 
   const statusLabel = transientStatus ?? formatProfilerStatusLabel(snapshot, isPending)
-  useFooterKeybindings(
-    enableDialogOpen || sampleLimitDialogOpen ? [] : SLOW_QUERIES_LIVE_FOOTER,
-  )
+  useFooterKeybindings(enableDialogOpen || sampleLimitDialogOpen ? [] : SLOW_QUERIES_LIVE_FOOTER)
   useFooterStatus(statusLabel)
 
   const showTransientStatus = useCallback(function showTransientStatus(message: string) {
@@ -1218,17 +1212,4 @@ function headerCell(label: string, theme: Theme, active = false): TextChunk[] {
 
 function cell(text: string, color: RGBA): TextChunk[] {
   return [fg(color)(text)]
-}
-
-function severityColor(theme: Theme, severity: Severity): RGBA {
-  switch (severity) {
-    case 'error':
-      return theme.error
-    case 'warning':
-      return theme.warning
-    case 'success':
-      return theme.success
-    case 'muted':
-      return theme.textMuted
-  }
 }

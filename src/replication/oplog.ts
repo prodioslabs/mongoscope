@@ -1,4 +1,5 @@
 import { Timestamp } from 'mongodb'
+import { optionalNumber } from '../lib/optional-number'
 import type { OplogWindow } from './types'
 
 export type OplogStatsInput = {
@@ -20,23 +21,23 @@ export function oplogTimestampSeconds(ts: unknown): number | null {
   }
 
   if (ts instanceof Timestamp) {
-    return finiteNumber(ts.getHighBits())
+    return optionalNumber(ts.getHighBits())
   }
 
   if ('getHighBits' in ts && typeof (ts as { getHighBits: unknown }).getHighBits === 'function') {
     const high = (ts as { getHighBits: () => unknown }).getHighBits()
-    return finiteNumber(high)
+    return optionalNumber(high)
   }
 
   if ('$timestamp' in ts) {
     const wrapped = (ts as { $timestamp?: unknown }).$timestamp
     if (wrapped != null && typeof wrapped === 'object' && 't' in wrapped) {
-      return finiteNumber((wrapped as { t: unknown }).t)
+      return optionalNumber((wrapped as { t: unknown }).t)
     }
   }
 
   if ('t' in ts) {
-    return finiteNumber((ts as { t: unknown }).t)
+    return optionalNumber((ts as { t: unknown }).t)
   }
 
   return null
@@ -47,8 +48,8 @@ export function buildOplogWindow(
   first: OplogEdgeDoc,
   last: OplogEdgeDoc,
 ): OplogWindow {
-  const usedBytes = Math.max(0, finiteNumber(stats?.size) ?? 0)
-  const maxBytes = Math.max(0, finiteNumber(stats?.maxSize) ?? 0)
+  const usedBytes = Math.max(0, optionalNumber(stats?.size) ?? 0)
+  const maxBytes = Math.max(0, optionalNumber(stats?.maxSize) ?? 0)
 
   const tFirst = first != null ? oplogTimestampSeconds(first.ts) : null
   const tLast = last != null ? oplogTimestampSeconds(last.ts) : null
@@ -76,20 +77,4 @@ export function buildOplogWindow(
     fillPercent,
     fillsOverMax,
   }
-}
-
-function finiteNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'bigint') {
-    return Number(value)
-  }
-  if (value != null && typeof value === 'object' && 'toNumber' in value) {
-    const maybe = (value as { toNumber: () => number }).toNumber()
-    if (typeof maybe === 'number' && Number.isFinite(maybe)) {
-      return maybe
-    }
-  }
-  return null
 }

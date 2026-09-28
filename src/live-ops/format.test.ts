@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatTopTimeLabel } from './collection-top'
-import {
-  collectionTopBarSegments,
-  formatRunningMs,
-  runningMsSeverity,
-} from './format'
+import { collectionTopBarSegments, formatRunningMs, runningMsSeverity } from './format'
 import { isUnauthorizedError, panelErrorFromUnknown } from './permissions'
 
 describe('collectionTopBarSegments', () => {

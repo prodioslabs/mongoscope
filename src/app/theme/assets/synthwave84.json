@@ -70,6 +70,8 @@
       "dark": "#2a2139",
       "light": "#eeeeee"
     },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": {
       "dark": "#495495",
       "light": "#e0e0e0"

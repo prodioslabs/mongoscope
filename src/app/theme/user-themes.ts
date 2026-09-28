@@ -1,6 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { userThemesDir } from '../../lib/config-paths'
+import { errorMessageText } from '../../lib/error-message'
 import { isTheme, resolveTheme, type ThemeJson } from './default-themes'
 
 const REQUIRED_THEME_COLOR_KEYS = [
@@ -35,7 +36,9 @@ export async function loadUserThemes(
     if (isFileNotFoundError(error)) {
       return { themes, warnings }
     }
-    warnings.push(`Failed to read user themes directory ${themesDirectory}: ${formatError(error)}`)
+    warnings.push(
+      `Failed to read user themes directory ${themesDirectory}: ${errorMessageText(error)}`,
+    )
     return { themes, warnings }
   }
 
@@ -61,7 +64,7 @@ export async function loadUserThemes(
       }
       themes[themeName] = validateUserThemeJson(parsed)
     } catch (error) {
-      warnings.push(`Skipped user theme "${themeName}" (${filePath}): ${formatError(error)}`)
+      warnings.push(`Skipped user theme "${themeName}" (${filePath}): ${errorMessageText(error)}`)
     }
   }
 
@@ -83,13 +86,6 @@ function validateUserThemeJson(value: unknown): ThemeJson {
   resolveTheme(value, 'light')
 
   return value
-}
-
-function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-  return String(error)
 }
 
 function isFileNotFoundError(error: unknown): boolean {

@@ -17,14 +17,13 @@ export type Shortcut = {
   bindings: ReadonlyArray<ShortcutBinding>
 }
 
-/** Display chip for keybinding UIs (footer chips and help-menu rows). */
 export type FooterChip = {
   keys: string
   label: string
   segments?: readonly MnemonicSegment[]
 }
 
-/** Help-menu row — same shape as footer chips. */
+/** Alias of FooterChip for help-menu rows. */
 export type HelpBinding = FooterChip
 
 export type HelpSection = {
@@ -35,7 +34,9 @@ export type HelpSection = {
 export function toFooter(shortcuts: ReadonlyArray<Shortcut>): FooterChip[] {
   const result: FooterChip[] = []
   for (const shortcut of shortcuts) {
-    if (shortcut.footerLabel == null) continue
+    if (shortcut.footerLabel == null) {
+      continue
+    }
     result.push({
       keys: shortcut.footerKeys ?? shortcut.keys,
       label: shortcut.footerLabel,

@@ -1,4 +1,5 @@
 import { isRecord } from '../lib/is-record'
+import { optionalNumber } from '../lib/optional-number'
 
 export type IndexBuildProgress = {
   database: string
@@ -74,8 +75,8 @@ function isIndexBuildOp(record: Record<string, unknown>): boolean {
 function extractBuildPercent(record: Record<string, unknown>): number | null {
   const progress = record.progress
   if (isRecord(progress)) {
-    const done = toFiniteNumber(progress.done)
-    const total = toFiniteNumber(progress.total)
+    const done = optionalNumber(progress.done)
+    const total = optionalNumber(progress.total)
     if (done != null && total != null && total > 0) {
       return clampPercent((done / total) * 100)
     }
@@ -159,20 +160,6 @@ function parseIndexNameFromMessage(msg: string): string | null {
   const named = msg.match(/Index Build[:\s]+(?:index\s+)?['"]?([A-Za-z0-9_.:-]+)['"]?/i)
   if (named?.[1] != null && named[1].toLowerCase() !== 'build') {
     return named[1]
-  }
-  return null
-}
-
-function toFiniteNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'bigint') {
-    return Number(value)
-  }
-  if (isRecord(value) && typeof value.toNumber === 'function') {
-    const converted = value.toNumber()
-    return typeof converted === 'number' && Number.isFinite(converted) ? converted : null
   }
   return null
 }

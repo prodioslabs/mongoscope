@@ -94,9 +94,7 @@ export function LogTailDialog({
       function applyCustomOrShowError(): boolean {
         const parsed = parseLogTailLinesInput(customTextRef.current)
         if (parsed == null || parsed > maxLines) {
-          setCustomError(
-            `enter 1–${formatLogTailPreset(maxLines)} (e.g. 75000 or 75k)`,
-          )
+          setCustomError(`enter 1–${formatLogTailPreset(maxLines)} (e.g. 75000 or 75k)`)
           setSelectedIndex(customRowIndexRef.current)
           inputRef.current?.focus()
           return false
@@ -221,9 +219,7 @@ export function LogTailDialog({
           return (
             <text
               key={preset}
-              content={displayText(
-                `${selected ? '●' : '○'} ${formatLogTailPreset(preset)} docs`,
-              )}
+              content={displayText(`${selected ? '●' : '○'} ${formatLogTailPreset(preset)} docs`)}
               fg={selected ? theme.primary : theme.text}
             />
           )
@@ -253,9 +249,7 @@ export function LogTailDialog({
             onSubmit={function submitCustomTail() {
               const parsed = parseLogTailLinesInput(customTextRef.current)
               if (parsed == null || parsed > maxLines) {
-                setCustomError(
-                  `enter 1–${formatLogTailPreset(maxLines)} (e.g. 75000 or 75k)`,
-                )
+                setCustomError(`enter 1–${formatLogTailPreset(maxLines)} (e.g. 75000 or 75k)`)
                 return
               }
               setCustomError(null)
@@ -266,11 +260,7 @@ export function LogTailDialog({
 
         {customError != null ? <text content={displayText(customError)} fg={theme.error} /> : null}
         <text
-          content={
-            isPending
-              ? 'updating…'
-              : '↑↓ navigate · enter apply · i custom · esc cancel'
-          }
+          content={isPending ? 'updating…' : '↑↓ navigate · enter apply · i custom · esc cancel'}
           fg={theme.textMuted}
         />
       </box>

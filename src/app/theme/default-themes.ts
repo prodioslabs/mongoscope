@@ -24,6 +24,10 @@ export type Theme = {
   readonly backgroundPanel: RGBA
   readonly backgroundElement: RGBA
   readonly backgroundMenu: RGBA
+  /** Fully transparent — inactive selection rows, clear cell backgrounds. */
+  readonly transparent: RGBA
+  /** Dimmed fullscreen overlay behind dialogs / palettes. */
+  readonly overlayScrim: RGBA
   readonly border: RGBA
   readonly borderActive: RGBA
   readonly borderSubtle: RGBA
@@ -79,9 +83,14 @@ type ColorValue = HexColor | RefName | Variant | RGBA | number
 export type ThemeJson = {
   $schema?: string
   defs?: Record<string, HexColor | RefName | number>
-  theme: Omit<Record<ThemeColor, ColorValue>, 'selectedListItemText' | 'backgroundMenu'> & {
+  theme: Omit<
+    Record<ThemeColor, ColorValue>,
+    'selectedListItemText' | 'backgroundMenu' | 'transparent' | 'overlayScrim'
+  > & {
     selectedListItemText?: ColorValue
     backgroundMenu?: ColorValue
+    transparent?: ColorValue
+    overlayScrim?: ColorValue
     thinkingOpacity?: number
   }
 }
@@ -202,6 +211,15 @@ export function resolveTheme(theme: ThemeJson, mode: 'dark' | 'light'): Theme {
     resolved.backgroundMenu = resolveColor(theme.theme.backgroundMenu)
   } else {
     resolved.backgroundMenu = resolved.backgroundElement
+  }
+
+  if (resolved.transparent === undefined) {
+    resolved.transparent = resolveColor('transparent')
+  }
+
+  if (resolved.overlayScrim === undefined) {
+    // Alpha 150/255 — matches prior dialog scrim RGBA.fromInts(0, 0, 0, 150)
+    resolved.overlayScrim = resolveColor('#00000096')
   }
 
   const thinkingOpacity = theme.theme.thinkingOpacity ?? 0.6

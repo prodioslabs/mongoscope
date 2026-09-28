@@ -15,3 +15,12 @@ export type ConnectionsBlob = {
   version: 1
   connections: StoredConnection[]
 }
+
+export type AddConnectionInput = {
+  name: string
+  /** Full MongoDB connection URI — stored only inside the OS keychain blob. */
+  uri: string
+  tags?: string[]
+}
+
+export type UpdateConnectionInput = AddConnectionInput

@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { GLOBAL_FOOTER_SHORTCUTS } from '../shortcuts/global'
 import { toFooter, type FooterChip } from '../shortcuts/types'
 
-/** Footer store bindings — same shape as shortcut footer chips. */
 export type FooterKeybinding = FooterChip
 
 type FooterKeybindingScope = {

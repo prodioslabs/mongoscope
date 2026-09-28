@@ -4,7 +4,7 @@ import type { RecentReplicationEvent } from './types'
 const REPLICATION_COMPONENTS = new Set(['REPL', 'ELECTION', 'REPL_HB', 'INITSYNC', 'ROLLBACK'])
 
 /** Max events kept for the Recent panel (RAM ring is already ≤1024 total). */
-export const RECENT_EVENTS_LIMIT = 12
+const RECENT_EVENTS_LIMIT = 12
 
 /**
  * Parse getLog:'global' output into recent replication-related events.

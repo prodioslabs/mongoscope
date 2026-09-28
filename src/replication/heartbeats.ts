@@ -1,3 +1,5 @@
+import { optionalNumber } from '../lib/optional-number'
+import { stringOrEmpty } from '../lib/string-or-empty'
 import type { RawReplSetStatus, RawStatusMember } from './normalize'
 import type { HeartbeatEdge, HeartbeatsView } from './types'
 
@@ -46,24 +48,4 @@ export function normalizeHeartbeats(statusRaw: unknown): HeartbeatsView | null {
   })
 
   return { fromName, edges }
-}
-
-function stringOrEmpty(value: unknown): string {
-  return typeof value === 'string' ? value : ''
-}
-
-function optionalNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  if (typeof value === 'bigint') {
-    return Number(value)
-  }
-  if (value != null && typeof value === 'object' && 'toNumber' in value) {
-    const maybe = (value as { toNumber: () => number }).toNumber()
-    if (typeof maybe === 'number' && Number.isFinite(maybe)) {
-      return maybe
-    }
-  }
-  return null
 }

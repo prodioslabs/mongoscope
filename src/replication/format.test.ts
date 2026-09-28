@@ -4,10 +4,8 @@ import {
   formatGrowthRate,
   formatHeartbeatEdge,
   formatLagSeconds,
-  formatMemberLabel,
   formatMemberMeta,
   formatPingMs,
-  formatPriorityVotes,
   formatShortHost,
   formatWindowHours,
   horizontalBarString,
@@ -55,18 +53,8 @@ describe('formatGrowthRate', () => {
   })
 })
 
-describe('formatMemberLabel', () => {
-  it('shortens host:port to hostname without port when possible', () => {
-    expect(formatMemberLabel('mongo-a.example.net:27017')).toBe('mongo-a.example.net')
-    expect(formatMemberLabel('127.0.0.1:27017')).toBe('127.0.0.1:27017')
-    expect(formatMemberLabel('localhost:27017')).toBe('localhost')
-  })
-})
-
-describe('formatPriorityVotes / formatMemberMeta / formatHeartbeatEdge', () => {
+describe('formatMemberMeta / formatHeartbeatEdge', () => {
   it('renders priority and votes or dashes', () => {
-    expect(formatPriorityVotes(1, 1)).toBe('1 / 1')
-    expect(formatPriorityVotes(null, 1)).toBe('— / 1')
     expect(formatMemberMeta(2, 1)).toBe('priority 2 • votes 1')
     expect(formatMemberMeta(null, 0)).toBe('priority — • votes 0')
   })

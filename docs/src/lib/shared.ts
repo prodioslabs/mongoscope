@@ -1,29 +1,34 @@
-import { createGetUrl } from 'fumadocs-core/source';
+import { createGetUrl } from 'fumadocs-core/source'
 
 export const appName = 'MongoScope'
 export const docsRoute = '/docs'
 const docsImageRoute = '/og/docs'
 export const docsContentRoute = '/llms.mdx/docs'
-export const docsContentDir = 'content/docs'
+const docsContentDir = 'content/docs'
 
 export const gitConfig = {
   user: 'prodioslabs',
-  repo: 'mongoscope-v2',
+  repo: 'mongoscope',
   branch: 'main',
 }
 
 export const githubRepoUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`
 
+/** Raw install.sh on the default branch — same URL the README curl one-liner uses. */
+const installScriptUrl = `https://raw.githubusercontent.com/${gitConfig.user}/${gitConfig.repo}/${gitConfig.branch}/install.sh`
+
+export const installCurlCommand = `curl -fsSL ${installScriptUrl} | bash`
+
 export function getDocsGithubBlobUrl(pagePath: string) {
   return `${githubRepoUrl}/blob/${gitConfig.branch}/${docsContentDir}/${pagePath}`
 }
 
-export type DocsPagePath = {
+type DocsPagePath = {
   slugs: string[]
   locale?: string
 }
 
-export type DocsPageAssetUrl = {
+type DocsPageAssetUrl = {
   segments: string[]
   url: string
 }

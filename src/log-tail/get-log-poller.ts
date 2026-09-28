@@ -3,14 +3,10 @@ import { errorMessageText } from '../lib/error-message'
 import { isUnauthorizedError } from '../lib/mongo-unauthorized-error'
 import { diffGetLogLines } from './diff-get-log'
 import { extractGetLogLines } from './get-log-lines'
+import { buildLogTailStats, createIngestRateTracker } from './ingest-rate'
 import { parseTailLogLineFromText } from './parse-tail-line'
 import { LogLineRingBuffer } from './ring-buffer'
-import {
-  LOG_TAIL_RING_CAPACITY,
-  type LogTailFormat,
-  type LogTailStats,
-  type TailLogLine,
-} from './types'
+import { LOG_TAIL_RING_CAPACITY, type LogTailStats, type TailLogLine } from './types'
 
 /** Default poll interval for getLog (heavier than file stat polls). */
 const GET_LOG_POLL_INTERVAL_MS = 1000
@@ -53,13 +49,13 @@ export function createGetLogPoller(options: GetLogPollerOptions): GetLogPoller {
 
   let running = false
   let seeded = false
-  let timer: ReturnType<typeof setInterval> | null = null
+  let timer: NodeJS.Timeout | null = null
   let tickInFlight = false
   let previousRaw: string[] = []
   let restartsDetected = 0
   let seenJson = false
   let error: string | null = null
-  const ingestTimestamps: number[] = []
+  const { recordIngest, linesPerSec } = createIngestRateTracker(now)
 
   function emit(): void {
     for (const listener of listeners) {
@@ -67,44 +63,13 @@ export function createGetLogPoller(options: GetLogPollerOptions): GetLogPoller {
     }
   }
 
-  function recordIngest(count: number): void {
-    if (count <= 0) {
-      return
-    }
-    const t = now()
-    for (let i = 0; i < count; i++) {
-      ingestTimestamps.push(t)
-    }
-    const cutoff = t - 1000
-    while (ingestTimestamps.length > 0 && ingestTimestamps[0]! < cutoff) {
-      ingestTimestamps.shift()
-    }
-  }
-
-  function linesPerSec(): number {
-    const t = now()
-    const cutoff = t - 1000
-    let count = 0
-    for (let i = ingestTimestamps.length - 1; i >= 0; i--) {
-      if (ingestTimestamps[i]! < cutoff) {
-        break
-      }
-      count++
-    }
-    return count
-  }
-
-  function formatLabel(): LogTailFormat {
-    return seenJson ? 'JSON (4.4+)' : 'raw/legacy'
-  }
-
   function buildStats(): LogTailStats {
-    return {
-      format: formatLabel(),
+    return buildLogTailStats({
+      seenJson,
       linesPerSec: linesPerSec(),
       restartsDetected,
       bufferedCount: ring.size,
-    }
+    })
   }
 
   function ingestRawLines(rawLines: string[]): void {
@@ -168,9 +133,7 @@ export function createGetLogPoller(options: GetLogPollerOptions): GetLogPoller {
       timer = setInterval(() => {
         void pollTick()
       }, pollIntervalMs)
-      if (typeof timer === 'object' && timer !== null && 'unref' in timer) {
-        ;(timer as { unref: () => void }).unref()
-      }
+      timer.unref()
     },
 
     stop() {

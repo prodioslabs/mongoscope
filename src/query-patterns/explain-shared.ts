@@ -1,6 +1,5 @@
-import { isRecord } from '../lib/is-record'
+import { asRecord, isRecord } from '../lib/is-record'
 import { normalizePlanSummary } from '../lib/plan-summary'
-import { formatJson } from './attr'
 import type { PatternExplain } from './types'
 
 const COMMAND_STRIP_KEYS = new Set([
@@ -56,7 +55,7 @@ export function cleanCommandDisplay(command: unknown): string {
     return 'n/a'
   }
   if (!isRecord(command)) {
-    return prettyJson(command) ?? formatJson(command) ?? 'n/a'
+    return prettyJson(command) ?? 'n/a'
   }
 
   const cleaned: Record<string, unknown> = {}
@@ -69,15 +68,13 @@ export function cleanCommandDisplay(command: unknown): string {
   return prettyJson(cleaned) ?? 'n/a'
 }
 
-export function asRecord(value: unknown): Record<string, unknown> | null {
-  return isRecord(value) ? value : null
-}
+export { asRecord }
 
 export function stringOrNull(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
-export function numberOrNull(value: unknown): number | null {
+function numberOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 

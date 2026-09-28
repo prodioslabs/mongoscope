@@ -19,9 +19,6 @@ export function buildEnableProfilingCommand(slowms: number): Record<string, numb
   return { profile: 1, slowms: threshold }
 }
 
-/**
- * Enable database profiler at level 1 with the given slowms threshold.
- */
 export async function enableProfiling(
   client: EnableProfilingClient | null,
   database: string,

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { connectionStore, formatConnectionError } from '../../connections'
 import { LiveConnectionError, liveConnectionManager } from '../../live-connection'
-import { useSession } from '../stores/session'
+import { CLI_EPHEMERAL_CONNECTION_ID, useSession } from '../stores/session'
 
 /**
  * Keeps the live MongoDB client in sync with the session's active connection selection.
@@ -9,6 +9,7 @@ import { useSession } from '../stores/session'
  */
 export function useSyncLiveConnection(): void {
   const activeConnectionId = useSession((s) => s.activeConnectionId)
+  const ephemeralLiveUri = useSession((s) => s.ephemeralLiveUri)
 
   useEffect(
     function syncLiveConnectionToActiveSelection() {
@@ -17,6 +18,18 @@ export function useSyncLiveConnection(): void {
       async function applyActiveConnection() {
         if (activeConnectionId == null) {
           await liveConnectionManager.disconnect('user')
+          return
+        }
+
+        if (
+          activeConnectionId === CLI_EPHEMERAL_CONNECTION_ID &&
+          ephemeralLiveUri != null &&
+          ephemeralLiveUri.trim() !== ''
+        ) {
+          if (cancelled) {
+            return
+          }
+          await liveConnectionManager.connect(activeConnectionId, ephemeralLiveUri)
           return
         }
 
@@ -55,6 +68,6 @@ export function useSyncLiveConnection(): void {
         cancelled = true
       }
     },
-    [activeConnectionId],
+    [activeConnectionId, ephemeralLiveUri],
   )
 }

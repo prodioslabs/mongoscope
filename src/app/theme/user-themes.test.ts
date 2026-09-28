@@ -9,6 +9,7 @@ import {
   resetThemeCatalogForTests,
   resolveConfiguredThemeName,
 } from '../theme/catalog'
+import { resolveTheme } from '../theme/default-themes'
 import { loadUserThemes } from '../theme/user-themes'
 
 const MINIMAL_THEME = {
@@ -82,5 +83,23 @@ describe('theme catalog precedence', () => {
     const catalog = buildThemeCatalog(DEFAULT_THEMES, {})
     expect(resolveConfiguredThemeName(catalog, 'does-not-exist')).toBe('gruvbox')
     expect(resolveConfiguredThemeName(catalog, 'nord')).toBe('nord')
+  })
+})
+
+describe('transparent and overlayScrim tokens', () => {
+  it('defaults missing transparent and overlayScrim for minimal user themes', () => {
+    const theme = resolveTheme(MINIMAL_THEME as never, 'dark')
+    expect(theme.transparent.a).toBe(0)
+    expect(theme.overlayScrim.a).toBeCloseTo(150 / 255)
+  })
+
+  it('resolves explicit tokens on every built-in theme', () => {
+    for (const json of Object.values(DEFAULT_THEMES)) {
+      expect(json.theme.transparent).toBe('transparent')
+      expect(json.theme.overlayScrim).toBe('#00000096')
+      const theme = resolveTheme(json, 'dark')
+      expect(theme.transparent.a).toBe(0)
+      expect(theme.overlayScrim.a).toBeCloseTo(150 / 255)
+    }
   })
 })

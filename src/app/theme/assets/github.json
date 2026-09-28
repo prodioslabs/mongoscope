@@ -77,6 +77,8 @@
       "dark": "darkBgPanel",
       "light": "lightBgPanel"
     },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": {
       "dark": "#30363d",
       "light": "#d0d7de"

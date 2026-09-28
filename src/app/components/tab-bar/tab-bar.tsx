@@ -1,10 +1,8 @@
-import { RGBA, TextAttributes } from '@opentui/core'
+import { TextAttributes } from '@opentui/core'
 import { useRenderer } from '@opentui/react'
 import { TABS, useSession, type AppTab } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { selectedForeground } from '../../theme'
-
-const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 
 export function TabBar() {
   const renderer = useRenderer()
@@ -39,7 +37,7 @@ export function TabBar() {
             flexDirection="row"
             paddingLeft={1}
             paddingRight={1}
-            backgroundColor={active ? theme.primary : TRANSPARENT}
+            backgroundColor={active ? theme.primary : theme.transparent}
             onMouseDown={function onTabMouseDown(event: { stopPropagation(): void }) {
               event.stopPropagation()
               selectTab(tab.id)

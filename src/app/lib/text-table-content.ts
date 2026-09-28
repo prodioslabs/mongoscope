@@ -35,11 +35,24 @@ export function severityColor(theme: Theme, severity: Severity): RGBA {
   }
 }
 
+/** Classify a MongoDB plan summary string for table / badge coloring. */
+export function planSeverity(plan: string): Severity {
+  if (plan === 'COLLSCAN') {
+    return 'error'
+  }
+  if (plan === 'IXSCAN+SORT') {
+    return 'warning'
+  }
+  if (plan === 'IXSCAN') {
+    return 'success'
+  }
+  return 'muted'
+}
+
 export function emptyTableRow(columnCount: number): TextChunk[][] {
   return Array.from({ length: columnCount }, () => [])
 }
 
-/** Pad data rows (excluding header) to fill the visible table capacity. */
 export function padTableRows(rows: TextTableContent, rowCapacity: number): TextTableContent {
   const padded = [...rows]
   while (padded.length - 1 < rowCapacity) {

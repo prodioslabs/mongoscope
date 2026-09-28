@@ -73,14 +73,10 @@ export type KillOpResult =
   | { ok: false; reason: KillOpFailureReason; message: string }
 
 /** Frozen snapshot of a row at kill-confirm open time. */
-export type KillOpTarget = {
-  opid: string
-  namespace: string
-  op: string
-  plan: string
-  client: string
-  runningMs: number
-}
+export type KillOpTarget = Pick<
+  CurrentOpRow,
+  'opid' | 'namespace' | 'op' | 'plan' | 'client' | 'runningMs'
+>
 
 export type RawCurrentOpDoc = {
   opid?: unknown

@@ -1,21 +1,41 @@
-import { RGBA, ScrollBoxRenderable, TextAttributes } from '@opentui/core'
+import { ScrollBoxRenderable, TextAttributes, type CliRenderer } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
+import { useRenderer } from '@opentui/react'
 import { join } from 'node:path'
 import { useEffect, useRef, useState } from 'react'
-import { listLogFiles, MONGODB_DEFAULT_LOG_DIR } from '../../lib/list-log-files'
+import {
+  elevatedFailureMessage,
+  isDirectorySessionElevated,
+  isPermissionDeniedMessage,
+  listLogFilesElevated,
+} from '../../lib/elevated-log-access'
+import {
+  filesFromListResult,
+  listLogFiles,
+  MONGODB_DEFAULT_LOG_DIR,
+  type ListLogFilesResult,
+} from '../../lib/list-log-files'
 import { type AppKeymapMode } from '../../lib/keymap-mode'
-import { toBindings, toFooter, WELCOME_PARSING_FOOTER, WELCOME_SHORTCUTS } from '../../shortcuts'
+import {
+  toBindings,
+  toFooter,
+  WELCOME_PARSING_FOOTER,
+  WELCOME_PERMISSION_FOOTER,
+  WELCOME_SHORTCUTS,
+} from '../../shortcuts'
 import { useFooterKeybindings } from '../footer-keybindings'
 import { useSession } from '../../stores/session'
 import { useTheme } from '../../stores/theme'
 import { selectedForeground } from '../../theme'
+import { ElevatedLogAccessDialog } from './elevated-log-access-dialog'
 
 const MAX_VISIBLE_FILES = 5
 const MAX_SECTION_WIDTH = 80
 const PROGRESS_BAR_WIDTH = 24
-const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0)
 
 const WELCOME_IDLE_KEYBINDINGS = toFooter(WELCOME_SHORTCUTS)
+
+const INITIAL_LIST_RESULT: ListLogFilesResult = { status: 'empty' }
 
 const SCOPE = [
   '  ▄███████████▄  ',
@@ -26,30 +46,55 @@ const SCOPE = [
   '  ▀███████████▀  ',
 ].join('\n')
 
+type ConfirmPurpose = 'list' | 'read'
+
 type WelcomeScreenProps = {
   logDir: string
 }
 
 export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const theme = useTheme((s) => s.theme)
+  const renderer = useRenderer() as CliRenderer
   const parseProgress = useSession((s) => s.parseProgress)
   const parseError = useSession((s) => s.parseError)
   const startParse = useSession((s) => s.startParse)
   const parsing = parseProgress !== null
 
-  const [mongoLogs, setMongoLogs] = useState<string[]>([])
-  const [dirLogs, setDirLogs] = useState<string[]>([])
+  const [mongoList, setMongoList] = useState<ListLogFilesResult>(INITIAL_LIST_RESULT)
+  const [dirList, setDirList] = useState<ListLogFilesResult>(INITIAL_LIST_RESULT)
   const [activeSection, setActiveSection] = useState(0)
   const [selectedIndexes, setSelectedIndexes] = useState<[number, number]>([0, 0])
+  const [confirmDirectory, setConfirmDirectory] = useState<string | null>(null)
+  const [confirmPurpose, setConfirmPurpose] = useState<ConfirmPurpose>('list')
+  const [pendingReadPath, setPendingReadPath] = useState<string | null>(null)
+  const [elevatePending, setElevatePending] = useState(false)
+  const [mongoElevateError, setMongoElevateError] = useState<string | null>(null)
+  const [dirElevateError, setDirElevateError] = useState<string | null>(null)
 
-  useFooterKeybindings(parsing ? WELCOME_PARSING_FOOTER : WELCOME_IDLE_KEYBINDINGS)
+  const mongoLogs = filesFromListResult(mongoList)
+  const dirLogs = filesFromListResult(dirList)
+
+  const activeList = activeSection === 0 ? mongoList : dirList
+  const needsSudoFooter =
+    !parsing &&
+    confirmDirectory == null &&
+    (activeList.status === 'permission_denied' ||
+      (parseError != null && isPermissionDeniedMessage(parseError)))
+
+  useFooterKeybindings(
+    needsSudoFooter
+      ? WELCOME_PERMISSION_FOOTER
+      : parsing
+        ? WELCOME_PARSING_FOOTER
+        : WELCOME_IDLE_KEYBINDINGS,
+  )
 
   useEffect(
     function loadLogFileLists() {
       let cancelled = false
 
       async function load() {
-        const [mongoResult, dirResult] = await Promise.allSettled([
+        const [mongoResult, dirResult] = await Promise.all([
           listLogFiles(MONGODB_DEFAULT_LOG_DIR),
           listLogFiles(logDir),
         ])
@@ -57,28 +102,10 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
           return
         }
 
-        if (mongoResult.status === 'fulfilled') {
-          setMongoLogs(mongoResult.value)
-        } else {
-          const message =
-            mongoResult.reason instanceof Error
-              ? mongoResult.reason.message
-              : String(mongoResult.reason)
-          // oxlint-disable-next-line no-console -- OpenTUI console overlay; log dir I/O
-          console.warn(`Failed to list logs in ${MONGODB_DEFAULT_LOG_DIR}: ${message}`)
-          setMongoLogs([])
-        }
-
-        if (dirResult.status === 'fulfilled') {
-          setDirLogs(dirResult.value)
-        } else {
-          const message =
-            dirResult.reason instanceof Error ? dirResult.reason.message : String(dirResult.reason)
-          // oxlint-disable-next-line no-console -- OpenTUI console overlay; log dir I/O
-          console.warn(`Failed to list logs in ${logDir}: ${message}`)
-          setDirLogs([])
-        }
-
+        setMongoList(mongoResult)
+        setDirList(dirResult)
+        setMongoElevateError(null)
+        setDirElevateError(null)
         setSelectedIndexes([0, 0])
       }
 
@@ -105,15 +132,81 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
   const selectedIndexesRef = useRef(selectedIndexes)
   const mongoLogsRef = useRef(mongoLogs)
   const dirLogsRef = useRef(dirLogs)
+  const mongoListRef = useRef(mongoList)
+  const dirListRef = useRef(dirList)
   const logDirRef = useRef(logDir)
-  const startParseRef = useRef(startParse)
+  const elevatePendingRef = useRef(elevatePending)
+  const parseErrorRef = useRef(parseError)
 
   activeSectionRef.current = activeSection
   selectedIndexesRef.current = selectedIndexes
   mongoLogsRef.current = mongoLogs
   dirLogsRef.current = dirLogs
+  mongoListRef.current = mongoList
+  dirListRef.current = dirList
   logDirRef.current = logDir
-  startParseRef.current = startParse
+  elevatePendingRef.current = elevatePending
+  parseErrorRef.current = parseError
+
+  function openConfirm(directory: string, purpose: ConfirmPurpose, readPath: string | null) {
+    setConfirmPurpose(purpose)
+    setPendingReadPath(readPath)
+    setConfirmDirectory(directory)
+  }
+
+  async function analyzeSelectedFile() {
+    const section = activeSectionRef.current
+    const files = section === 0 ? mongoLogsRef.current : dirLogsRef.current
+    const name = files[selectedIndexesRef.current[section] ?? 0]
+    if (!name) {
+      return
+    }
+    const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
+    const path = join(dir, name)
+
+    if (isDirectorySessionElevated(dir)) {
+      await startParse(path, { elevatedRenderer: renderer })
+      return
+    }
+
+    const result = await startParse(path)
+    if (result === 'permission_denied') {
+      openConfirm(dir, 'read', path)
+    }
+  }
+
+  function requestSudoForActiveSection() {
+    if (elevatePendingRef.current) {
+      return
+    }
+    const section = activeSectionRef.current
+    const list = section === 0 ? mongoListRef.current : dirListRef.current
+    const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
+
+    if (list.status === 'permission_denied') {
+      openConfirm(dir, 'list', null)
+      return
+    }
+
+    const error = parseErrorRef.current
+    if (error != null && isPermissionDeniedMessage(error)) {
+      const files = section === 0 ? mongoLogsRef.current : dirLogsRef.current
+      const name = files[selectedIndexesRef.current[section] ?? 0]
+      if (name) {
+        openConfirm(dir, 'read', join(dir, name))
+        return
+      }
+    }
+  }
+
+  function retrySudoForSection(section: number) {
+    if (parsing || elevatePendingRef.current) {
+      return
+    }
+    activeSectionRef.current = section
+    setActiveSection(section)
+    requestSudoForActiveSection()
+  }
 
   useBindings(
     function createWelcomeScreenLayer() {
@@ -152,19 +245,12 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
 
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: !parsing,
+        enabled: !parsing && confirmDirectory == null && !elevatePending,
         commands: [
           {
             name: 'welcome.analyze',
             run() {
-              const section = activeSectionRef.current
-              const files = logFilesForSection(section)
-              const name = files[selectedIndexesRef.current[section] ?? 0]
-              if (!name) {
-                return
-              }
-              const dir = section === 0 ? MONGODB_DEFAULT_LOG_DIR : logDirRef.current
-              void startParseRef.current(join(dir, name))
+              void analyzeSelectedFile()
             },
           },
           {
@@ -185,12 +271,83 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
               navigateSelection(1)
             },
           },
+          {
+            name: 'welcome.retry-sudo',
+            run() {
+              requestSudoForActiveSection()
+            },
+          },
         ],
         bindings: toBindings(WELCOME_SHORTCUTS),
       }
     },
-    [parsing],
+    [confirmDirectory, elevatePending, parsing, renderer],
   )
+
+  async function runElevatedConfirm() {
+    if (confirmDirectory == null) {
+      return
+    }
+    const directory = confirmDirectory
+    const purpose = confirmPurpose
+    const readPath = pendingReadPath
+
+    setElevatePending(true)
+
+    if (purpose === 'list') {
+      const result = await listLogFilesElevated({
+        renderer,
+        dir: directory,
+      })
+      setElevatePending(false)
+      setConfirmDirectory(null)
+      setPendingReadPath(null)
+
+      const isMongoDir = directory === MONGODB_DEFAULT_LOG_DIR
+      if (!result.ok) {
+        if (isMongoDir) {
+          setMongoElevateError(result.message)
+        } else {
+          setDirElevateError(result.message)
+        }
+        return
+      }
+
+      if (isMongoDir) {
+        setMongoList(result.value)
+        setMongoElevateError(null)
+      } else {
+        setDirList(result.value)
+        setDirElevateError(null)
+      }
+      setSelectedIndexes([0, 0])
+      return
+    }
+
+    if (readPath == null) {
+      setElevatePending(false)
+      setConfirmDirectory(null)
+      return
+    }
+
+    const result = await startParse(readPath, { elevatedRenderer: renderer })
+    setElevatePending(false)
+    setConfirmDirectory(null)
+    setPendingReadPath(null)
+
+    if (result !== 'ok') {
+      const message = useSession.getState().parseError ?? elevatedFailureMessage('other')
+      if (directory === MONGODB_DEFAULT_LOG_DIR) {
+        setMongoElevateError(message)
+      } else {
+        setDirElevateError(message)
+      }
+    } else if (directory === MONGODB_DEFAULT_LOG_DIR) {
+      setMongoElevateError(null)
+    } else {
+      setDirElevateError(null)
+    }
+  }
 
   return (
     <box
@@ -227,26 +384,38 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
           sectionId="mongo"
           title="MongoDB logs"
           dir={MONGODB_DEFAULT_LOG_DIR}
-          files={mongoLogs}
+          list={mongoList}
+          elevateError={mongoElevateError}
           active={activeSection === 0}
           selectedIndex={selectedIndexes[0]}
           onSelectIndex={(index) => {
-            if (parsing) return
+            if (parsing) {
+              return
+            }
             setActiveSection(0)
             setSelectedIndexes((indexes) => [index, indexes[1]])
+          }}
+          onRetrySudo={() => {
+            retrySudoForSection(0)
           }}
         />
         <LogFileSection
           sectionId="log-dir"
           title="Log directory"
           dir={logDir}
-          files={dirLogs}
+          list={dirList}
+          elevateError={dirElevateError}
           active={activeSection === 1}
           selectedIndex={selectedIndexes[1]}
           onSelectIndex={(index) => {
-            if (parsing) return
+            if (parsing) {
+              return
+            }
             setActiveSection(1)
             setSelectedIndexes((indexes) => [indexes[0], index])
+          }}
+          onRetrySudo={() => {
+            retrySudoForSection(1)
           }}
         />
         {parseProgress !== null ? (
@@ -262,6 +431,35 @@ export function WelcomeScreen({ logDir }: WelcomeScreenProps) {
           </text>
         ) : null}
       </box>
+      <ElevatedLogAccessDialog
+        open={confirmDirectory != null}
+        directory={confirmDirectory ?? ''}
+        purpose={confirmPurpose}
+        isPending={elevatePending}
+        onConfirm={() => {
+          if (confirmDirectory == null || elevatePending) {
+            return
+          }
+          void runElevatedConfirm()
+        }}
+        onCancel={() => {
+          if (elevatePending) {
+            return
+          }
+          const directory = confirmDirectory
+          setConfirmDirectory(null)
+          setPendingReadPath(null)
+          if (directory == null) {
+            return
+          }
+          const message = elevatedFailureMessage('cancelled')
+          if (directory === MONGODB_DEFAULT_LOG_DIR) {
+            setMongoElevateError(message)
+          } else {
+            setDirElevateError(message)
+          }
+        }}
+      />
     </box>
   )
 }
@@ -271,36 +469,73 @@ function progressBar(percent: number): string {
   return `[${'█'.repeat(filled)}${'░'.repeat(PROGRESS_BAR_WIDTH - filled)}]`
 }
 
+function listStatusMessage(list: ListLogFilesResult): { content: string; tone: 'muted' | 'error' } {
+  switch (list.status) {
+    case 'ok':
+      return { content: '', tone: 'muted' }
+    case 'empty':
+      return { content: 'No log files found', tone: 'muted' }
+    case 'not_found':
+      return {
+        content:
+          "Directory does not exist — pick a different path or confirm MongoDB's log location on this system",
+        tone: 'error',
+      }
+    case 'permission_denied':
+      return {
+        content: 'Permission denied — cannot read this directory',
+        tone: 'error',
+      }
+    case 'other':
+      return { content: list.message, tone: 'error' }
+  }
+}
+
 type LogFileSectionProps = {
   sectionId: string
   title: string
   dir: string
-  files: string[]
+  list: ListLogFilesResult
+  elevateError: string | null
   active: boolean
   selectedIndex: number
   onSelectIndex: (index: number) => void
+  onRetrySudo: () => void
 }
 
 function LogFileSection({
   sectionId,
   title,
   dir,
-  files,
+  list,
+  elevateError,
   active,
   selectedIndex,
   onSelectIndex,
+  onRetrySudo,
 }: LogFileSectionProps) {
   const theme = useTheme((s) => s.theme)
   const highlightFg = selectedForeground(theme)
+  const files = filesFromListResult(list)
   const needsScroll = files.length > MAX_VISIBLE_FILES
-  const listHeight = Math.min(Math.max(files.length, 1), MAX_VISIBLE_FILES)
+  const status = listStatusMessage(list)
+  const showPermissionRetry = list.status === 'permission_denied'
+  const emptyLineCount =
+    files.length > 0
+      ? files.length
+      : 1 + (showPermissionRetry ? 1 : 0) + (elevateError != null ? 1 : 0)
+  const listHeight = Math.min(Math.max(emptyLineCount, 1), MAX_VISIBLE_FILES)
   const scrollRef = useRef<ScrollBoxRenderable | null>(null)
 
   useEffect(
     function scrollHighlightedFileIntoView() {
-      if (!active || !needsScroll) return
+      if (!active || !needsScroll) {
+        return
+      }
       const scroll = scrollRef.current
-      if (!scroll) return
+      if (!scroll) {
+        return
+      }
       scroll.scrollChildIntoView(`${sectionId}-file-${selectedIndex}`)
     },
     [active, needsScroll, sectionId, selectedIndex],
@@ -317,7 +552,7 @@ function LogFileSection({
             id={`${sectionId}-file-${index}`}
             flexDirection="row"
             gap={1}
-            backgroundColor={highlighted ? theme.primary : TRANSPARENT}
+            backgroundColor={highlighted ? theme.primary : theme.transparent}
             onMouseOver={() => onSelectIndex(index)}
             onMouseDown={() => onSelectIndex(index)}
             paddingLeft={1}
@@ -334,7 +569,24 @@ function LogFileSection({
         )
       })
     ) : (
-      <text content="No log files found" fg={theme.textMuted} />
+      <box flexDirection="column">
+        <text
+          content={status.content}
+          fg={status.tone === 'error' ? theme.error : theme.textMuted}
+        />
+        {showPermissionRetry ? (
+          <text
+            content={active ? 'r retry with sudo' : 'select section, then r for sudo'}
+            fg={theme.accent}
+            onMouseDown={() => {
+              if (active) {
+                onRetrySudo()
+              }
+            }}
+          />
+        ) : null}
+        {elevateError != null ? <text content={elevateError} fg={theme.error} /> : null}
+      </box>
     )
 
   return (

@@ -312,5 +312,4 @@ export function createLiveConnectionManager(
   }
 }
 
-/** Process-wide manager used by the app shell. */
 export const liveConnectionManager = createLiveConnectionManager()

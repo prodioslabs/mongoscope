@@ -77,6 +77,8 @@
       "dark": "macCrust",
       "light": "macCrust"
     },
+    "transparent": "transparent",
+    "overlayScrim": "#00000096",
     "border": {
       "dark": "macSurface0",
       "light": "macSurface0"
