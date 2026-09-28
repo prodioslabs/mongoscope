@@ -1,0 +1,18 @@
+# Dependencies and build artifacts — never send them as build context.
+node_modules
+.next
+.source
+coverage
+*.tsbuildinfo
+
+# VCS and the Dockerfile itself (not needed inside the image context).
+.git
+Dockerfile
+
+# Local env files — keep secrets and machine-specific overrides out of the image.
+.env
+.env.*
+
+# Lint/format tooling is not used during the image build.
+oxlint.json
+.oxfmtrc.json
