@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# Install production dependencies without running lifecycle scripts (content is not present yet).
+# Install deps without lifecycle scripts — content/MDX is not in the deps layer yet.
 FROM oven/bun:1.3.11 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
@@ -16,8 +16,9 @@ COPY . .
 RUN mkdir -p public
 
 # Real Node binary for next build — Bun's node shim cannot load Turbopack page-data modules.
-COPY --from=node:22-bookworm-slim /usr/local/bin/node /opt/node/bin/node
+COPY --from=node:22.23.3-bookworm-slim /usr/local/bin/node /opt/node/bin/node
 
+# Inlined into the client/server bundles at build time (not rewritten by runtime -e).
 ARG NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -26,8 +27,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run generate:icon \
 	&& /opt/node/bin/node ./node_modules/next/dist/bin/next build
 
-# Serve the traced standalone server with Node (matches Next standalone layout).
-FROM node:22-alpine AS runner
+# Serve the traced standalone server with Node (Next standalone ships a Node server.js).
+FROM node:22.23.3-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
