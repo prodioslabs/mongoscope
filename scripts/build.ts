@@ -31,9 +31,9 @@ type BunCompileTarget =
 type CompileTarget = {
   /** Bun --compile --target value */
   bunTarget: BunCompileTarget
-  /** install.sh / cellar-style OS key */
+  /** install.sh OS key */
   os: 'linux' | 'darwin' | 'windows'
-  /** install.sh / cellar-style arch key (amd64 | arm64) */
+  /** install.sh arch key (amd64 | arm64) */
   arch: 'amd64' | 'arm64'
   /** OpenTUI libc define for Linux only */
   libc?: 'glibc' | 'musl'

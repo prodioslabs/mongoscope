@@ -10,7 +10,7 @@ Then run `mongoscope`. Pick a log file. Hit Enter. You get slow-query patterns, 
 
 Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui). Needs a real interactive TTY (don't pipe stdout).
 
-Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are attached to [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases) (the curl installer is Unix-only, same as Cellar).
+Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are attached to [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases) (the curl installer is Unix-only).
 
 ## What you get
 

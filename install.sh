@@ -52,7 +52,7 @@ fi
 [ -n "$install_home" ] || fail "HOME is unset"
 
 # Linux keeps /usr/local (typically needs sudo). macOS defaults to a
-# user-writable prefix so the installer runs without sudo. (Matches cellar.)
+# user-writable prefix so the installer runs without sudo.
 if [ -n "${MONGOSCOPE_PREFIX:-}" ]; then
 	PREFIX=$MONGOSCOPE_PREFIX
 elif [ "$os" = "darwin" ]; then
@@ -63,7 +63,7 @@ fi
 
 if [ "$VERSION" = "latest" ]; then
 	printf 'Resolving latest mongoscope release...\n'
-	# Prefer GitHub's latest redirect (same approach as cellar) — avoids API rate limits.
+	# Prefer GitHub's latest redirect — avoids API rate limits.
 	VERSION=$(
 		curl -fsSLI -o /dev/null -w '%{url_effective}' \
 			"https://github.com/${REPOSITORY}/releases/latest"
