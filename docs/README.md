@@ -45,3 +45,25 @@ Ship it:
 bun run build
 bun run start
 ```
+
+## Docker
+
+Build from the repo root with `docs/` as the context:
+
+```bash
+docker build -t mongoscope-docs docs
+```
+
+Optional site URL for absolute metadata and OG links (defaults to `http://localhost:3000` when unset):
+
+```bash
+docker build --build-arg NEXT_PUBLIC_SITE_URL=https://example.com -t mongoscope-docs docs
+```
+
+Run:
+
+```bash
+docker run --rm -p 3000:3000 -e NEXT_PUBLIC_SITE_URL=http://localhost:3000 mongoscope-docs
+```
+
+Open [http://localhost:3000](http://localhost:3000). `NEXT_PUBLIC_SITE_URL` sets `metadataBase`; pass it at build time for correct absolute URLs in the built output.

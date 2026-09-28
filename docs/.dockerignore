@@ -1,0 +1,12 @@
+# Dependencies and build artifacts — never send them as build context.
+node_modules
+.next
+.source
+
+# VCS and the Dockerfile itself (not needed inside the image context).
+.git
+Dockerfile
+
+# Local env files — keep secrets and machine-specific overrides out of the image.
+.env
+.env.*
