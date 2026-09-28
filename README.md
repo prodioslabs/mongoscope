@@ -64,6 +64,10 @@ That is separate from release binaries:
 | `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                                                 |
 | `bun run test`                       | Vitest                                                              |
 
+### Releasing
+
+Bump and commit `package.json` `"version"`, then push a matching SemVer tag (`vX.Y.Z` or `vX.Y.Z-rc.1`). The release job compares the linux-amd64 binary `--version` to the tag without `v` and fails on mismatch. CircleCI builds all five platform archives, writes `checksums.txt`, and publishes to [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases). Hyphenated tags are published with `--prerelease` so they never become `latest`. Requires `GITHUB_TOKEN` in CircleCI Project Settings → Environment Variables (permission to create releases on this repo).
+
 On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`). Enter parses the last 100k lines and opens the dashboard.
 
 If a log directory (or selected file) is unreadable due to permissions, Welcome shows a permission error and offers **retry with sudo** (`r`). Confirming runs a short-lived elevated `ls` / `tail` — the app itself does **not** run as root — and your password may be requested. Elevation is scoped to Welcome log listing and file read only (not live connect, secrets, kill-op, profiler, or config). `sudo` is optional: without it the app still runs, but protected directories stay inaccessible.
