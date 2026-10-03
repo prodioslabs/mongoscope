@@ -98,3 +98,7 @@ mongoscope --help
 | `--log-path`                                                | Parse that log file on startup (skips picker; invalid path exits 1)                                   |
 | `--uri`                                                     | Ephemeral live connect for this session (not saved to keychain)                                       |
 | `--host`, `--port`, `--username`, `--password`, `--auth-db` | Build a URI and ephemeral-connect (do not combine with `--uri`; default port 27017)                   |
+
+## License
+
+MIT License — see [LICENSE](./LICENSE) for details.
