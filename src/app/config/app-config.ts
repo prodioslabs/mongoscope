@@ -1,6 +1,6 @@
 import { appConfigFilePath } from '../../lib/config-paths'
 import { isRecord } from '../../lib/is-record'
-import { loadJsonConfigFile, saveJsonConfigFile } from '../../lib/json-config-file'
+import { loadJsonConfigFile, updateJsonConfigFile } from '../../lib/json-config-file'
 import { DEFAULT_APP_CONFIG, isThemeMode, type AppConfig, type ThemeMode } from './types'
 
 export function validateAppConfig(value: unknown): AppConfig {
@@ -9,6 +9,11 @@ export function validateAppConfig(value: unknown): AppConfig {
   }
 
   const record = value
+
+  // Secrets-only file (plaintext fallback wrote before any theme save) → defaults in memory.
+  if (record.version === undefined && record.secrets !== undefined) {
+    return { ...DEFAULT_APP_CONFIG }
+  }
 
   if (record.version !== 1) {
     throw new Error('Invalid app config: unsupported version (expected 1)')
@@ -53,6 +58,10 @@ export async function saveAppConfig(
   if (!isThemeMode(input.mode)) {
     throw new Error('mode must be "dark" or "light"')
   }
-  const config: AppConfig = { version: 1, theme, mode: input.mode }
-  await saveJsonConfigFile(filePath, config)
+  await updateJsonConfigFile(filePath, (current) => ({
+    ...current,
+    version: 1,
+    theme,
+    mode: input.mode,
+  }))
 }

@@ -44,6 +44,14 @@ describe('validateAppConfig', () => {
     expect(() => validateAppConfig({ version: 1, theme: '  ' })).toThrow(/theme/)
     expect(() => validateAppConfig({ version: 1, theme: 'nord', mode: 'dim' })).toThrow(/mode/)
   })
+
+  it('accepts secrets-only objects as the default theme', () => {
+    expect(
+      validateAppConfig({
+        secrets: { 'com.mongoscope.cli': { connections: '{}' } },
+      }),
+    ).toEqual(DEFAULT_APP_CONFIG)
+  })
 })
 
 describe('loadAppConfig / saveAppConfig', () => {
@@ -82,6 +90,37 @@ describe('loadAppConfig / saveAppConfig', () => {
       version: 1,
       theme: 'gruvbox',
       mode: 'dark',
+    })
+  })
+
+  it('loads secrets-only config as the default theme', async () => {
+    const path = await makeTempConfigPath()
+    await writeFile(
+      path,
+      JSON.stringify({
+        secrets: { 'com.mongoscope.cli': { connections: '{}' } },
+      }),
+      'utf8',
+    )
+    await expect(loadAppConfig(path)).resolves.toEqual(DEFAULT_APP_CONFIG)
+  })
+
+  it('preserves secrets when saving theme', async () => {
+    const path = await makeTempConfigPath()
+    await writeFile(
+      path,
+      JSON.stringify({
+        secrets: { 'com.mongoscope.cli': { connections: 'blob' } },
+      }),
+      'utf8',
+    )
+    await saveAppConfig({ theme: 'nord', mode: 'light' }, path)
+    const written = JSON.parse(await readFile(path, 'utf8'))
+    expect(written).toEqual({
+      secrets: { 'com.mongoscope.cli': { connections: 'blob' } },
+      version: 1,
+      theme: 'nord',
+      mode: 'light',
     })
   })
 })

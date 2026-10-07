@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { isRecord } from './is-record'
 
 /**
  * Load a JSON config file. Missing file → `fallback`.
@@ -31,6 +32,19 @@ export async function loadJsonConfigFile<T>(
 }
 
 /**
+ * Read the existing JSON object (missing file → `{}`), apply `patch`, write atomically.
+ * `patch` receives a shallow clone of the current record and must return the next object to persist.
+ */
+export async function updateJsonConfigFile(
+  filePath: string,
+  patch: (current: Record<string, unknown>) => Record<string, unknown>,
+): Promise<void> {
+  const current = await readJsonObjectOrEmpty(filePath)
+  const next = patch({ ...current })
+  await saveJsonConfigFile(filePath, next)
+}
+
+/**
  * Atomically write JSON (tmp file in the same directory + rename).
  */
 export async function saveJsonConfigFile<T>(filePath: string, value: T): Promise<void> {
@@ -51,6 +65,31 @@ export async function saveJsonConfigFile<T>(filePath: string, value: T): Promise
     }
     throw error
   }
+}
+
+async function readJsonObjectOrEmpty(filePath: string): Promise<Record<string, unknown>> {
+  let fileContents: string
+  try {
+    fileContents = await readFile(filePath, 'utf8')
+  } catch (error) {
+    if (isFileNotFoundError(error)) {
+      return {}
+    }
+    throw error
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(fileContents)
+  } catch {
+    throw new Error(`Invalid config: ${filePath} is not valid JSON`)
+  }
+
+  if (!isRecord(parsed)) {
+    throw new Error(`Invalid config: ${filePath} must be a JSON object`)
+  }
+
+  return parsed
 }
 
 function isFileNotFoundError(error: unknown): boolean {
