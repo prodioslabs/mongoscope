@@ -1,7 +1,9 @@
 import { platform } from 'node:os'
+import { appConfigFilePath } from '../lib/config-paths'
+import { errorMessageText } from '../lib/error-message'
+import { createPlaintextSecretBackend } from './plaintext-secret-backend'
 import type { ConnectionsBlob } from './types'
 import { emptyConnectionsBlob, validateConnectionsBlob } from './validate'
-import { errorMessageText } from '../lib/error-message'
 
 export const SECRET_SERVICE = 'com.mongoscope.cli'
 
@@ -47,6 +49,54 @@ const bunSecretsBackend: SecretBackend = {
   },
 }
 
+/**
+ * Prefer `primary` until it fails as {@link SecretStoreCode} `unavailable`, then use `fallback`
+ * for the rest of the process. Pass `primary: null` to use the fallback immediately.
+ */
+export function createFallbackSecretBackend(
+  primary: SecretBackend | null,
+  fallback: SecretBackend,
+): SecretBackend {
+  let useFallback = primary == null
+
+  async function withResolvedBackend<T>(run: (backend: SecretBackend) => Promise<T>): Promise<T> {
+    if (useFallback || primary == null) {
+      useFallback = true
+      return run(fallback)
+    }
+
+    try {
+      return await run(primary)
+    } catch (error) {
+      if (classifySecretError(error) !== 'unavailable') {
+        throw error
+      }
+      useFallback = true
+      return run(fallback)
+    }
+  }
+
+  return {
+    get(options) {
+      return withResolvedBackend((backend) => backend.get(options))
+    },
+    set(options) {
+      return withResolvedBackend((backend) => backend.set(options))
+    },
+    delete(options) {
+      return withResolvedBackend((backend) => backend.delete(options))
+    },
+  }
+}
+
+export function isBunSecretsAvailable(): boolean {
+  try {
+    return typeof Bun !== 'undefined' && typeof Bun.secrets?.get === 'function'
+  } catch {
+    return false
+  }
+}
+
 export function createSecretStore(backend: SecretBackend = bunSecretsBackend): SecretStore {
   return {
     async load() {
@@ -68,7 +118,7 @@ export function createSecretStore(backend: SecretBackend = bunSecretsBackend): S
       try {
         parsed = JSON.parse(raw)
       } catch {
-        throw new Error('Invalid connections store in OS keychain: not valid JSON')
+        throw new Error('Invalid connections store: not valid JSON')
       }
 
       return validateConnectionsBlob(parsed)
@@ -101,7 +151,12 @@ export function createSecretStore(backend: SecretBackend = bunSecretsBackend): S
   }
 }
 
-export const defaultSecretStore = createSecretStore()
+export const defaultSecretStore = createSecretStore(
+  createFallbackSecretBackend(
+    isBunSecretsAvailable() ? bunSecretsBackend : null,
+    createPlaintextSecretBackend(appConfigFilePath()),
+  ),
+)
 
 function mapSecretError(error: unknown, action: 'retrieve' | 'store' | 'delete'): SecretStoreError {
   const code = classifySecretError(error)
