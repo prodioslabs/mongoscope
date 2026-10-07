@@ -1,8 +1,8 @@
 {
   "name": "mongoscope-docs",
   "version": "0.0.0",
-  "license": "MIT",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "generate:icon": "bun run scripts/generate-icon.ts",
     "build": "bun run generate:icon && next build",

@@ -22,7 +22,7 @@ Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are at
 | Indexes      | Inventory, build %, `$indexStats`, jump from a slow query       |
 | Logs         | File tail or rolling `getLog` buffer from a live connection     |
 
-Connections land in your OS keychain (`Bun.secrets`). Themes (gruvbox, catppuccin, nord, …) persist under `~/.config/mongoscope/`.
+Connections land in your OS keychain (`Bun.secrets`) when available, otherwise plaintext under `secrets` in `~/.config/mongoscope/config.json`. Themes (gruvbox, catppuccin, nord, …) persist in that same config directory.
 
 ## Install options
 
