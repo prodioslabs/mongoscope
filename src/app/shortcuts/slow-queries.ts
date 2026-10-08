@@ -72,6 +72,12 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
       { key: ']', cmd: 'slow-queries.next-database' },
     ],
   },
+  {
+    keys: 'x',
+    helpLabel: 'Export patterns (JSON / CSV / Markdown)',
+    footerLabel: 'export',
+    bindings: [{ key: 'x', cmd: 'slow-queries.export-open' }],
+  },
 ]
 
 const sortCountAvgPlanChip: FooterChip = {
@@ -87,9 +93,12 @@ const sortCountAvgPlanChip: FooterChip = {
   ],
 }
 
+const exportChip: FooterChip = { keys: 'x', label: 'export' }
+
 export const SLOW_QUERIES_STATIC_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   sortCountAvgPlanChip,
+  exportChip,
 ]
 
 export const SLOW_QUERIES_LIVE_FOOTER: FooterChip[] = [
@@ -99,6 +108,7 @@ export const SLOW_QUERIES_LIVE_FOOTER: FooterChip[] = [
   { keys: 'e', label: 'enable' },
   { keys: 'T', label: 'samples' },
   { keys: 'l', label: 'source' },
+  exportChip,
 ]
 
 export const SLOW_QUERIES_ENABLE_CONFIRM_FOOTER: FooterChip[] = [
@@ -111,4 +121,16 @@ export const SLOW_QUERIES_TAIL_DIALOG_FOOTER: FooterChip[] = [
   { keys: 'enter', label: 'apply' },
   { keys: 'i', label: 'custom' },
   { keys: 'esc', label: 'cancel' },
+]
+
+export const SLOW_QUERIES_EXPORT_DIALOG_FOOTER: FooterChip[] = [
+  { keys: 'tab', label: 'focus' },
+  { keys: '←→/jk', label: 'format' },
+  { keys: 'enter', label: 'export' },
+  { keys: 'esc', label: 'cancel' },
+]
+
+export const SLOW_QUERIES_EXPORT_OVERWRITE_FOOTER: FooterChip[] = [
+  { keys: 'enter', label: 'overwrite' },
+  { keys: 'esc', label: 'back' },
 ]

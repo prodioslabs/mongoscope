@@ -1,8 +1,9 @@
 import { bold, fg, type RGBA, type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useTerminalDimensions } from '@opentui/react'
+import { basename } from 'node:path'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { QueryPattern } from '../../../../query-patterns'
+import { resolveAppVersion } from '../../../../lib/app-version'
 import { displayText } from '../../../../lib/display-text'
 import { errorMessageText } from '../../../../lib/error-message'
 import { formatLogTailPreset } from '../../../../parser'
@@ -12,6 +13,14 @@ import {
   PROFILE_FETCH_LIMIT_PRESETS,
   type ProfilerSlowQueriesSnapshot,
 } from '../../../../profiler'
+import {
+  TREND_BUCKETS,
+  toExportablePatterns,
+  type ExportSort,
+  type ExportSource,
+  type QueryPattern,
+  type SlowQueriesExportDocument,
+} from '../../../../query-patterns'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { type SortDirection } from '../../../lib/sort-direction'
 import { severityColor, type Severity } from '../../../lib/text-table-content'
@@ -30,6 +39,7 @@ import '../../../lib/opentui-text-table'
 import { DbSelector } from '../../db-selector'
 import { useFooterKeybindings, useFooterStatus } from '../../footer-keybindings'
 import { EnableProfilingDialog } from '../enable-profiling-dialog'
+import { SlowQueriesExportDialog } from '../export-dialog'
 import { LogTailDialog } from '../log-tail-dialog'
 import {
   avgMsSeverity,
@@ -155,8 +165,10 @@ function StaticSlowQueriesPanel() {
   const theme = useTheme((s) => s.theme)
   const queryPatterns = useSession((s) => s.queryPatterns)
   const logStore = useSession((s) => s.logStore)
+  const logPath = useSession((s) => s.logPath)
   const logTailLines = useSession((s) => s.logTailLines)
   const parseProgress = useSession((s) => s.parseProgress)
+  const parseError = useSession((s) => s.parseError)
   const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
   const { height: terminalHeight } = useTerminalDimensions()
 
@@ -166,6 +178,8 @@ function StaticSlowQueriesPanel() {
   const [sortBy, setSortBy] = useState<SortBy>('count')
   const [detailPatternId, setDetailPatternId] = useState<number | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportDocument, setExportDocument] = useState<SlowQueriesExportDocument | null>(null)
   const [transientStatus, setTransientStatus] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -176,6 +190,7 @@ function StaticSlowQueriesPanel() {
   const sortedPatternsRef = useRef<QueryPattern[]>([])
   const sortByRef = useRef(sortBy)
   const sortDirectionRef = useRef(sortDirection)
+  const exportDialogOpenRef = useRef(exportDialogOpen)
 
   const stats = useMemo(() => computeSlowQueryStats(patterns), [patterns])
   const sortedPatterns = useMemo(
@@ -198,7 +213,7 @@ function StaticSlowQueriesPanel() {
       ? `parsing… ${parseProgress}%`
       : `tail ${formatLogTailPreset(logTailLines)} · ${windowLabel}`)
 
-  useFooterKeybindings(SLOW_QUERIES_STATIC_FOOTER)
+  useFooterKeybindings(exportDialogOpen ? [] : SLOW_QUERIES_STATIC_FOOTER)
   useFooterStatus(statusLabel)
 
   const showTransientStatus = useCallback(function showTransientStatus(message: string) {
@@ -219,6 +234,13 @@ function StaticSlowQueriesPanel() {
       }
     }
   }, [])
+
+  useEffect(
+    function syncStaticExportDialogOpenRef() {
+      exportDialogOpenRef.current = exportDialogOpen
+    },
+    [exportDialogOpen],
+  )
 
   useEffect(
     function applyPendingSlowQueriesNav() {
@@ -339,9 +361,39 @@ function StaticSlowQueriesPanel() {
         setScrollOffset(0)
       }
 
+      function openExport() {
+        if (exportDialogOpenRef.current || detailPatternId != null) {
+          return
+        }
+        if (parseProgress != null) {
+          showTransientStatus('still loading — cannot export')
+          return
+        }
+        if (parseError != null) {
+          showTransientStatus('cannot export while data is errored')
+          return
+        }
+        if (sortedLengthRef.current === 0) {
+          showTransientStatus('nothing to export')
+          return
+        }
+        const label = logPath != null && logPath.trim() !== '' ? basename(logPath) : undefined
+        setExportDocument(
+          buildSlowQueriesExportDocument({
+            patterns: sortedPatternsRef.current,
+            source: 'static',
+            label,
+            windowStartMs: queryPatterns?.windowStartMs ?? 0,
+            windowEndMs: queryPatterns?.windowEndMs ?? 0,
+            sort: { by: sortByRef.current, direction: sortDirectionRef.current },
+          }),
+        )
+        setExportDialogOpen(true)
+      }
+
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: detailPatternId == null,
+        enabled: detailPatternId == null && !exportDialogOpen,
         commands: [
           {
             name: 'slow-queries.sort-count',
@@ -383,19 +435,35 @@ function StaticSlowQueriesPanel() {
               setDetailPatternId(pattern.id)
             },
           },
+          {
+            name: 'slow-queries.export-open',
+            run() {
+              openExport()
+            },
+          },
         ],
         bindings: toBindings(
           SLOW_QUERIES_SHORTCUTS.filter(function keepStaticBindings(shortcut) {
             return (
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.move')) ||
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.sort')) ||
-              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-details')
+              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-details') ||
+              shortcut.bindings.some((b) => b.cmd === 'slow-queries.export-open')
             )
           }),
         ),
       }
     },
-    [detailPatternId],
+    [
+      detailPatternId,
+      exportDialogOpen,
+      logPath,
+      parseError,
+      parseProgress,
+      queryPatterns?.windowEndMs,
+      queryPatterns?.windowStartMs,
+      showTransientStatus,
+    ],
   )
 
   const visible = sortedPatterns.slice(scrollOffset, scrollOffset + capacity)
@@ -473,6 +541,23 @@ function StaticSlowQueriesPanel() {
         queryPatterns={queryPatterns}
         onClose={() => setDetailPatternId(null)}
       />
+      {exportDocument != null ? (
+        <SlowQueriesExportDialog
+          open={exportDialogOpen}
+          document={exportDocument}
+          onSuccess={function onStaticExportSuccess(absolutePath) {
+            setExportDialogOpen(false)
+            setExportDocument(null)
+            showTransientStatus(
+              `wrote ${absolutePath} (on the machine running mongoscope — matters over SSH)`,
+            )
+          }}
+          onCancel={function onStaticExportCancel() {
+            setExportDialogOpen(false)
+            setExportDocument(null)
+          }}
+        />
+      ) : null}
     </box>
   )
 }
@@ -505,6 +590,8 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [enableDialogOpen, setEnableDialogOpen] = useState(false)
   const [sampleLimitDialogOpen, setSampleLimitDialogOpen] = useState(false)
+  const [exportDialogOpen, setExportDialogOpen] = useState(false)
+  const [exportDocument, setExportDocument] = useState<SlowQueriesExportDocument | null>(null)
   const [enableErrorMessage, setEnableErrorMessage] = useState('')
   const [transientStatus, setTransientStatus] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -522,7 +609,11 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const databaseRef = useRef(database)
   const enableDialogOpenRef = useRef(enableDialogOpen)
   const sampleLimitDialogOpenRef = useRef(sampleLimitDialogOpen)
+  const exportDialogOpenRef = useRef(exportDialogOpen)
   const detailOpenRef = useRef(false)
+  const isPendingRef = useRef(isPending)
+  const snapshotRef = useRef(snapshot)
+  const profilerFetchLimitRef = useRef(profilerFetchLimit)
 
   const stats = useMemo(() => computeSlowQueryStats(patterns), [patterns])
   const sortedPatterns = useMemo(
@@ -541,7 +632,9 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
   const proposedSlowms = profiling?.slowms ?? DEFAULT_SLOWMS
 
   const statusLabel = transientStatus ?? formatProfilerStatusLabel(snapshot, isPending)
-  useFooterKeybindings(enableDialogOpen || sampleLimitDialogOpen ? [] : SLOW_QUERIES_LIVE_FOOTER)
+  useFooterKeybindings(
+    enableDialogOpen || sampleLimitDialogOpen || exportDialogOpen ? [] : SLOW_QUERIES_LIVE_FOOTER,
+  )
   useFooterStatus(statusLabel)
 
   const showTransientStatus = useCallback(function showTransientStatus(message: string) {
@@ -684,9 +777,21 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
     function syncEnableDialogOpenRef() {
       enableDialogOpenRef.current = enableDialogOpen
       sampleLimitDialogOpenRef.current = sampleLimitDialogOpen
+      exportDialogOpenRef.current = exportDialogOpen
       detailOpenRef.current = detailPatternId != null
+      isPendingRef.current = isPending
+      snapshotRef.current = snapshot
+      profilerFetchLimitRef.current = profilerFetchLimit
     },
-    [detailPatternId, enableDialogOpen, sampleLimitDialogOpen],
+    [
+      detailPatternId,
+      enableDialogOpen,
+      exportDialogOpen,
+      isPending,
+      profilerFetchLimit,
+      sampleLimitDialogOpen,
+      snapshot,
+    ],
   )
 
   const cycleDatabase = useCallback(
@@ -782,7 +887,8 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
         if (
           enableDialogOpenRef.current ||
           detailOpenRef.current ||
-          sampleLimitDialogOpenRef.current
+          sampleLimitDialogOpenRef.current ||
+          exportDialogOpenRef.current
         ) {
           return
         }
@@ -799,13 +905,51 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
         setEnableDialogOpen(true)
       }
 
+      function openExport() {
+        if (
+          enableDialogOpenRef.current ||
+          detailOpenRef.current ||
+          sampleLimitDialogOpenRef.current ||
+          exportDialogOpenRef.current
+        ) {
+          return
+        }
+        if (isPendingRef.current && snapshotRef.current == null) {
+          showTransientStatus('still loading — cannot export')
+          return
+        }
+        const currentSnapshot = snapshotRef.current
+        if (currentSnapshot != null && currentSnapshot.errors.read != null && sortedLengthRef.current === 0) {
+          showTransientStatus('cannot export while data is errored')
+          return
+        }
+        if (sortedLengthRef.current === 0) {
+          showTransientStatus('nothing to export')
+          return
+        }
+        const databaseName = databaseRef.current.trim()
+        setExportDocument(
+          buildSlowQueriesExportDocument({
+            patterns: sortedPatternsRef.current,
+            source: 'live',
+            label: databaseName !== '' ? databaseName : undefined,
+            windowStartMs: currentSnapshot?.windowStartMs ?? 0,
+            windowEndMs: currentSnapshot?.windowEndMs ?? 0,
+            sampleLimit: profilerFetchLimitRef.current,
+            sort: { by: sortByRef.current, direction: sortDirectionRef.current },
+          }),
+        )
+        setExportDialogOpen(true)
+      }
+
       return {
         appMode: 'base' satisfies AppKeymapMode,
         enabled: function slowQueriesBaseEnabled() {
           return (
             !enableDialogOpenRef.current &&
             !detailOpenRef.current &&
-            !sampleLimitDialogOpenRef.current
+            !sampleLimitDialogOpenRef.current &&
+            !exportDialogOpenRef.current
           )
         },
         commands: [
@@ -857,7 +1001,8 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
               if (
                 enableDialogOpenRef.current ||
                 detailOpenRef.current ||
-                sampleLimitDialogOpenRef.current
+                sampleLimitDialogOpenRef.current ||
+                exportDialogOpenRef.current
               ) {
                 return
               }
@@ -874,6 +1019,12 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
             name: 'slow-queries.next-database',
             run() {
               cycleDatabase(1)
+            },
+          },
+          {
+            name: 'slow-queries.export-open',
+            run() {
+              openExport()
             },
           },
         ],
@@ -1005,8 +1156,54 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
           setSampleLimitDialogOpen(false)
         }}
       />
+      {exportDocument != null ? (
+        <SlowQueriesExportDialog
+          open={exportDialogOpen}
+          document={exportDocument}
+          onSuccess={function onLiveExportSuccess(absolutePath) {
+            setExportDialogOpen(false)
+            setExportDocument(null)
+            showTransientStatus(
+              `wrote ${absolutePath} (on the machine running mongoscope — matters over SSH)`,
+            )
+          }}
+          onCancel={function onLiveExportCancel() {
+            setExportDialogOpen(false)
+            setExportDocument(null)
+          }}
+        />
+      ) : null}
     </box>
   )
+}
+
+function buildSlowQueriesExportDocument(input: {
+  patterns: QueryPattern[]
+  source: ExportSource
+  label?: string
+  windowStartMs: number
+  windowEndMs: number
+  sampleLimit?: number
+  sort: ExportSort
+}): SlowQueriesExportDocument {
+  const exportable = toExportablePatterns(input.patterns)
+  const metadata: SlowQueriesExportDocument['metadata'] = {
+    mongoscopeVersion: resolveAppVersion(),
+    source: input.source,
+    windowStartMs: input.windowStartMs,
+    windowEndMs: input.windowEndMs,
+    trendBucketCount: TREND_BUCKETS,
+    exportedAt: new Date().toISOString(),
+    sort: input.sort,
+    patternCount: exportable.length,
+  }
+  if (input.label != null && input.label !== '') {
+    metadata.label = input.label
+  }
+  if (input.sampleLimit != null) {
+    metadata.sampleLimit = input.sampleLimit
+  }
+  return { metadata, patterns: exportable }
 }
 
 function formatProfilingChip(profiling: ProfilerSlowQueriesSnapshot['profiling']): string {
