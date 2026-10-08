@@ -28,6 +28,18 @@ export const QUERY_DETAIL_SHORTCUTS: readonly Shortcut[] = [
     bindings: [{ key: 'r', cmd: 'query-detail.toggle-raw' }],
   },
   {
+    keys: 'c',
+    helpLabel: 'Copy displayed detail (raw or curated)',
+    footerLabel: 'copy',
+    bindings: [{ key: 'c', cmd: 'query-detail.copy-detail' }],
+  },
+  {
+    keys: 's',
+    helpLabel: 'Copy suggested index command',
+    footerLabel: 'suggest',
+    bindings: [{ key: 's', cmd: 'query-detail.copy-suggest' }],
+  },
+  {
     keys: 'i',
     helpLabel: 'Jump to Indexes (focus collection + suggested vs existing)',
     footerLabel: 'indexes',
