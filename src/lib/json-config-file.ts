@@ -1,5 +1,6 @@
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { atomicWriteFile } from './atomic-write-file'
 import { isRecord } from './is-record'
 
 /**
@@ -50,21 +51,8 @@ export async function updateJsonConfigFile(
 export async function saveJsonConfigFile<T>(filePath: string, value: T): Promise<void> {
   const directoryPath = dirname(filePath)
   await mkdir(directoryPath, { recursive: true })
-
-  const temporaryFilePath = `${filePath}.${process.pid}.${Date.now()}.tmp`
   const serialized = `${JSON.stringify(value, null, 2)}\n`
-
-  try {
-    await writeFile(temporaryFilePath, serialized, { encoding: 'utf8', mode: 0o600 })
-    await rename(temporaryFilePath, filePath)
-  } catch (error) {
-    try {
-      await unlink(temporaryFilePath)
-    } catch {
-      // ignore cleanup failure
-    }
-    throw error
-  }
+  await atomicWriteFile(filePath, serialized)
 }
 
 async function readJsonObjectOrEmpty(filePath: string): Promise<Record<string, unknown>> {

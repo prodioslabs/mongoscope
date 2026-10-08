@@ -1,15 +1,11 @@
 import type { Severity } from '../../../lib/text-table-content'
 import { planSeverity } from '../../../lib/text-table-content'
 import { formatCount } from '../../../../lib/format-count'
+import { sparkline as sparklineFromLib } from '../../../../lib/sparkline'
 import { truncateText } from '../../../../lib/truncate-text'
 
 export type { Severity } from '../../../lib/text-table-content'
 export { formatCount, planSeverity }
-
-const SPARK_CHARS = '▁▂▃▄▅▆▇█'
-
-/** Default sparkline width so the TREND column stays narrow in the table. */
-const SPARKLINE_WIDTH = 12
 
 export function formatExaminedRet(examined: number, returned: number): string {
   return `${formatCount(examined)} / ${formatCount(returned)}`
@@ -50,39 +46,8 @@ export function formatWindowLabel(startMs: number, endMs: number): string {
   return `${Math.max(1, Math.round(days))}d window`
 }
 
-export function sparkline(trend: Uint16Array, width: number = SPARKLINE_WIDTH): string {
-  if (trend.length === 0 || width <= 0) {
-    return ''
-  }
-
-  const pooled = new Uint16Array(width)
-  for (let i = 0; i < trend.length; i++) {
-    const bucket = Math.min(width - 1, Math.floor((i / trend.length) * width))
-    const v = trend[i] ?? 0
-    if (v > (pooled[bucket] ?? 0)) {
-      pooled[bucket] = v
-    }
-  }
-
-  let max = 0
-  for (let i = 0; i < pooled.length; i++) {
-    const v = pooled[i] ?? 0
-    if (v > max) {
-      max = v
-    }
-  }
-  if (max === 0) {
-    return SPARK_CHARS[0]!.repeat(width)
-  }
-
-  let out = ''
-  const last = SPARK_CHARS.length - 1
-  for (let i = 0; i < pooled.length; i++) {
-    const v = pooled[i] ?? 0
-    const idx = Math.min(last, Math.round((v / max) * last))
-    out += SPARK_CHARS[idx]!
-  }
-  return out
+export function sparkline(trend: Uint16Array, width?: number): string {
+  return sparklineFromLib(trend, width)
 }
 
 export function avgMsSeverity(avgMs: number): Severity {
