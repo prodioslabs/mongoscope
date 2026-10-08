@@ -1,6 +1,6 @@
 import { ScrollBoxRenderable, TextAttributes, type RGBA } from '@opentui/core'
 import { useBindings, useKeymap } from '@opentui/keymap/react'
-import { useTerminalDimensions } from '@opentui/react'
+import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   getPatternExplain,
@@ -11,7 +11,9 @@ import {
 } from '../../../../query-patterns'
 import type { LogStore } from '../../../../parser'
 import { getPatternExplainFromSample } from '../../../../profiler'
+import { displayText } from '../../../../lib/display-text'
 import { errorMessageText } from '../../../../lib/error-message'
+import { writeClipboardText } from '../../../lib/clipboard'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { overlayMode } from '../../../lib/overlay-mode'
 import { severityColor } from '../../../lib/text-table-content'
@@ -29,6 +31,23 @@ import {
   planSeverity,
   sparkline,
 } from '../format'
+import {
+  buildQueryDetailCopyText,
+  buildSuggestedIndexCopyText,
+  formatCpu,
+  formatTimestamp,
+  prettyDisplay,
+} from './build-copy-text'
+import { scrollThumbMetrics, type ScrollThumbMetrics } from './scroll-thumb-metrics'
+
+const COPY_FEEDBACK_MS = 1500
+
+const HIDDEN_SCROLL_THUMB: ScrollThumbMetrics = {
+  visible: false,
+  trackRows: 0,
+  thumbSize: 0,
+  thumbOffset: 0,
+}
 
 type QueryDetailDialogProps = {
   open: boolean
@@ -50,6 +69,7 @@ export function QueryDetailDialog({
 }: QueryDetailDialogProps) {
   const theme = useTheme((s) => s.theme)
   const keymap = useKeymap()
+  const renderer = useRenderer()
   const dimensions = useTerminalDimensions()
   const navigateToTab = useSession((s) => s.navigateToTab)
   const pushOverlayKeybindings = useFooter((s) => s.pushOverlayKeybindings)
@@ -58,12 +78,75 @@ export function QueryDetailDialog({
   const onCloseRef = useRef(onClose)
   const explainRef = useRef<PatternExplain | null>(null)
   const patternRef = useRef(pattern)
+  const showRawRef = useRef(false)
+  const loadErrorRef = useRef<string | null>(null)
+  const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   onCloseRef.current = onClose
   patternRef.current = pattern
   const [explain, setExplain] = useState<PatternExplain | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
+  const [thumb, setThumb] = useState<ScrollThumbMetrics>(HIDDEN_SCROLL_THUMB)
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
   explainRef.current = explain
+  showRawRef.current = showRaw
+  loadErrorRef.current = loadError
+
+  function clearCopyFeedbackTimer() {
+    if (copyFeedbackTimerRef.current != null) {
+      clearTimeout(copyFeedbackTimerRef.current)
+      copyFeedbackTimerRef.current = null
+    }
+  }
+
+  function showCopyFeedback(message: string) {
+    clearCopyFeedbackTimer()
+    setCopyFeedback(message)
+    copyFeedbackTimerRef.current = setTimeout(function clearCopyFeedback() {
+      copyFeedbackTimerRef.current = null
+      setCopyFeedback(null)
+    }, COPY_FEEDBACK_MS)
+  }
+
+  function copyPlainText(text: string | null, emptyMessage: string) {
+    if (text == null) {
+      showCopyFeedback(emptyMessage)
+      return
+    }
+    try {
+      const result = writeClipboardText(renderer, text)
+      if (result.status === 'sent') {
+        showCopyFeedback('Sent to clipboard')
+        return
+      }
+      if (result.status === 'copied') {
+        showCopyFeedback('Copied')
+        return
+      }
+      showCopyFeedback(result.message)
+    } catch {
+      showCopyFeedback('Clipboard write failed')
+    }
+  }
+
+  function syncScrollThumb() {
+    const scroll = scrollRef.current
+    const next =
+      scroll == null
+        ? HIDDEN_SCROLL_THUMB
+        : scrollThumbMetrics(scroll.content.height, scroll.viewport.height, scroll.scrollTop)
+    setThumb((prev) => {
+      if (
+        prev.visible === next.visible &&
+        prev.trackRows === next.trackRows &&
+        prev.thumbSize === next.thumbSize &&
+        prev.thumbOffset === next.thumbOffset
+      ) {
+        return prev
+      }
+      return next
+    })
+  }
 
   useEffect(
     function syncQueryDetailOverlayMode() {
@@ -97,8 +180,19 @@ export function QueryDetailDialog({
         return
       }
       setShowRaw(false)
+      setCopyFeedback(null)
+      clearCopyFeedbackTimer()
     },
     [open],
+  )
+
+  useEffect(
+    function clearCopyFeedbackOnUnmount() {
+      return function disposeCopyFeedbackTimer() {
+        clearCopyFeedbackTimer()
+      }
+    },
+    [],
   )
 
   useEffect(
@@ -107,8 +201,30 @@ export function QueryDetailDialog({
         return
       }
       scrollRef.current?.scrollTo(0)
+      syncScrollThumb()
     },
-    [open, showRaw, pattern?.id],
+    [open, showRaw, pattern?.id, explain],
+  )
+
+  useEffect(
+    function syncScrollThumbWhileOpen() {
+      if (!open || explain == null) {
+        setThumb(HIDDEN_SCROLL_THUMB)
+        return
+      }
+
+      let frameId = 0
+      function tick() {
+        syncScrollThumb()
+        frameId = requestAnimationFrame(tick)
+      }
+      frameId = requestAnimationFrame(tick)
+
+      return function stopScrollThumbSync() {
+        cancelAnimationFrame(frameId)
+      }
+    },
+    [open, explain, showRaw, dimensions.width, dimensions.height],
   )
 
   useEffect(
@@ -179,27 +295,57 @@ export function QueryDetailDialog({
             },
           },
           {
+            name: 'query-detail.copy-detail',
+            run() {
+              if (loadErrorRef.current != null) {
+                showCopyFeedback('Nothing to copy')
+                return
+              }
+              if (explainRef.current == null || patternRef.current == null) {
+                showCopyFeedback('Nothing to copy')
+                return
+              }
+              copyPlainText(
+                buildQueryDetailCopyText(explainRef.current, patternRef.current, showRawRef.current),
+                'Nothing to copy',
+              )
+            },
+          },
+          {
+            name: 'query-detail.copy-suggest',
+            run() {
+              copyPlainText(
+                buildSuggestedIndexCopyText(explainRef.current),
+                'No suggested index',
+              )
+            },
+          },
+          {
             name: 'query-detail.scroll-up',
             run() {
               scrollRef.current?.scrollBy(-1)
+              syncScrollThumb()
             },
           },
           {
             name: 'query-detail.scroll-down',
             run() {
               scrollRef.current?.scrollBy(1)
+              syncScrollThumb()
             },
           },
           {
             name: 'query-detail.page-up',
             run() {
               scrollRef.current?.scrollBy(-1, 'viewport')
+              syncScrollThumb()
             },
           },
           {
             name: 'query-detail.page-down',
             run() {
               scrollRef.current?.scrollBy(1, 'viewport')
+              syncScrollThumb()
             },
           },
           {
@@ -273,142 +419,220 @@ export function QueryDetailDialog({
         maxHeight={dimensions.height - paddingTop - 1}
       >
         <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
-          <text fg={theme.text} attributes={TextAttributes.BOLD}>
-            Query detail
-          </text>
-          <text fg={theme.textMuted} onMouseUp={onClose}>
-            esc
-          </text>
+          <text fg={theme.text} attributes={TextAttributes.BOLD} content={displayText('Query detail')} />
+          <box flexDirection="row" gap={1} flexShrink={0}>
+            <text
+              fg={theme.textMuted}
+              onMouseUp={function copyDetailFromHeader() {
+                if (loadErrorRef.current != null) {
+                  showCopyFeedback('Nothing to copy')
+                  return
+                }
+                if (explainRef.current == null || patternRef.current == null) {
+                  showCopyFeedback('Nothing to copy')
+                  return
+                }
+                copyPlainText(
+                  buildQueryDetailCopyText(
+                    explainRef.current,
+                    patternRef.current,
+                    showRawRef.current,
+                  ),
+                  'Nothing to copy',
+                )
+              }}
+              content={displayText('c copy')}
+            />
+            <text fg={theme.textMuted} content={displayText('·')} />
+            <text fg={theme.textMuted} onMouseUp={onClose} content={displayText('esc')} />
+          </box>
         </box>
 
+        {copyFeedback != null ? (
+          <text
+            fg={copyFeedback.startsWith('Sent') || copyFeedback === 'Copied' ? theme.success : theme.warning}
+            content={displayText(copyFeedback)}
+            flexShrink={0}
+          />
+        ) : null}
+
         {pattern == null ? (
-          <text fg={theme.textMuted}>No query selected</text>
+          <text fg={theme.textMuted} content={displayText('No query selected')} />
         ) : loadError != null ? (
-          <text fg={theme.error}>{loadError}</text>
+          <text fg={theme.error} content={displayText(loadError)} />
         ) : explain == null ? (
-          <text fg={theme.textMuted}>Loading…</text>
+          <text fg={theme.textMuted} content={displayText('Loading…')} />
         ) : (
-          <scrollbox
-            ref={scrollRef}
+          <box
             height={bodyHeight}
             width="100%"
             flexGrow={1}
             flexShrink={1}
-            scrollX={false}
-            scrollY
-            backgroundColor={theme.backgroundPanel}
-            rootOptions={{ backgroundColor: theme.backgroundPanel }}
-            viewportOptions={{ backgroundColor: theme.backgroundPanel }}
-            contentOptions={{
-              backgroundColor: theme.backgroundPanel,
-              flexDirection: 'column',
-            }}
-            horizontalScrollbarOptions={{ visible: false }}
-            verticalScrollbarOptions={{
-              trackOptions: {
-                foregroundColor: theme.border,
-                backgroundColor: theme.backgroundElement,
-              },
-            }}
+            flexDirection="row"
+            gap={0}
           >
-            <box width="100%" flexDirection="column" flexShrink={0}>
-              {showRaw ? (
-                <DetailSection title="Raw sample" theme={theme}>
-                  <text fg={theme.text} wrapMode="char">
-                    {explain.rawDisplay}
-                  </text>
-                </DetailSection>
-              ) : (
-                <>
-                  <DetailSection title="Diagnosis" theme={theme}>
-                    <DetailRow
-                      label="Namespace"
-                      value={explain.namespace}
-                      valueColor={theme.info}
+            <scrollbox
+              ref={scrollRef}
+              height={bodyHeight}
+              flexGrow={1}
+              flexShrink={1}
+              scrollX={false}
+              scrollY
+              backgroundColor={theme.backgroundPanel}
+              rootOptions={{ backgroundColor: theme.backgroundPanel }}
+              viewportOptions={{ backgroundColor: theme.backgroundPanel }}
+              contentOptions={{
+                backgroundColor: theme.backgroundPanel,
+                flexDirection: 'column',
+              }}
+              horizontalScrollbarOptions={{ visible: false }}
+              verticalScrollbarOptions={{ visible: false }}
+            >
+              <box width="100%" flexDirection="column" flexShrink={0}>
+                {showRaw ? (
+                  <DetailSection title="Raw sample" theme={theme}>
+                    <text
+                      fg={theme.text}
+                      wrapMode="char"
+                      content={displayText(explain.rawDisplay)}
                     />
-                    <DetailRow label="Op" value={explain.op} />
-                    <DetailRow
-                      label="Plan"
-                      value={explain.plan}
-                      valueColor={severityColor(theme, planSeverity(explain.plan))}
-                    />
-                    {explain.planSummary != null && explain.planSummary !== explain.plan ? (
-                      <DetailRow label="Plan summary" value={explain.planSummary} />
-                    ) : null}
-                    <DetailRow
-                      label="Duration"
-                      value={`${formatCount(explain.totalMillis)} ms`}
-                      valueColor={severityColor(theme, avgMsSeverity(explain.totalMillis))}
-                    />
-                    <DetailRow
-                      label="Examined/ret"
-                      value={formatExaminedRet(explain.docsExamined, explain.nReturned)}
-                      valueColor={severityColor(
-                        theme,
-                        examinedSeverity(explain.docsExamined, explain.nReturned),
-                      )}
-                    />
-                    <DetailRow label="Stage" value={explain.stageDetail} />
                   </DetailSection>
-
-                  <DetailSection title="Filter / pipeline" theme={theme}>
-                    <text fg={theme.text} wrapMode="word">
-                      {prettyDisplay(explain.filter)}
-                    </text>
-                  </DetailSection>
-
-                  {explain.suggestedIndex != null ? (
-                    <DetailSection title="Suggested index" theme={theme}>
-                      <text fg={theme.success} wrapMode="word">
-                        {explain.suggestedIndex.command}
-                      </text>
-                      <text fg={theme.textMuted} wrapMode="word">
-                        {explain.suggestedIndex.reason}
-                      </text>
-                      <text fg={theme.textMuted} wrapMode="word">
-                        Press i to open Indexes for this collection
-                      </text>
+                ) : (
+                  <>
+                    <DetailSection title="Diagnosis" theme={theme}>
+                      <DetailRow
+                        label="Namespace"
+                        value={explain.namespace}
+                        valueColor={theme.info}
+                      />
+                      <DetailRow label="Op" value={explain.op} />
+                      <DetailRow
+                        label="Plan"
+                        value={explain.plan}
+                        valueColor={severityColor(theme, planSeverity(explain.plan))}
+                      />
+                      {explain.planSummary != null && explain.planSummary !== explain.plan ? (
+                        <DetailRow label="Plan summary" value={explain.planSummary} />
+                      ) : null}
+                      <DetailRow
+                        label="Duration"
+                        value={`${formatCount(explain.totalMillis)} ms`}
+                        valueColor={severityColor(theme, avgMsSeverity(explain.totalMillis))}
+                      />
+                      <DetailRow
+                        label="Examined/ret"
+                        value={formatExaminedRet(explain.docsExamined, explain.nReturned)}
+                        valueColor={severityColor(
+                          theme,
+                          examinedSeverity(explain.docsExamined, explain.nReturned),
+                        )}
+                      />
+                      <DetailRow label="Stage" value={explain.stageDetail} />
                     </DetailSection>
-                  ) : null}
 
-                  <DetailSection title="Pattern" theme={theme}>
-                    <DetailRow label="Count" value={formatCount(pattern.count)} />
-                    <DetailRow
-                      label="Avg ms"
-                      value={formatCount(pattern.avgMs)}
-                      valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
-                    />
-                    <DetailRow label="Total ms" value={formatCount(pattern.totalDurationMs)} />
-                    <DetailRow label="Shape" value={pattern.shape} />
-                    <DetailRow
-                      label="Trend"
-                      value={sparkline(pattern.trend)}
-                      valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
-                    />
-                  </DetailSection>
+                    <DetailSection title="Filter / pipeline" theme={theme}>
+                      <text
+                        fg={theme.text}
+                        wrapMode="word"
+                        content={displayText(prettyDisplay(explain.filter))}
+                      />
+                    </DetailSection>
 
-                  <DetailSection title="Context" theme={theme}>
-                    <DetailRow label="Timestamp" value={formatTimestamp(explain.timestampMs)} />
-                    <DetailRow label="Ctx" value={explain.ctx || 'n/a'} />
-                    <DetailRow label="App" value={explain.appName ?? 'n/a'} />
-                    <DetailRow label="Remote" value={explain.remote ?? 'n/a'} />
-                    <DetailRow label="Protocol" value={explain.protocol ?? 'n/a'} />
-                  </DetailSection>
+                    {explain.suggestedIndex != null ? (
+                      <DetailSection title="Suggested index" theme={theme}>
+                        <text
+                          fg={theme.success}
+                          wrapMode="word"
+                          content={displayText(explain.suggestedIndex.command)}
+                        />
+                        <text
+                          fg={theme.textMuted}
+                          wrapMode="word"
+                          content={displayText(explain.suggestedIndex.reason)}
+                        />
+                        <text
+                          fg={theme.textMuted}
+                          wrapMode="word"
+                          content={displayText('Press i to open Indexes for this collection')}
+                        />
+                      </DetailSection>
+                    ) : null}
 
-                  <WorkMetricsSection explain={explain} theme={theme} />
+                    <DetailSection title="Pattern" theme={theme}>
+                      <DetailRow label="Count" value={formatCount(pattern.count)} />
+                      <DetailRow
+                        label="Avg ms"
+                        value={formatCount(pattern.avgMs)}
+                        valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
+                      />
+                      <DetailRow label="Total ms" value={formatCount(pattern.totalDurationMs)} />
+                      <DetailRow label="Shape" value={pattern.shape} />
+                      <DetailRow
+                        label="Trend"
+                        value={sparkline(pattern.trend)}
+                        valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
+                      />
+                    </DetailSection>
 
-                  <DetailSection title="Command" theme={theme}>
-                    <text fg={theme.text} wrapMode="word">
-                      {explain.commandDisplay}
-                    </text>
-                  </DetailSection>
-                </>
-              )}
-            </box>
-          </scrollbox>
+                    <DetailSection title="Context" theme={theme}>
+                      <DetailRow label="Timestamp" value={formatTimestamp(explain.timestampMs)} />
+                      <DetailRow label="Ctx" value={explain.ctx || 'n/a'} />
+                      <DetailRow label="App" value={explain.appName ?? 'n/a'} />
+                      <DetailRow label="Remote" value={explain.remote ?? 'n/a'} />
+                      <DetailRow label="Protocol" value={explain.protocol ?? 'n/a'} />
+                    </DetailSection>
+
+                    <WorkMetricsSection explain={explain} theme={theme} />
+
+                    <DetailSection title="Command" theme={theme}>
+                      <text
+                        fg={theme.text}
+                        wrapMode="word"
+                        content={displayText(explain.commandDisplay)}
+                      />
+                    </DetailSection>
+                  </>
+                )}
+              </box>
+            </scrollbox>
+            {thumb.visible ? (
+              <DetailScrollThumb
+                trackRows={thumb.trackRows}
+                thumbSize={thumb.thumbSize}
+                thumbOffset={thumb.thumbOffset}
+                theme={theme}
+              />
+            ) : null}
+          </box>
         )}
       </box>
     </Dialog>
+  )
+}
+
+type DetailScrollThumbProps = {
+  trackRows: number
+  thumbSize: number
+  thumbOffset: number
+  theme: Theme
+}
+
+function DetailScrollThumb({ trackRows, thumbSize, thumbOffset, theme }: DetailScrollThumbProps) {
+  const cells: string[] = []
+  for (let row = 0; row < trackRows; row += 1) {
+    const inThumb = row >= thumbOffset && row < thumbOffset + thumbSize
+    cells.push(inThumb ? '█' : ' ')
+  }
+
+  return (
+    <box
+      width={1}
+      height={trackRows}
+      flexShrink={0}
+      backgroundColor={theme.backgroundElement}
+    >
+      <text fg={theme.border} content={displayText(cells.join('\n'))} />
+    </box>
   )
 }
 
@@ -464,9 +688,7 @@ type DetailSectionProps = {
 function DetailSection({ title, theme, children }: DetailSectionProps) {
   return (
     <box flexDirection="column" gap={0} paddingBottom={1}>
-      <text fg={theme.accent} attributes={TextAttributes.BOLD}>
-        {title}
-      </text>
+      <text fg={theme.accent} attributes={TextAttributes.BOLD} content={displayText(title)} />
       <box flexDirection="column" paddingTop={0}>
         {children}
       </box>
@@ -484,40 +706,18 @@ function DetailRow({ label, value, valueColor }: DetailRowProps) {
   const theme = useTheme((s) => s.theme)
   return (
     <box flexDirection="row" gap={1}>
-      <text fg={theme.textMuted} width={14} flexShrink={0}>
-        {label}
-      </text>
-      <text fg={valueColor ?? theme.text} wrapMode="word" flexGrow={1}>
-        {value}
-      </text>
+      <text
+        fg={theme.textMuted}
+        width={14}
+        flexShrink={0}
+        content={displayText(label)}
+      />
+      <text
+        fg={valueColor ?? theme.text}
+        wrapMode="word"
+        flexGrow={1}
+        content={displayText(value)}
+      />
     </box>
   )
-}
-
-function prettyDisplay(value: string): string {
-  if (value === 'n/a') {
-    return value
-  }
-  try {
-    return JSON.stringify(JSON.parse(value), null, 2)
-  } catch {
-    return value
-  }
-}
-
-function formatTimestamp(timestampMs: number): string {
-  if (!Number.isFinite(timestampMs)) {
-    return 'n/a'
-  }
-  return new Date(timestampMs).toISOString()
-}
-
-function formatCpu(cpuNanos: number): string {
-  if (cpuNanos >= 1_000_000) {
-    return `${(cpuNanos / 1_000_000).toFixed(1)} ms`
-  }
-  if (cpuNanos >= 1_000) {
-    return `${(cpuNanos / 1_000).toFixed(0)} µs`
-  }
-  return `${formatCount(cpuNanos)} ns`
 }
