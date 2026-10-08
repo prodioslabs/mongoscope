@@ -420,7 +420,32 @@ export function QueryDetailDialog({
       >
         <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
           <text fg={theme.text} attributes={TextAttributes.BOLD} content={displayText('Query detail')} />
-          <text fg={theme.textMuted} onMouseUp={onClose} content={displayText('esc')} />
+          <box flexDirection="row" gap={1} flexShrink={0}>
+            <text
+              fg={theme.textMuted}
+              onMouseUp={function copyDetailFromHeader() {
+                if (loadErrorRef.current != null) {
+                  showCopyFeedback('Nothing to copy')
+                  return
+                }
+                if (explainRef.current == null || patternRef.current == null) {
+                  showCopyFeedback('Nothing to copy')
+                  return
+                }
+                copyPlainText(
+                  buildQueryDetailCopyText(
+                    explainRef.current,
+                    patternRef.current,
+                    showRawRef.current,
+                  ),
+                  'Nothing to copy',
+                )
+              }}
+              content={displayText('c copy')}
+            />
+            <text fg={theme.textMuted} content={displayText('·')} />
+            <text fg={theme.textMuted} onMouseUp={onClose} content={displayText('esc')} />
+          </box>
         </box>
 
         {copyFeedback != null ? (
