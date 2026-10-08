@@ -29,6 +29,14 @@ import {
   planSeverity,
   sparkline,
 } from '../format'
+import { scrollThumbMetrics, type ScrollThumbMetrics } from './scroll-thumb-metrics'
+
+const HIDDEN_SCROLL_THUMB: ScrollThumbMetrics = {
+  visible: false,
+  trackRows: 0,
+  thumbSize: 0,
+  thumbOffset: 0,
+}
 
 type QueryDetailDialogProps = {
   open: boolean
@@ -63,7 +71,27 @@ export function QueryDetailDialog({
   const [explain, setExplain] = useState<PatternExplain | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
+  const [thumb, setThumb] = useState<ScrollThumbMetrics>(HIDDEN_SCROLL_THUMB)
   explainRef.current = explain
+
+  function syncScrollThumb() {
+    const scroll = scrollRef.current
+    const next =
+      scroll == null
+        ? HIDDEN_SCROLL_THUMB
+        : scrollThumbMetrics(scroll.content.height, scroll.viewport.height, scroll.scrollTop)
+    setThumb((prev) => {
+      if (
+        prev.visible === next.visible &&
+        prev.trackRows === next.trackRows &&
+        prev.thumbSize === next.thumbSize &&
+        prev.thumbOffset === next.thumbOffset
+      ) {
+        return prev
+      }
+      return next
+    })
+  }
 
   useEffect(
     function syncQueryDetailOverlayMode() {
@@ -107,8 +135,30 @@ export function QueryDetailDialog({
         return
       }
       scrollRef.current?.scrollTo(0)
+      syncScrollThumb()
     },
-    [open, showRaw, pattern?.id],
+    [open, showRaw, pattern?.id, explain],
+  )
+
+  useEffect(
+    function syncScrollThumbWhileOpen() {
+      if (!open || explain == null) {
+        setThumb(HIDDEN_SCROLL_THUMB)
+        return
+      }
+
+      let frameId = 0
+      function tick() {
+        syncScrollThumb()
+        frameId = requestAnimationFrame(tick)
+      }
+      frameId = requestAnimationFrame(tick)
+
+      return function stopScrollThumbSync() {
+        cancelAnimationFrame(frameId)
+      }
+    },
+    [open, explain, showRaw, dimensions.width, dimensions.height],
   )
 
   useEffect(
@@ -182,24 +232,28 @@ export function QueryDetailDialog({
             name: 'query-detail.scroll-up',
             run() {
               scrollRef.current?.scrollBy(-1)
+              syncScrollThumb()
             },
           },
           {
             name: 'query-detail.scroll-down',
             run() {
               scrollRef.current?.scrollBy(1)
+              syncScrollThumb()
             },
           },
           {
             name: 'query-detail.page-up',
             run() {
               scrollRef.current?.scrollBy(-1, 'viewport')
+              syncScrollThumb()
             },
           },
           {
             name: 'query-detail.page-down',
             run() {
               scrollRef.current?.scrollBy(1, 'viewport')
+              syncScrollThumb()
             },
           },
           {
@@ -288,127 +342,164 @@ export function QueryDetailDialog({
         ) : explain == null ? (
           <text fg={theme.textMuted}>Loading…</text>
         ) : (
-          <scrollbox
-            ref={scrollRef}
+          <box
             height={bodyHeight}
             width="100%"
             flexGrow={1}
             flexShrink={1}
-            scrollX={false}
-            scrollY
-            backgroundColor={theme.backgroundPanel}
-            rootOptions={{ backgroundColor: theme.backgroundPanel }}
-            viewportOptions={{ backgroundColor: theme.backgroundPanel }}
-            contentOptions={{
-              backgroundColor: theme.backgroundPanel,
-              flexDirection: 'column',
-            }}
-            horizontalScrollbarOptions={{ visible: false }}
-            verticalScrollbarOptions={{
-              trackOptions: {
-                foregroundColor: theme.border,
-                backgroundColor: theme.backgroundElement,
-              },
-            }}
+            flexDirection="row"
+            gap={0}
           >
-            <box width="100%" flexDirection="column" flexShrink={0}>
-              {showRaw ? (
-                <DetailSection title="Raw sample" theme={theme}>
-                  <text fg={theme.text} wrapMode="char">
-                    {explain.rawDisplay}
-                  </text>
-                </DetailSection>
-              ) : (
-                <>
-                  <DetailSection title="Diagnosis" theme={theme}>
-                    <DetailRow
-                      label="Namespace"
-                      value={explain.namespace}
-                      valueColor={theme.info}
-                    />
-                    <DetailRow label="Op" value={explain.op} />
-                    <DetailRow
-                      label="Plan"
-                      value={explain.plan}
-                      valueColor={severityColor(theme, planSeverity(explain.plan))}
-                    />
-                    {explain.planSummary != null && explain.planSummary !== explain.plan ? (
-                      <DetailRow label="Plan summary" value={explain.planSummary} />
-                    ) : null}
-                    <DetailRow
-                      label="Duration"
-                      value={`${formatCount(explain.totalMillis)} ms`}
-                      valueColor={severityColor(theme, avgMsSeverity(explain.totalMillis))}
-                    />
-                    <DetailRow
-                      label="Examined/ret"
-                      value={formatExaminedRet(explain.docsExamined, explain.nReturned)}
-                      valueColor={severityColor(
-                        theme,
-                        examinedSeverity(explain.docsExamined, explain.nReturned),
-                      )}
-                    />
-                    <DetailRow label="Stage" value={explain.stageDetail} />
-                  </DetailSection>
-
-                  <DetailSection title="Filter / pipeline" theme={theme}>
-                    <text fg={theme.text} wrapMode="word">
-                      {prettyDisplay(explain.filter)}
+            <scrollbox
+              ref={scrollRef}
+              height={bodyHeight}
+              flexGrow={1}
+              flexShrink={1}
+              scrollX={false}
+              scrollY
+              backgroundColor={theme.backgroundPanel}
+              rootOptions={{ backgroundColor: theme.backgroundPanel }}
+              viewportOptions={{ backgroundColor: theme.backgroundPanel }}
+              contentOptions={{
+                backgroundColor: theme.backgroundPanel,
+                flexDirection: 'column',
+              }}
+              horizontalScrollbarOptions={{ visible: false }}
+              verticalScrollbarOptions={{ visible: false }}
+            >
+              <box width="100%" flexDirection="column" flexShrink={0}>
+                {showRaw ? (
+                  <DetailSection title="Raw sample" theme={theme}>
+                    <text fg={theme.text} wrapMode="char">
+                      {explain.rawDisplay}
                     </text>
                   </DetailSection>
+                ) : (
+                  <>
+                    <DetailSection title="Diagnosis" theme={theme}>
+                      <DetailRow
+                        label="Namespace"
+                        value={explain.namespace}
+                        valueColor={theme.info}
+                      />
+                      <DetailRow label="Op" value={explain.op} />
+                      <DetailRow
+                        label="Plan"
+                        value={explain.plan}
+                        valueColor={severityColor(theme, planSeverity(explain.plan))}
+                      />
+                      {explain.planSummary != null && explain.planSummary !== explain.plan ? (
+                        <DetailRow label="Plan summary" value={explain.planSummary} />
+                      ) : null}
+                      <DetailRow
+                        label="Duration"
+                        value={`${formatCount(explain.totalMillis)} ms`}
+                        valueColor={severityColor(theme, avgMsSeverity(explain.totalMillis))}
+                      />
+                      <DetailRow
+                        label="Examined/ret"
+                        value={formatExaminedRet(explain.docsExamined, explain.nReturned)}
+                        valueColor={severityColor(
+                          theme,
+                          examinedSeverity(explain.docsExamined, explain.nReturned),
+                        )}
+                      />
+                      <DetailRow label="Stage" value={explain.stageDetail} />
+                    </DetailSection>
 
-                  {explain.suggestedIndex != null ? (
-                    <DetailSection title="Suggested index" theme={theme}>
-                      <text fg={theme.success} wrapMode="word">
-                        {explain.suggestedIndex.command}
-                      </text>
-                      <text fg={theme.textMuted} wrapMode="word">
-                        {explain.suggestedIndex.reason}
-                      </text>
-                      <text fg={theme.textMuted} wrapMode="word">
-                        Press i to open Indexes for this collection
+                    <DetailSection title="Filter / pipeline" theme={theme}>
+                      <text fg={theme.text} wrapMode="word">
+                        {prettyDisplay(explain.filter)}
                       </text>
                     </DetailSection>
-                  ) : null}
 
-                  <DetailSection title="Pattern" theme={theme}>
-                    <DetailRow label="Count" value={formatCount(pattern.count)} />
-                    <DetailRow
-                      label="Avg ms"
-                      value={formatCount(pattern.avgMs)}
-                      valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
-                    />
-                    <DetailRow label="Total ms" value={formatCount(pattern.totalDurationMs)} />
-                    <DetailRow label="Shape" value={pattern.shape} />
-                    <DetailRow
-                      label="Trend"
-                      value={sparkline(pattern.trend)}
-                      valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
-                    />
-                  </DetailSection>
+                    {explain.suggestedIndex != null ? (
+                      <DetailSection title="Suggested index" theme={theme}>
+                        <text fg={theme.success} wrapMode="word">
+                          {explain.suggestedIndex.command}
+                        </text>
+                        <text fg={theme.textMuted} wrapMode="word">
+                          {explain.suggestedIndex.reason}
+                        </text>
+                        <text fg={theme.textMuted} wrapMode="word">
+                          Press i to open Indexes for this collection
+                        </text>
+                      </DetailSection>
+                    ) : null}
 
-                  <DetailSection title="Context" theme={theme}>
-                    <DetailRow label="Timestamp" value={formatTimestamp(explain.timestampMs)} />
-                    <DetailRow label="Ctx" value={explain.ctx || 'n/a'} />
-                    <DetailRow label="App" value={explain.appName ?? 'n/a'} />
-                    <DetailRow label="Remote" value={explain.remote ?? 'n/a'} />
-                    <DetailRow label="Protocol" value={explain.protocol ?? 'n/a'} />
-                  </DetailSection>
+                    <DetailSection title="Pattern" theme={theme}>
+                      <DetailRow label="Count" value={formatCount(pattern.count)} />
+                      <DetailRow
+                        label="Avg ms"
+                        value={formatCount(pattern.avgMs)}
+                        valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
+                      />
+                      <DetailRow label="Total ms" value={formatCount(pattern.totalDurationMs)} />
+                      <DetailRow label="Shape" value={pattern.shape} />
+                      <DetailRow
+                        label="Trend"
+                        value={sparkline(pattern.trend)}
+                        valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
+                      />
+                    </DetailSection>
 
-                  <WorkMetricsSection explain={explain} theme={theme} />
+                    <DetailSection title="Context" theme={theme}>
+                      <DetailRow label="Timestamp" value={formatTimestamp(explain.timestampMs)} />
+                      <DetailRow label="Ctx" value={explain.ctx || 'n/a'} />
+                      <DetailRow label="App" value={explain.appName ?? 'n/a'} />
+                      <DetailRow label="Remote" value={explain.remote ?? 'n/a'} />
+                      <DetailRow label="Protocol" value={explain.protocol ?? 'n/a'} />
+                    </DetailSection>
 
-                  <DetailSection title="Command" theme={theme}>
-                    <text fg={theme.text} wrapMode="word">
-                      {explain.commandDisplay}
-                    </text>
-                  </DetailSection>
-                </>
-              )}
-            </box>
-          </scrollbox>
+                    <WorkMetricsSection explain={explain} theme={theme} />
+
+                    <DetailSection title="Command" theme={theme}>
+                      <text fg={theme.text} wrapMode="word">
+                        {explain.commandDisplay}
+                      </text>
+                    </DetailSection>
+                  </>
+                )}
+              </box>
+            </scrollbox>
+            {thumb.visible ? (
+              <DetailScrollThumb
+                trackRows={thumb.trackRows}
+                thumbSize={thumb.thumbSize}
+                thumbOffset={thumb.thumbOffset}
+                theme={theme}
+              />
+            ) : null}
+          </box>
         )}
       </box>
     </Dialog>
+  )
+}
+
+type DetailScrollThumbProps = {
+  trackRows: number
+  thumbSize: number
+  thumbOffset: number
+  theme: Theme
+}
+
+function DetailScrollThumb({ trackRows, thumbSize, thumbOffset, theme }: DetailScrollThumbProps) {
+  const cells: string[] = []
+  for (let row = 0; row < trackRows; row += 1) {
+    const inThumb = row >= thumbOffset && row < thumbOffset + thumbSize
+    cells.push(inThumb ? '█' : ' ')
+  }
+
+  return (
+    <box
+      width={1}
+      height={trackRows}
+      flexShrink={0}
+      backgroundColor={theme.backgroundElement}
+    >
+      <text fg={theme.border}>{cells.join('\n')}</text>
+    </box>
   )
 }
 
