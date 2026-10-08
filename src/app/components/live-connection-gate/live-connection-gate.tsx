@@ -21,8 +21,9 @@ export function LiveConnectionGate({ children }: LiveConnectionGateProps) {
   const { data: profilesData } = useConnectionsList()
   const profiles = profilesData ?? []
 
-  if (profiles.length === 0) {
-    // DbSelector already shows the inline add form.
+  // Empty keychain + no selection: DbSelector already shows the inline add form.
+  // Do not blank the gate when an active connection exists (e.g. CLI --uri ephemeral).
+  if (profiles.length === 0 && activeConnectionId == null) {
     return null
   }
 

@@ -2,7 +2,7 @@ import { type TextChunk, type TextTableContent } from '@opentui/core'
 import { useBindings } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { findBestMatchingPattern } from '../../../../query-patterns'
+import { findBestMatchingPattern, type QueryPattern } from '../../../../query-patterns'
 import {
   formatRunningMs,
   runningMsSeverity,
@@ -24,6 +24,7 @@ import { type AppKeymapMode } from '../../../lib/keymap-mode'
 import { whenNotEditing } from '../../../lib/when-not-editing'
 import { useKillCurrentOp } from '../../../queries/kill-op'
 import { LIVE_OPS_FOOTER, LIVE_OPS_SHORTCUTS, toBindings } from '../../../shortcuts'
+import { type FooterKeybinding } from '../../../stores/footer'
 import { useProfilerPatternsStore } from '../../../stores/profiler-patterns'
 import { useSession } from '../../../stores/session'
 import { useTheme } from '../../../stores/theme'
@@ -43,6 +44,9 @@ type CurrentOpsTableProps = {
 
 const STATUS_CLEAR_MS = 3000
 const EMPTY_OPID = '—'
+/** Stable empty fallback — `?? []` inside a zustand selector re-renders forever. */
+const EMPTY_STATIC_PATTERNS: QueryPattern[] = []
+const EMPTY_FOOTER_KEYBINDINGS: FooterKeybinding[] = []
 
 /**
  * Non-data lines above/below the currentOp table within Live Ops:
@@ -61,7 +65,7 @@ export function CurrentOpsTable({
   const renderer = useRenderer()
   const theme = useTheme((s) => s.theme)
   const profilerPatterns = useProfilerPatternsStore((s) => s.patterns)
-  const staticPatterns = useSession((s) => s.queryPatterns?.patterns ?? [])
+  const staticPatterns = useSession((s) => s.queryPatterns?.patterns ?? EMPTY_STATIC_PATTERNS)
   const slowQueriesSource = useSession((s) => s.slowQueriesSource)
   const setSlowQueriesSource = useSession((s) => s.setSlowQueriesSource)
   const activeConnectionId = useSession((s) => s.activeConnectionId)
@@ -92,7 +96,7 @@ export function CurrentOpsTable({
   opsRef.current = ops
 
   const showFooter = error == null && !killConfirmOpen
-  useFooterKeybindings(showFooter ? LIVE_OPS_FOOTER : [])
+  useFooterKeybindings(showFooter ? LIVE_OPS_FOOTER : EMPTY_FOOTER_KEYBINDINGS)
   useFooterStatus(statusMessage)
 
   const showTransientStatus = useCallback(function showTransientStatus(message: string) {
