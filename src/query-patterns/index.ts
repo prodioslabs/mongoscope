@@ -12,3 +12,17 @@ export { suggestIndex } from './suggest-index'
 export { buildQueryPatternStore } from './build'
 export { getPatternExplain } from './explain'
 export { findBestMatchingPattern, type LiveOpPatternMatch } from './match-pattern'
+export {
+  EXPORT_EXTENSIONS,
+  EXPORT_FORMATS,
+  defaultExportFilename,
+  serializeSlowQueriesExport,
+  syncPathExtension,
+  toExportablePatterns,
+  type ExportFormat,
+  type ExportSort,
+  type ExportSource,
+  type ExportablePattern,
+  type SlowQueriesExportDocument,
+  type SlowQueriesExportMetadata,
+} from './export'
