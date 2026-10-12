@@ -14,14 +14,37 @@ export type SlowQueriesExportMetadata = {
   label?: string
   windowStartMs: number
   windowEndMs: number
-  /** Fixed trend bucket count so exported trend arrays are interpretable. */
-  trendBucketCount: number
   /** Live only: newest system.profile docs sampled. */
   sampleLimit?: number
   /** ISO 8601 UTC. */
   exportedAt: string
   sort: ExportSort
   patternCount: number
+}
+
+/** Sample-level fields from the query detail dialog (default view, not raw). */
+export type ExportableQueryDetail = {
+  planSummary: string | null
+  filter: string
+  docsExamined: number
+  nReturned: number
+  totalMillis: number
+  stageDetail: string
+  suggestedIndexCommand: string | null
+  suggestedIndexReason: string | null
+  /** ISO 8601 UTC, or null when unknown. */
+  timestamp: string | null
+  ctx: string
+  appName: string | null
+  remote: string | null
+  protocol: string | null
+  keysExamined: number | null
+  numYields: number | null
+  reslen: number | null
+  cpuNanos: number | null
+  workingMillis: number | null
+  waitForWriteConcernDurationMillis: number | null
+  command: string
 }
 
 export type ExportablePattern = {
@@ -34,7 +57,8 @@ export type ExportablePattern = {
   avgDocsReturned: number
   plan: string
   totalDurationMs: number
-  trend: number[]
+  /** Slowest-sample query detail; null when explain could not be built. */
+  detail: ExportableQueryDetail | null
 }
 
 export type SlowQueriesExportDocument = {

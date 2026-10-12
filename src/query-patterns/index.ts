@@ -18,11 +18,13 @@ export {
   defaultExportFilename,
   serializeSlowQueriesExport,
   syncPathExtension,
+  toExportablePattern,
   toExportablePatterns,
   type ExportFormat,
   type ExportSort,
   type ExportSource,
   type ExportablePattern,
+  type ExportableQueryDetail,
   type SlowQueriesExportDocument,
   type SlowQueriesExportMetadata,
 } from './export'

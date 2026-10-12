@@ -6,19 +6,22 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { resolveAppVersion } from '../../../../lib/app-version'
 import { displayText } from '../../../../lib/display-text'
 import { errorMessageText } from '../../../../lib/error-message'
-import { formatLogTailPreset } from '../../../../parser'
+import { formatLogTailPreset, type LogStore } from '../../../../parser'
 import {
   DEFAULT_SLOWMS,
+  getPatternExplainFromSample,
   MAX_PROFILE_FETCH_LIMIT,
   PROFILE_FETCH_LIMIT_PRESETS,
   type ProfilerSlowQueriesSnapshot,
 } from '../../../../profiler'
 import {
-  TREND_BUCKETS,
+  getPatternExplain,
   toExportablePatterns,
   type ExportSort,
   type ExportSource,
+  type PatternExplain,
   type QueryPattern,
+  type QueryPatternStore,
   type SlowQueriesExportDocument,
 } from '../../../../query-patterns'
 import { type AppKeymapMode } from '../../../lib/keymap-mode'
@@ -377,18 +380,29 @@ function StaticSlowQueriesPanel() {
           showTransientStatus('nothing to export')
           return
         }
+        if (logStore == null || queryPatterns == null) {
+          showTransientStatus('cannot export while data is errored')
+          return
+        }
         const label = logPath != null && logPath.trim() !== '' ? basename(logPath) : undefined
-        setExportDocument(
-          buildSlowQueriesExportDocument({
-            patterns: sortedPatternsRef.current,
-            source: 'static',
-            label,
-            windowStartMs: queryPatterns?.windowStartMs ?? 0,
-            windowEndMs: queryPatterns?.windowEndMs ?? 0,
-            sort: { by: sortByRef.current, direction: sortDirectionRef.current },
-          }),
-        )
-        setExportDialogOpen(true)
+        const patterns = sortedPatternsRef.current
+        const store = queryPatterns
+        const sort = { by: sortByRef.current, direction: sortDirectionRef.current }
+        showTransientStatus('preparing export…')
+        void (async function prepareStaticExport() {
+          const entries = await loadStaticExportEntries(logStore, store, patterns)
+          setExportDocument(
+            buildSlowQueriesExportDocument({
+              entries,
+              source: 'static',
+              label,
+              windowStartMs: store.windowStartMs,
+              windowEndMs: store.windowEndMs,
+              sort,
+            }),
+          )
+          setExportDialogOpen(true)
+        })()
       }
 
       return {
@@ -458,10 +472,10 @@ function StaticSlowQueriesPanel() {
       detailPatternId,
       exportDialogOpen,
       logPath,
+      logStore,
       parseError,
       parseProgress,
-      queryPatterns?.windowEndMs,
-      queryPatterns?.windowStartMs,
+      queryPatterns,
       showTransientStatus,
     ],
   )
@@ -928,15 +942,20 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
           return
         }
         const databaseName = databaseRef.current.trim()
+        const patterns = sortedPatternsRef.current
+        const samples = currentSnapshot?.samples ?? []
+        const sort = { by: sortByRef.current, direction: sortDirectionRef.current }
+        showTransientStatus('preparing export…')
+        const entries = loadLiveExportEntries(patterns, samples)
         setExportDocument(
           buildSlowQueriesExportDocument({
-            patterns: sortedPatternsRef.current,
+            entries,
             source: 'live',
             label: databaseName !== '' ? databaseName : undefined,
             windowStartMs: currentSnapshot?.windowStartMs ?? 0,
             windowEndMs: currentSnapshot?.windowEndMs ?? 0,
             sampleLimit: profilerFetchLimitRef.current,
-            sort: { by: sortByRef.current, direction: sortDirectionRef.current },
+            sort,
           }),
         )
         setExportDialogOpen(true)
@@ -1178,7 +1197,7 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
 }
 
 function buildSlowQueriesExportDocument(input: {
-  patterns: QueryPattern[]
+  entries: ReadonlyArray<{ pattern: QueryPattern; explain: PatternExplain | null }>
   source: ExportSource
   label?: string
   windowStartMs: number
@@ -1186,13 +1205,12 @@ function buildSlowQueriesExportDocument(input: {
   sampleLimit?: number
   sort: ExportSort
 }): SlowQueriesExportDocument {
-  const exportable = toExportablePatterns(input.patterns)
+  const exportable = toExportablePatterns(input.entries)
   const metadata: SlowQueriesExportDocument['metadata'] = {
     mongoscopeVersion: resolveAppVersion(),
     source: input.source,
     windowStartMs: input.windowStartMs,
     windowEndMs: input.windowEndMs,
-    trendBucketCount: TREND_BUCKETS,
     exportedAt: new Date().toISOString(),
     sort: input.sort,
     patternCount: exportable.length,
@@ -1204,6 +1222,40 @@ function buildSlowQueriesExportDocument(input: {
     metadata.sampleLimit = input.sampleLimit
   }
   return { metadata, patterns: exportable }
+}
+
+async function loadStaticExportEntries(
+  logStore: LogStore,
+  store: QueryPatternStore,
+  patterns: QueryPattern[],
+): Promise<Array<{ pattern: QueryPattern; explain: PatternExplain | null }>> {
+  const entries: Array<{ pattern: QueryPattern; explain: PatternExplain | null }> = []
+  for (const pattern of patterns) {
+    try {
+      const explain = await getPatternExplain(logStore, store, pattern.id)
+      entries.push({ pattern, explain })
+    } catch {
+      entries.push({ pattern, explain: null })
+    }
+  }
+  return entries
+}
+
+function loadLiveExportEntries(
+  patterns: QueryPattern[],
+  samples: Record<string, unknown>[],
+): Array<{ pattern: QueryPattern; explain: PatternExplain | null }> {
+  return patterns.map(function mapLiveEntry(pattern) {
+    const sampleDoc = samples[pattern.sampleRow]
+    if (sampleDoc == null) {
+      return { pattern, explain: null }
+    }
+    try {
+      return { pattern, explain: getPatternExplainFromSample(pattern, sampleDoc) }
+    } catch {
+      return { pattern, explain: null }
+    }
+  })
 }
 
 function formatProfilingChip(profiling: ProfilerSlowQueriesSnapshot['profiling']): string {

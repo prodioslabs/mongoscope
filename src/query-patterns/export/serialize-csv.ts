@@ -1,4 +1,4 @@
-import type { ExportablePattern, SlowQueriesExportDocument } from './types'
+import type { ExportablePattern, ExportableQueryDetail, SlowQueriesExportDocument } from './types'
 
 const CSV_HEADER = [
   'namespace',
@@ -10,11 +10,30 @@ const CSV_HEADER = [
   'avgDocsReturned',
   'plan',
   'totalDurationMs',
-  'trend',
+  'detailPlanSummary',
+  'detailFilter',
+  'detailDocsExamined',
+  'detailNReturned',
+  'detailTotalMillis',
+  'detailStage',
+  'detailSuggestedIndexCommand',
+  'detailSuggestedIndexReason',
+  'detailTimestamp',
+  'detailCtx',
+  'detailAppName',
+  'detailRemote',
+  'detailProtocol',
+  'detailKeysExamined',
+  'detailNumYields',
+  'detailReslen',
+  'detailCpuNanos',
+  'detailWorkingMillis',
+  'detailWcWaitMillis',
+  'detailCommand',
 ] as const
 
 /**
- * RFC 4180 CSV for slow-query patterns.
+ * RFC 4180 CSV for slow-query patterns + query detail.
  *
  * Formula injection: string cells whose first character is `=`, `+`, `-`, `@`,
  * tab, or carriage return are prefixed with a single quote so spreadsheet apps
@@ -30,6 +49,7 @@ export function serializeSlowQueriesCsv(document: SlowQueriesExportDocument): st
 }
 
 function serializePatternRow(pattern: ExportablePattern): string {
+  const detail = pattern.detail
   return [
     quoteCsvString(pattern.namespace),
     quoteCsvString(pattern.op),
@@ -40,12 +60,45 @@ function serializePatternRow(pattern: ExportablePattern): string {
     formatCsvNumber(pattern.avgDocsReturned),
     quoteCsvString(pattern.plan),
     formatCsvNumber(pattern.totalDurationMs),
-    quoteCsvString(formatTrendCell(pattern.trend)),
+    ...serializeDetailCells(detail),
   ].join(',')
 }
 
-function formatTrendCell(trend: readonly number[]): string {
-  return trend.join(';')
+function serializeDetailCells(detail: ExportableQueryDetail | null): string[] {
+  if (detail == null) {
+    return CSV_HEADER.slice(9).map(function emptyCell() {
+      return ''
+    })
+  }
+  return [
+    quoteCsvString(detail.planSummary ?? ''),
+    quoteCsvString(detail.filter),
+    formatCsvNumber(detail.docsExamined),
+    formatCsvNumber(detail.nReturned),
+    formatCsvNumber(detail.totalMillis),
+    quoteCsvString(detail.stageDetail),
+    quoteCsvString(detail.suggestedIndexCommand ?? ''),
+    quoteCsvString(detail.suggestedIndexReason ?? ''),
+    quoteCsvString(detail.timestamp ?? ''),
+    quoteCsvString(detail.ctx),
+    quoteCsvString(detail.appName ?? ''),
+    quoteCsvString(detail.remote ?? ''),
+    quoteCsvString(detail.protocol ?? ''),
+    formatOptionalNumber(detail.keysExamined),
+    formatOptionalNumber(detail.numYields),
+    formatOptionalNumber(detail.reslen),
+    formatOptionalNumber(detail.cpuNanos),
+    formatOptionalNumber(detail.workingMillis),
+    formatOptionalNumber(detail.waitForWriteConcernDurationMillis),
+    quoteCsvString(detail.command),
+  ]
+}
+
+function formatOptionalNumber(value: number | null): string {
+  if (value == null) {
+    return ''
+  }
+  return formatCsvNumber(value)
 }
 
 function formatCsvNumber(value: number): string {
@@ -80,9 +133,6 @@ function neutralizeFormula(value: string): string {
 
 function needsCsvQuotes(value: string): boolean {
   return (
-    value.includes(',') ||
-    value.includes('"') ||
-    value.includes('\n') ||
-    value.includes('\r')
+    value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')
   )
 }
