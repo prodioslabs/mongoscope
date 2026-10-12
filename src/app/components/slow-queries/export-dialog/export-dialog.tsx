@@ -141,6 +141,20 @@ export function SlowQueriesExportDialog({
     [focus, open, renderer, view],
   )
 
+  useEffect(
+    function blurInputAfterFormatPathSync() {
+      if (!open || view !== 'form' || focus !== 'format') {
+        return
+      }
+      // Extension sync updates the input value and can steal editor focus.
+      const focused = renderer.currentFocusedEditor
+      if (focused != null && typeof focused.blur === 'function') {
+        focused.blur()
+      }
+    },
+    [focus, open, pathText, renderer, view],
+  )
+
   useBindings(
     function createExportDialogFormLayer() {
       return {
@@ -236,7 +250,10 @@ export function SlowQueriesExportDialog({
     const nextIndex = (currentIndex + delta + EXPORT_FORMATS.length) % EXPORT_FORMATS.length
     const nextFormat = EXPORT_FORMATS[nextIndex]!
     setFormat(nextFormat)
+    // Updating the path `value` can emit onInput; keep focus on Format and do not
+    // treat extension sync as a user edit (see onPathInput).
     setPathText(syncPathExtension(pathTextRef.current, nextFormat, pathEditedRef.current))
+    setFocus('format')
     setErrorMessage('')
   }
 
@@ -355,8 +372,14 @@ export function SlowQueriesExportDialog({
             placeholderColor={theme.textMuted}
             onInput={function onPathInput(value: string) {
               setPathText(value)
-              setPathEdited(true)
-              setFocus('path')
+              // Programmatic value updates (format→extension sync) also hit onInput.
+              // Only treat real typing as an edit / focus move to Path.
+              const inputFocused =
+                inputRef.current != null && renderer.currentFocusedEditor === inputRef.current
+              if (inputFocused) {
+                setPathEdited(true)
+                setFocus('path')
+              }
               setErrorMessage('')
             }}
             onSubmit={function onPathSubmit() {
