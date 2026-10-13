@@ -36,6 +36,8 @@ const OPLOG_BAR_WIDTH = 40
 const LAG_CHART_HEIGHT = 6
 const RIGHT_PANEL_WIDTH = 36
 const RECENT_EVENTS_VISIBLE = 6
+const MEMBER_CARD_WIDTH = 30
+const CONNECTOR_WIDTH = 8
 
 export function ReplicationDashboard({ data, isPending }: ReplicationDashboardProps) {
   const dimensions = useTerminalDimensions()
@@ -135,10 +137,13 @@ function TopologyOplogPanel({
   isPending,
 }: TopologyOplogPanelProps) {
   const theme = useTheme((s) => s.theme)
+  const dimensions = useTerminalDimensions()
+  const narrowTree = dimensions.width < NARROW_WIDTH
 
   return (
     <PanelShell title={` ${setLabel} — topology `}>
-      <box flexDirection="row" justifyContent="flex-end" flexShrink={0}>
+      <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
+        <text content="Replica Set Topology" fg={theme.text} attributes={TextAttributes.BOLD} />
         <text
           content={displayText(memberCount === 1 ? '1 member' : `${memberCount} members`)}
           fg={theme.textMuted}
@@ -153,9 +158,8 @@ function TopologyOplogPanel({
         <text content="no replica set members" fg={theme.textMuted} />
       ) : (
         <box flexDirection="column" gap={0} flexShrink={0}>
-          {members.map(function renderMember(member) {
-            return <MemberRow key={member.id} member={member} />
-          })}
+          <TopologyTree members={members} narrow={narrowTree} />
+          <TopologyLegend />
         </box>
       )}
 
@@ -164,48 +168,147 @@ function TopologyOplogPanel({
   )
 }
 
-type MemberRowProps = {
+type TopologyTreeProps = {
+  members: TopologyMember[]
+  narrow: boolean
+}
+
+function TopologyTree({ members, narrow }: TopologyTreeProps) {
+  const theme = useTheme((s) => s.theme)
+  const { primary, others } = splitTopologyMembers(members)
+
+  if (narrow || primary == null || others.length === 0) {
+    return (
+      <box flexDirection="column" gap={1} flexShrink={0} paddingTop={1}>
+        {primary != null ? <MemberCard member={primary} /> : null}
+        {others.map(function renderOther(member, index) {
+          return (
+            <box key={member.id} flexDirection="column" gap={0} flexShrink={0}>
+              {primary != null ? (
+                <text
+                  content={displayText(index === others.length - 1 ? '└──▶' : '├──▶')}
+                  fg={theme.border}
+                  wrapMode="none"
+                />
+              ) : null}
+              <MemberCard member={member} />
+            </box>
+          )
+        })}
+      </box>
+    )
+  }
+
+  return (
+    <box flexDirection="row" gap={1} flexShrink={0} paddingTop={1} alignItems="flex-start">
+      <MemberCard member={primary} />
+      <TopologyConnectors count={others.length} />
+      <box flexDirection="column" gap={1} flexShrink={0}>
+        {others.map(function renderOther(member) {
+          return <MemberCard key={member.id} member={member} />
+        })}
+      </box>
+    </box>
+  )
+}
+
+type TopologyConnectorsProps = {
+  count: number
+}
+
+function TopologyConnectors({ count }: TopologyConnectorsProps) {
+  const theme = useTheme((s) => s.theme)
+  const lines = connectorLines(count)
+
+  return (
+    <box
+      flexDirection="column"
+      flexShrink={0}
+      width={CONNECTOR_WIDTH}
+      justifyContent="flex-start"
+      paddingTop={1}
+    >
+      {lines.map(function renderConnectorLine(line, index) {
+        return (
+          <text
+            key={`conn-${index}`}
+            content={displayText(line)}
+            fg={theme.success}
+            wrapMode="none"
+            height={1}
+          />
+        )
+      })}
+    </box>
+  )
+}
+
+type MemberCardProps = {
   member: TopologyMember
 }
 
-function MemberRow({ member }: MemberRowProps) {
+function MemberCard({ member }: MemberCardProps) {
   const theme = useTheme((s) => s.theme)
-  const dotColor = memberDotColor(member, theme)
-  const stateColor = member.stateStr.toUpperCase() === 'PRIMARY' ? theme.success : theme.text
-  const lagLabel =
-    member.stateStr.toUpperCase() === 'PRIMARY' || member.lagSeconds == null
-      ? '—'
-      : formatLagSeconds(member.lagSeconds)
+  const state = member.stateStr.toUpperCase()
+  const isPrimary = state === 'PRIMARY'
+  const borderColor = memberCardBorderColor(member, theme)
+  const stateColor = isPrimary ? theme.success : theme.text
+  const icon = memberRoleIcon(state)
+  const hostLabel = formatShortHost(member.host)
+  const meta = memberCardMeta(member)
 
   return (
-    <box flexDirection="row" gap={1} flexShrink={0} height={1}>
-      <text content="●" fg={dotColor} wrapMode="none" flexShrink={0} />
+    <box
+      flexDirection="column"
+      flexShrink={0}
+      width={MEMBER_CARD_WIDTH}
+      paddingLeft={1}
+      paddingRight={1}
+      paddingTop={0}
+      paddingBottom={0}
+      border
+      borderStyle="single"
+      borderColor={borderColor}
+      backgroundColor={theme.backgroundElement}
+      title={` ${state} `}
+      titleColor={stateColor}
+      titleAlignment="left"
+    >
+      <box flexDirection="row" gap={1} height={1} flexShrink={0}>
+        <text content={displayText(icon)} fg={memberDotColor(member, theme)} wrapMode="none" />
+        <text
+          content={displayText(hostLabel)}
+          fg={theme.text}
+          attributes={TextAttributes.BOLD}
+          wrapMode="none"
+          flexShrink={1}
+        />
+        {member.self ? <text content="(self)" fg={theme.textMuted} wrapMode="none" /> : null}
+      </box>
       <text
-        content={displayText(member.stateStr.padEnd(10, ' '))}
-        fg={stateColor}
-        attributes={TextAttributes.BOLD}
+        content={displayText(meta)}
+        fg={member.severity === 'warning' ? theme.warning : theme.textMuted}
         wrapMode="none"
-        flexShrink={0}
       />
       <text
         content={displayText(member.host)}
-        fg={theme.text}
-        wrapMode="none"
-        flexShrink={1}
-        flexGrow={1}
-      />
-      <text
-        content={displayText(formatMemberMeta(member.priority, member.votes))}
         fg={theme.textMuted}
         wrapMode="none"
-        flexShrink={0}
       />
-      <text
-        content={displayText(lagLabel.padStart(6, ' '))}
-        fg={member.severity === 'warning' ? theme.warning : theme.textMuted}
-        wrapMode="none"
-        flexShrink={0}
-      />
+    </box>
+  )
+}
+
+function TopologyLegend() {
+  const theme = useTheme((s) => s.theme)
+  return (
+    <box flexDirection="row" gap={2} flexShrink={0} paddingTop={1} paddingLeft={1} alignItems="center">
+      <text content="Legend" fg={theme.textMuted} attributes={TextAttributes.BOLD} />
+      <text content={displayText('★  PRIMARY')} fg={theme.success} wrapMode="none" />
+      <text content={displayText('↓  SECONDARY')} fg={theme.info} wrapMode="none" />
+      <text content={displayText('◇  ARBITER')} fg={theme.textMuted} wrapMode="none" />
+      <text content={displayText('·  other')} fg={theme.textMuted} wrapMode="none" />
+      <text content={displayText('lag  oplog delay')} fg={theme.textMuted} wrapMode="none" />
     </box>
   )
 }
@@ -507,4 +610,96 @@ function memberDotColor(member: TopologyMember, theme: Theme) {
     return theme.success
   }
   return theme.info
+}
+
+function memberCardBorderColor(member: TopologyMember, theme: Theme) {
+  if (member.severity === 'error') {
+    return theme.error
+  }
+  if (member.severity === 'warning') {
+    return theme.warning
+  }
+  if (member.stateStr.toUpperCase() === 'PRIMARY') {
+    return theme.success
+  }
+  return theme.border
+}
+
+function memberRoleIcon(state: string): string {
+  if (state === 'PRIMARY') {
+    return '★'
+  }
+  if (state === 'SECONDARY') {
+    return '↓'
+  }
+  if (state === 'ARBITER') {
+    return '◇'
+  }
+  return '·'
+}
+
+function memberCardMeta(member: TopologyMember): string {
+  const state = member.stateStr.toUpperCase()
+  if (state === 'PRIMARY') {
+    return formatMemberMeta(member.priority, member.votes)
+  }
+  if (member.lagSeconds == null) {
+    return formatMemberMeta(member.priority, member.votes)
+  }
+  return `lag ${formatLagSeconds(member.lagSeconds)} · ${formatMemberMeta(member.priority, member.votes)}`
+}
+
+function splitTopologyMembers(members: TopologyMember[]): {
+  primary: TopologyMember | null
+  others: TopologyMember[]
+} {
+  const primary =
+    members.find(function findPrimary(member) {
+      return member.stateStr.toUpperCase() === 'PRIMARY'
+    }) ?? null
+  const others = members.filter(function keepNonPrimary(member) {
+    return primary == null || member.id !== primary.id
+  })
+  return { primary, others }
+}
+
+/**
+ * ASCII branch from primary (left) to N member cards (right).
+ * Each card is ~3 content rows + border; connectors align to card midlines.
+ */
+function connectorLines(count: number): string[] {
+  if (count <= 0) {
+    return []
+  }
+  if (count === 1) {
+    return ['', '───▶', '']
+  }
+
+  // MemberCard: title border + 3 content lines + bottom border ≈ 5 rows; gap={1} between cards.
+  const cardStride = 6
+  const midOffset = 2
+  const totalRows = (count - 1) * cardStride + 5
+  const lines = Array.from({ length: totalRows }, () => '        ')
+
+  for (let i = 0; i < count; i++) {
+    const row = i * cardStride + midOffset
+    if (i === 0) {
+      lines[row] = '──┬───▶'
+      continue
+    }
+    if (i === count - 1) {
+      lines[row] = '  └───▶'
+      continue
+    }
+    lines[row] = '  ├───▶'
+  }
+
+  const firstMid = midOffset
+  const lastMid = (count - 1) * cardStride + midOffset
+  for (let row = firstMid + 1; row < lastMid; row++) {
+    if (lines[row] === '        ') {
+      lines[row] = '  │     '
+    }
+  }
+  return lines
 }
