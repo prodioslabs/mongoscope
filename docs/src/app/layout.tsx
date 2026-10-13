@@ -2,6 +2,7 @@ import { RootProvider } from 'fumadocs-ui/provider/next'
 import '../styles/globals.css'
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
+import { appName } from '@/lib/shared'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -15,12 +16,17 @@ if (process.env.NODE_ENV === 'production' && !siteUrl) {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl ?? 'http://localhost:3000'),
+  applicationName: appName,
+  title: {
+    default: appName,
+    template: `%s | ${appName}`,
+  },
 }
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={inter.className} suppressHydrationWarning>
-      <body className="flex flex-col min-h-screen">
+      <body className="flex flex-col min-h-screen" suppressHydrationWarning>
         <RootProvider>{children}</RootProvider>
       </body>
     </html>
