@@ -1,0 +1,188 @@
+---
+title: Indexing guide
+description: How aggregation pipelines and compound indexes use MongoDB indexes, and how to verify with explain and $indexStats
+---
+
+Indexes help MongoDB locate matching documents without scanning a whole collection. Whether a query or aggregation actually uses them depends on pipeline shape, predicate form, and index key order. This page is a practical reference for any MongoDB deployment. For the classic equality / sort / range layout discussion, see [Optimizing MongoDB Compound Indexes](https://emptysqua.re/blog/optimizing-mongodb-compound-indexes/).
+
+In mongoscope, the [Slow Queries](/docs/slow-queries) tab shows a plan column and examined / returned ratios from profile or log samples. The [Indexes](/docs/indexes) tab lists inventory and `$indexStats` ops / since for the connected node. Neither surface warns about the patterns below; use `explain` and `$indexStats` in mongosh to confirm.
+
+## Pipelines run left to right
+
+MongoDB executes aggregation stages in order. Leading `$match` and `$sort` stages can use indexes on the **source** collection. A `$lookup` can separately use indexes on the **foreign** collection when the join predicate allows it. Later stages that filter or sort already-materialized documents generally cannot turn those predicates into source-collection index scans.
+
+Prefer filtering on the collection that carries the selective predicate first:
+
+```javascript
+// Prefer: filter sessions, then join customers
+db.sessions.aggregate([
+  { $match: { status: "active", createdAt: { $gte: ISODate("2026-01-01") } } },
+  {
+    $lookup: {
+      from: "customers",
+      localField: "customerId",
+      foreignField: "_id",
+      as: "customer",
+    },
+  },
+])
+```
+
+Starting from `customers` and matching on joined `sessions` fields after the lookup usually means the foreign work happens after the join has already produced arrays.
+
+## `$lookup` and foreign indexes
+
+An equality `$lookup` (`localField` / `foreignField`) performs better when the foreign collection has an index on `foreignField`. For a correlated subquery, put a `$match` early in the `$lookup` pipeline. Referencing `let` variables requires `$expr`.
+
+```javascript
+db.orders.aggregate([
+  { $match: { status: "open" } },
+  {
+    $lookup: {
+      from: "sessions",
+      let: { orderCustomerId: "$customerId" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$customerId", "$$orderCustomerId"] },
+            status: "active",
+          },
+        },
+      ],
+      as: "sessions",
+    },
+  },
+])
+```
+
+A useful foreign index for that shape is often `{ customerId: 1, status: 1 }`. Confirm with `explain("executionStats")` on the full pipeline; look for index use under the `$lookup` portion (`indexesUsed`, `totalKeysExamined`, `collectionScans`).
+
+If a unique equality appears in the join (for example matching a unique `orderId`), the planner usually picks that unique index and may ignore a broader compound index for the same predicate. Treat that as expected when `explain` shows it, not as a guarantee for every plan.
+
+### `$match` after `$lookup`
+
+When `$unwind` immediately follows `$lookup` on the `as` field, and a `$match` then filters an `as` subfield, the optimizer can coalesce `$unwind` and `$match` into the `$lookup`. That can push the filter into the foreign pipeline and avoid large intermediate arrays.
+
+```javascript
+db.customers.aggregate([
+  {
+    $lookup: {
+      from: "orders",
+      localField: "_id",
+      foreignField: "customerId",
+      as: "orders",
+    },
+  },
+  { $unwind: "$orders" },
+  { $match: { "orders.status": "shipped" } },
+])
+```
+
+A `$match` on the joined array **without** an immediate `$unwind` runs against documents that already carry the materialized array. Prefer filtering inside the `$lookup` pipeline, or keep `$unwind` immediately after `$lookup` when you need that coalescence.
+
+### `$sort` after `$lookup`
+
+Sorting on fields from the joined array after `$lookup` usually cannot use an index on the foreign collection for a blocking sort of the joined result. Sort on the source collection before the join when that matches the query, or `$sort` inside the `$lookup` pipeline when you need foreign-side order.
+
+## `$expr` and indexes (by version)
+
+Prefer ordinary query predicates when you can. They use indexes the same way `find` does:
+
+```javascript
+// Prefer
+{ createdAt: { $gte: ISODate("2026-01-01") } }
+
+// Avoid when a plain predicate works
+{ $expr: { $gte: ["$createdAt", ISODate("2026-01-01")] } }
+```
+
+Index support for `$expr` inside a `$lookup` `$match` changed across versions:
+
+| MongoDB | Indexed `$expr` comparisons in `$lookup` | Still not indexed |
+| --- | --- | --- |
+| Through 4.4 | `$eq` only (range operators `$lt` / `$lte` / `$gt` / `$gte` cannot use the index) | Multikey indexes; comparisons with an array or undefined operand; comparisons with more than one field-path operand |
+| 5.0+ | `$eq`, `$lt`, `$lte`, `$gt`, `$gte` when comparing a field to a constant (`let` must resolve to a constant) | Empty or missing `let` values; multikey indexes; partial or sparse indexes (current manual); field-to-field comparisons; other expression shapes (for example `$cond` over computed values) |
+
+Outside `$lookup`, use plain predicates for ranges and equality whenever possible. Computed `$expr` forms and same-document field comparisons are poor candidates for index bounds.
+
+## `$facet`
+
+`$facet` runs several sub-pipelines on the **same** input document set. If `$facet` is the first stage, MongoDB performs a `COLLSCAN`; the stage does not use indexes in that position. A preceding `$match` or `$sort` can use indexes, and then `$facet` works on that already-reduced input without triggering a collection scan of its own.
+
+```javascript
+db.orders.aggregate([
+  { $match: { createdAt: { $gte: ISODate("2026-01-01") } } },
+  {
+    $facet: {
+      byStatus: [{ $group: { _id: "$status", n: { $sum: 1 } } }],
+      topCustomers: [
+        { $group: { _id: "$customerId", total: { $sum: "$amount" } } },
+        { $sort: { total: -1 } },
+        { $limit: 10 },
+      ],
+    },
+  },
+])
+```
+
+## Compound indexes and the ESR rule
+
+For predicates that mix equality, sort, and range, order compound index keys with the [ESR guideline](https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/): **Equality**, then **Sort**, then **Range**.
+
+```javascript
+// Query shape
+db.orders.find({
+  status: "open",
+  createdAt: { $gte: ISODate("2026-01-01") },
+}).sort({ amount: -1 })
+
+// ESR-oriented index: equality → sort → range
+db.orders.createIndex({ status: 1, amount: -1, createdAt: 1 })
+```
+
+Equality keys come first (any order relative to each other). Put sort keys next when avoiding an in-memory sort matters. Range keys come last so they do not break the sorted prefix. If the range predicate is extremely selective and an in-memory sort is acceptable, an equality → range → sort (ERS) layout can be better—confirm with `explain`.
+
+| Symptom | Likely cause | What to try |
+| --- | --- | --- |
+| `COLLSCAN` on a selective filter | No usable index prefix | Add or reorder a compound index for the equality / range fields |
+| `SORT` (or `scanAndOrder`) with a large `nReturned` | Sort not satisfied by the index | Follow ESR so sort keys sit after equality and before range |
+| High `totalDocsExamined` vs `nReturned` | Weak selectivity or wrong field order | Tighten `$match`, move selective equality earlier in the index |
+| Good source plan, slow `$lookup` | Missing foreign index | Index `foreignField` or the `$lookup` pipeline `$match` fields |
+
+## Verify with `explain("executionStats")`
+
+```javascript
+db.orders.explain("executionStats").aggregate([
+  { $match: { status: "open", createdAt: { $gte: ISODate("2026-01-01") } } },
+  { $sort: { amount: -1 } },
+])
+```
+
+Read at least:
+
+- `totalKeysExamined` — index keys touched
+- `totalDocsExamined` — documents fetched
+- `nReturned` — documents returned
+- Stage names such as `IXSCAN`, `COLLSCAN`, `FETCH`, `SORT`
+
+A healthy selective plan often keeps examined counts close to `nReturned` and shows `IXSCAN` without a blocking `SORT` when the index covers the sort. A `COLLSCAN` or examined ≫ returned ratio is a signal to reshape the query or the index. mongoscope’s Slow Queries plan and examined / returned columns surface the same ideas from logged or profiled samples; re-check the live plan in mongosh when you change indexes.
+
+## Reading `$indexStats`
+
+```javascript
+db.orders.aggregate([{ $indexStats: {} }])
+```
+
+Each document includes `accesses.ops` (user operations that used the index on this host) and `accesses.since` (when that counter started). Counters reset when `mongod` restarts, when the index is dropped and recreated, or when the index is modified with `collMod`. Stats are **per member**: run `$indexStats` on each replica-set or shard node you care about. mongoscope’s Indexes tab shows ops / since for the connected node only.
+
+TTL deletions, chunk splits, and migrations do **not** increment `ops`. A TTL index can therefore show low or zero ops while still expiring documents. Do not drop `_id`, and do not drop a unique index only because `ops` is low—uniqueness and primary-key access are not the same thing as a busy read index.
+
+## Cautious removal checklist
+
+1. Confirm `accesses.since` covers a representative production window on **every** relevant member.
+2. Exclude indexes you must keep (`_id`, uniqueness constraints, shard-key prefixes, TTL that still expires data).
+3. On MongoDB 4.4+, hide the candidate first: `db.orders.hideIndex("status_1_createdAt_1")`. The index stays maintained but the planner ignores it. Unique and TTL behavior still apply while hidden.
+4. Watch latency and `explain` plans under real traffic. If nothing regresses, drop the index. If something does, `unhideIndex` restores it without a rebuild.
+5. Hiding or unhiding an index resets that index’s `$indexStats` when the hidden state actually changes.
+
+Unused indexes cost RAM, disk, and write amplification. Removing them is still a reversible experiment when you hide first and verify afterward.
