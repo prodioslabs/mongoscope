@@ -8,5 +8,4 @@ export {
   planSortRank,
   sparkline,
   truncateCell,
-  type Severity,
 } from './format'

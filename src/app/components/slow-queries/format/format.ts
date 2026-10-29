@@ -4,7 +4,6 @@ import { formatCount } from '../../../../lib/format-count'
 import { sparkline as sparklineFromLib } from '../../../../lib/sparkline'
 import { truncateText } from '../../../../lib/truncate-text'
 
-export type { Severity } from '../../../lib/text-table-content'
 export { formatCount, planSeverity }
 
 export function formatExaminedRet(examined: number, returned: number): string {

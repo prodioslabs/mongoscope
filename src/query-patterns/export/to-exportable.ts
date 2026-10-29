@@ -27,7 +27,7 @@ export function toExportablePatterns(
   })
 }
 
-export function toExportableQueryDetail(explain: PatternExplain): ExportableQueryDetail {
+function toExportableQueryDetail(explain: PatternExplain): ExportableQueryDetail {
   return {
     planSummary: explain.planSummary,
     filter: explain.filter,
