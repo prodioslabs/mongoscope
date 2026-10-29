@@ -1,5 +1,6 @@
 export type {
   ProfileSample,
+  ProfilerClient,
   ProfilerPanelError,
   ProfilerSlowQueriesSnapshot,
   ProfilingStatus,
@@ -18,12 +19,10 @@ export {
   fetchProfilerSlowQueriesSnapshot,
   parseProfilingStatus,
   type FetchProfilerSnapshotResult,
-  type ProfilerClient,
 } from './fetch-snapshot'
 export {
   buildEnableProfilingCommand,
   enableProfiling,
-  type EnableProfilingClient,
   type EnableProfilingResult,
 } from './enable-profiling'
 export { getPatternExplainFromSample } from './explain'
