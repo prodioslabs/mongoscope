@@ -1,3 +1,4 @@
+import { isRecord } from '../lib/is-record'
 import { optionalNumber } from '../lib/optional-number'
 import { stringOrEmpty } from '../lib/string-or-empty'
 import type { MemberSeverity, ReplicationTopology, TopologyMember } from './types'
@@ -173,8 +174,8 @@ function dateToMs(value: unknown): number | null {
     const ms = new Date(value).getTime()
     return Number.isFinite(ms) ? ms : null
   }
-  if (value != null && typeof value === 'object' && '$date' in value) {
-    const raw = (value as { $date: unknown }).$date
+  if (isRecord(value) && '$date' in value) {
+    const raw = value.$date
     if (typeof raw === 'string' || typeof raw === 'number') {
       const ms = new Date(raw).getTime()
       return Number.isFinite(ms) ? ms : null
