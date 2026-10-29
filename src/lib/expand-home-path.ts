@@ -15,9 +15,6 @@ export function expandHomePath(input: string, homeDirectory: string = homedir())
   return trimmed
 }
 
-/**
- * Expand `~` then resolve to an absolute path against `cwd`.
- */
 export function resolveUserPath(
   input: string,
   cwd: string = process.cwd(),

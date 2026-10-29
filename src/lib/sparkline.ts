@@ -3,9 +3,6 @@ const SPARK_CHARS = '▁▂▃▄▅▆▇█'
 /** Default sparkline width so the TREND column stays narrow in the table. */
 const DEFAULT_SPARKLINE_WIDTH = 12
 
-/**
- * Compact a trend bucket array into a plain-text sparkline (no styling).
- */
 export function sparkline(
   trend: ArrayLike<number>,
   width: number = DEFAULT_SPARKLINE_WIDTH,
