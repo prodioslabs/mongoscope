@@ -1,6 +1,7 @@
 import type { Dirent } from 'node:fs'
 import { readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
+import { isFileNotFoundError, isFsPermissionDeniedError } from '../../lib/node-errno'
 
 export const MONGODB_DEFAULT_LOG_DIR = '/var/log/mongodb'
 
@@ -63,26 +64,11 @@ export function listErrorFromUnknown(
   if (isFileNotFoundError(error)) {
     return { status: 'not_found' }
   }
-  if (isPermissionDeniedError(error)) {
+  if (isFsPermissionDeniedError(error)) {
     return { status: 'permission_denied' }
   }
   return {
     status: 'other',
     message: error instanceof Error ? error.message : String(error),
   }
-}
-
-function isFileNotFoundError(error: unknown): boolean {
-  return isNodeErrnoException(error) && error.code === 'ENOENT'
-}
-
-function isPermissionDeniedError(error: unknown): boolean {
-  if (!isNodeErrnoException(error)) {
-    return false
-  }
-  return error.code === 'EACCES' || error.code === 'EPERM'
-}
-
-function isNodeErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return typeof error === 'object' && error != null && 'code' in error
 }

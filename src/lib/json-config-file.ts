@@ -2,6 +2,7 @@ import { mkdir, readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { atomicWriteFile } from './atomic-write-file'
 import { isRecord } from './is-record'
+import { isFileNotFoundError } from './node-errno'
 
 /**
  * Load a JSON config file. Missing file → `fallback`.
@@ -45,9 +46,6 @@ export async function updateJsonConfigFile(
   await saveJsonConfigFile(filePath, next)
 }
 
-/**
- * Atomically write JSON (tmp file in the same directory + rename).
- */
 export async function saveJsonConfigFile<T>(filePath: string, value: T): Promise<void> {
   const directoryPath = dirname(filePath)
   await mkdir(directoryPath, { recursive: true })
@@ -78,12 +76,4 @@ async function readJsonObjectOrEmpty(filePath: string): Promise<Record<string, u
   }
 
   return parsed
-}
-
-function isFileNotFoundError(error: unknown): boolean {
-  return isNodeErrnoException(error) && error.code === 'ENOENT'
-}
-
-function isNodeErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return typeof error === 'object' && error != null && 'code' in error
 }

@@ -3,8 +3,11 @@ import { randomBytes } from 'node:crypto'
 import { chmod, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, normalize } from 'node:path'
+import { isFileNotFoundError } from '../../lib/node-errno'
 import { MAX_READ_BYTES } from '../../parser'
 import { isMongoLogFile, type ListLogFilesResult } from './list-log-files'
+
+export { isFsPermissionDeniedError } from '../../lib/node-errno'
 
 const SUDO_TIMEOUT_MS = 90_000
 
@@ -93,10 +96,6 @@ export function clearSessionElevatedDirectories(): void {
   sessionElevatedDirectories.clear()
 }
 
-export function isFsPermissionDeniedError(error: unknown): boolean {
-  return isNodeErrnoException(error) && (error.code === 'EACCES' || error.code === 'EPERM')
-}
-
 export function isPermissionDeniedMessage(message: string): boolean {
   const lower = message.toLowerCase()
   return lower.includes('eacces') || lower.includes('eperm') || lower.includes('permission denied')
@@ -134,7 +133,7 @@ export async function runElevatedCommand(
         stderr: 'inherit',
       })
     } catch (error) {
-      if (isEnoent(error)) {
+      if (isFileNotFoundError(error)) {
         return { ok: false, kind: 'sudo_missing', message: FAILURE_MESSAGE.sudo_missing }
       }
       return {
@@ -313,10 +312,3 @@ function defaultBunSpawn(
   }
 }
 
-function isEnoent(error: unknown): boolean {
-  return isNodeErrnoException(error) && error.code === 'ENOENT'
-}
-
-function isNodeErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return typeof error === 'object' && error != null && 'code' in error
-}

@@ -7,6 +7,7 @@ import { atomicWriteFile } from '../../../../lib/atomic-write-file'
 import { displayText } from '../../../../lib/display-text'
 import { resolveUserPath } from '../../../../lib/expand-home-path'
 import { mapWriteError } from '../../../../lib/map-write-error'
+import { isFileNotFoundError } from '../../../../lib/node-errno'
 import {
   defaultExportFilename,
   EXPORT_FORMATS,
@@ -411,18 +412,9 @@ async function classifyPath(absolutePath: string): Promise<'missing' | 'file' | 
     }
     return 'file'
   } catch (error) {
-    if (isNotFound(error)) {
+    if (isFileNotFoundError(error)) {
       return 'missing'
     }
     throw error
   }
-}
-
-function isNotFound(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error != null &&
-    'code' in error &&
-    (error as { code?: string }).code === 'ENOENT'
-  )
 }

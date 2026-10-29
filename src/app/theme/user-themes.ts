@@ -2,6 +2,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { userThemesDir } from '../../lib/config-paths'
 import { errorMessageText } from '../../lib/error-message'
+import { isFileNotFoundError } from '../../lib/node-errno'
 import { isTheme, resolveTheme, type ThemeJson } from './default-themes'
 
 const REQUIRED_THEME_COLOR_KEYS = [
@@ -86,12 +87,4 @@ function validateUserThemeJson(value: unknown): ThemeJson {
   resolveTheme(value, 'light')
 
   return value
-}
-
-function isFileNotFoundError(error: unknown): boolean {
-  return isNodeErrnoException(error) && error.code === 'ENOENT'
-}
-
-function isNodeErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return typeof error === 'object' && error != null && 'code' in error
 }

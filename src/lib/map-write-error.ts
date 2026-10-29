@@ -1,15 +1,18 @@
-/**
- * Map a filesystem write failure to a short user-facing message.
- * Never pass through raw errno text.
- */
+import {
+  isFileNotFoundError,
+  isFsPermissionDeniedError,
+  isNodeErrnoException,
+} from './node-errno'
+
+/** User-facing write failure text — never pass through raw errno strings. */
 export function mapWriteError(error: unknown): string {
+  if (isFsPermissionDeniedError(error)) {
+    return 'permission denied'
+  }
+  if (isFileNotFoundError(error)) {
+    return 'directory missing'
+  }
   if (isNodeErrnoException(error)) {
-    if (error.code === 'EACCES' || error.code === 'EPERM') {
-      return 'permission denied'
-    }
-    if (error.code === 'ENOENT') {
-      return 'directory missing'
-    }
     if (error.code === 'ENOSPC') {
       return 'disk full'
     }
@@ -18,8 +21,4 @@ export function mapWriteError(error: unknown): string {
     }
   }
   return 'could not write file'
-}
-
-function isNodeErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return typeof error === 'object' && error != null && 'code' in error
 }
