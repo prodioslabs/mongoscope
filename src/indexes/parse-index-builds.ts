@@ -1,7 +1,7 @@
 import { isRecord } from '../lib/is-record'
 import { optionalNumber } from '../lib/optional-number'
 
-export type IndexBuildProgress = {
+type IndexBuildProgress = {
   database: string
   collection: string
   indexName: string

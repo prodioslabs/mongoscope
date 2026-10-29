@@ -3,10 +3,7 @@ import { isRecord } from '../lib/is-record'
 import { equalityFieldsOfFilter, shapeOfFilter, shapeOfPipeline } from './shape'
 import type { SlowQueryAttr } from './types'
 
-/**
- * Extract typed slow-query fields from a MongoDB log `attr` object.
- * Returns null when required fields are missing.
- */
+/** Returns null when required `attr` fields are missing. */
 export function extractSlowQueryAttr(attr: unknown): SlowQueryAttr | null {
   if (!isRecord(attr)) {
     return null

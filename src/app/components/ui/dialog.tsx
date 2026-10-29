@@ -26,6 +26,8 @@ export function Dialog({
   const dimensions = useTerminalDimensions()
   const theme = useTheme((s) => s.theme)
   const dismissRef = useRef(false)
+  /** True only when the current pointer gesture's mousedown landed on the scrim. */
+  const scrimPointerDownRef = useRef(false)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
@@ -80,12 +82,18 @@ export function Dialog({
       left={0}
       top={0}
       backgroundColor={theme.overlayScrim}
-      onMouseDown={() => {
+      onMouseDown={function onScrimMouseDown() {
+        // Require mousedown+mouseup on the scrim. Opening the dialog from another
+        // control's mousedown would otherwise close on the same click's mouseup.
+        scrimPointerDownRef.current = true
         dismissRef.current = !!renderer.getSelection()
       }}
-      onMouseUp={() => {
-        if (dismissRef.current) {
-          dismissRef.current = false
+      onMouseUp={function onScrimMouseUp() {
+        const openedByThisGesture = !scrimPointerDownRef.current
+        const skipForSelection = dismissRef.current
+        scrimPointerDownRef.current = false
+        dismissRef.current = false
+        if (openedByThisGesture || skipForSelection) {
           return
         }
         onClose?.()
@@ -96,11 +104,15 @@ export function Dialog({
         maxWidth={dimensions.width - 2}
         backgroundColor={theme.backgroundPanel}
         paddingTop={1}
-        onMouseUp={(event: { stopPropagation(): void }) => {
+        onMouseDown={function onPanelMouseDown(event: { stopPropagation(): void }) {
+          event.stopPropagation()
+        }}
+        onMouseUp={function onPanelMouseUp(event: { stopPropagation(): void }) {
           if (renderer.getSelection()?.getSelectedText()) {
             return
           }
           dismissRef.current = false
+          scrimPointerDownRef.current = false
           event.stopPropagation()
         }}
       >

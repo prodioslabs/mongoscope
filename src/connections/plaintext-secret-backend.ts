@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { appConfigFilePath } from '../lib/config-paths'
 import { isRecord } from '../lib/is-record'
 import { updateJsonConfigFile } from '../lib/json-config-file'
-import type { SecretBackend } from './secret-store'
+import { isFileNotFoundError } from '../lib/node-errno'
+import type { SecretBackend } from './secret-backend'
 
 /**
  * Persist secrets as plaintext strings under `secrets[service][name]` in config.json.
@@ -103,13 +104,4 @@ async function readConfigObject(filePath: string): Promise<Record<string, unknow
   }
 
   return isRecord(parsed) ? parsed : null
-}
-
-function isFileNotFoundError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error != null &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
-  )
 }

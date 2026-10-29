@@ -1,12 +1,11 @@
+import { isRecord } from './is-record'
+
 export function errorMessageText(error: unknown): string {
   if (error instanceof Error) {
     return error.message
   }
-  if (error != null && typeof error === 'object' && 'message' in error) {
-    const maybe = (error as { message?: unknown }).message
-    if (typeof maybe === 'string') {
-      return maybe
-    }
+  if (isRecord(error) && typeof error.message === 'string') {
+    return error.message
   }
   return String(error)
 }

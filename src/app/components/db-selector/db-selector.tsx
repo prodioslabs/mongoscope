@@ -130,9 +130,6 @@ export function DbSelector() {
       paddingTop={1}
       paddingRight={1}
       paddingBottom={1}
-      onMouseDown={function openConnectionsOnClick() {
-        openManage()
-      }}
     >
       <text content="DB" fg={theme.textMuted} attributes={TextAttributes.BOLD} flexShrink={0} />
       <text content={displayText(label)} fg={hasSelection ? theme.text : theme.textMuted} />

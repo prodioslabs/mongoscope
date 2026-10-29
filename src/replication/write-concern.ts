@@ -1,3 +1,4 @@
+import { asRecord, isRecord } from '../lib/is-record'
 import type { WriteConcernView } from './types'
 
 /**
@@ -5,16 +6,11 @@ import type { WriteConcernView } from './types'
  * Does not invent a majority-specific wait metric — that is not cleanly available read-only.
  */
 export function normalizeWriteConcern(raw: unknown): WriteConcernView {
-  if (raw == null || typeof raw !== 'object') {
+  if (!isRecord(raw)) {
     return { defaultW: null, source: null }
   }
 
-  const record = raw as {
-    defaultWriteConcern?: { w?: unknown } | null
-    defaultWriteConcernSource?: unknown
-  }
-
-  const w = record.defaultWriteConcern?.w
+  const w = asRecord(raw.defaultWriteConcern)?.w
   let defaultW: string | null = null
   if (typeof w === 'string' && w.trim() !== '') {
     defaultW = w.trim()
@@ -25,7 +21,7 @@ export function normalizeWriteConcern(raw: unknown): WriteConcernView {
   }
 
   const source =
-    typeof record.defaultWriteConcernSource === 'string' ? record.defaultWriteConcernSource : null
+    typeof raw.defaultWriteConcernSource === 'string' ? raw.defaultWriteConcernSource : null
 
   return { defaultW, source }
 }

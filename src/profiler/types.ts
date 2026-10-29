@@ -1,3 +1,4 @@
+import type { MongoDbClient } from '../live-connection'
 import type { PanelError } from '../lib/panel-error'
 import type { QueryPattern } from '../query-patterns'
 
@@ -10,6 +11,9 @@ export const MIN_PROFILE_FETCH_LIMIT = 1
 export const MAX_PROFILE_FETCH_LIMIT = 1_000_000
 
 export type ProfilerPanelError = PanelError
+
+/** Minimal admin/db client surface for profiler reads and enable-profiling. */
+export type ProfilerClient = MongoDbClient
 
 export type ProfilingStatus = {
   level: number

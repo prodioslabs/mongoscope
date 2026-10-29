@@ -1,4 +1,5 @@
 import { Timestamp } from 'mongodb'
+import { isRecord } from '../lib/is-record'
 import { optionalNumber } from '../lib/optional-number'
 import type { OplogWindow } from './types'
 
@@ -16,28 +17,26 @@ export type OplogEdgeDoc = {
  * Matches mongosh `DB.tsToSeconds` semantics used by `db.getReplicationInfo()`.
  */
 export function oplogTimestampSeconds(ts: unknown): number | null {
-  if (ts == null || typeof ts !== 'object') {
-    return null
-  }
-
   if (ts instanceof Timestamp) {
     return optionalNumber(ts.getHighBits())
   }
 
-  if ('getHighBits' in ts && typeof (ts as { getHighBits: unknown }).getHighBits === 'function') {
-    const high = (ts as { getHighBits: () => unknown }).getHighBits()
+  if (!isRecord(ts)) {
+    return null
+  }
+
+  const getHighBits = ts.getHighBits
+  if (typeof getHighBits === 'function') {
+    const high: unknown = getHighBits.call(ts)
     return optionalNumber(high)
   }
 
-  if ('$timestamp' in ts) {
-    const wrapped = (ts as { $timestamp?: unknown }).$timestamp
-    if (wrapped != null && typeof wrapped === 'object' && 't' in wrapped) {
-      return optionalNumber((wrapped as { t: unknown }).t)
-    }
+  if (isRecord(ts.$timestamp) && 't' in ts.$timestamp) {
+    return optionalNumber(ts.$timestamp.t)
   }
 
   if ('t' in ts) {
-    return optionalNumber((ts as { t: unknown }).t)
+    return optionalNumber(ts.t)
   }
 
   return null

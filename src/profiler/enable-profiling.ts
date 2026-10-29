@@ -1,8 +1,5 @@
-import type { MongoDbClient } from '../live-connection'
 import { enableErrorFromUnknown } from './permissions'
-import { DEFAULT_SLOWMS, type ProfilerPanelError } from './types'
-
-export type EnableProfilingClient = MongoDbClient
+import { DEFAULT_SLOWMS, type ProfilerClient, type ProfilerPanelError } from './types'
 
 export type EnableProfilingResult =
   | { ok: true; slowms: number }
@@ -20,7 +17,7 @@ export function buildEnableProfilingCommand(slowms: number): Record<string, numb
 }
 
 export async function enableProfiling(
-  client: EnableProfilingClient | null,
+  client: ProfilerClient | null,
   database: string,
   slowms: number = DEFAULT_SLOWMS,
 ): Promise<EnableProfilingResult> {

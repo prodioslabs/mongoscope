@@ -1,4 +1,3 @@
-export { hostLabelFromUri } from '../lib/mongodb-uri'
 export { formatConnectionError } from './format-connection-error'
 export { createPlaintextSecretBackend } from './plaintext-secret-backend'
 export {
@@ -6,7 +5,6 @@ export {
   createFallbackSecretBackend,
   createSecretStore,
   defaultSecretStore,
-  isBunSecretsAvailable,
   SECRET_SERVICE,
   SecretStoreError,
   type SecretBackend,

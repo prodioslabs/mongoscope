@@ -1,4 +1,3 @@
-import type { MongoDbClient } from '../live-connection'
 import { isRecord } from '../lib/is-record'
 import { filterPickerDatabases, parseListDatabasesResult } from '../indexes/normalize'
 import { buildPatternsFromSamples } from './build-patterns'
@@ -13,11 +12,12 @@ import { toProfileSample } from './profile-doc'
 import {
   DEFAULT_SLOWMS,
   PROFILE_FETCH_LIMIT,
+  type ProfilerClient,
   type ProfilerSlowQueriesSnapshot,
   type ProfilingStatus,
 } from './types'
 
-export type ProfilerClient = MongoDbClient
+export type { ProfilerClient }
 
 export type FetchProfilerSnapshotResult = {
   snapshot: ProfilerSlowQueriesSnapshot

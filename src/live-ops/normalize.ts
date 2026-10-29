@@ -1,4 +1,4 @@
-import { isRecord } from '../lib/is-record'
+import { asRecord, isRecord } from '../lib/is-record'
 import { optionalNumber } from '../lib/optional-number'
 import { normalizePlanSummary } from '../lib/plan-summary'
 import { stringOrEmpty } from '../lib/string-or-empty'
@@ -19,10 +19,10 @@ export function normalizeCurrentOpDocs(docs: unknown[]): {
 } {
   const rawOps: RawCurrentOpDoc[] = []
   for (const doc of docs) {
-    if (doc == null || typeof doc !== 'object') {
+    if (!isRecord(doc)) {
       continue
     }
-    rawOps.push(doc as RawCurrentOpDoc)
+    rawOps.push(doc)
   }
 
   const ops: CurrentOpRow[] = []
@@ -145,20 +145,18 @@ export function parseServerStatus(result: unknown): {
     writers: null,
   }
 
-  if (result == null || typeof result !== 'object') {
+  if (!isRecord(result)) {
     return { connections, queuedOps }
   }
 
-  const record = result as {
-    connections?: { current?: unknown; available?: unknown; active?: unknown }
-    globalLock?: { currentQueue?: { readers?: unknown; writers?: unknown } }
-  }
+  const connectionStats = asRecord(result.connections)
+  const currentQueue = asRecord(asRecord(result.globalLock)?.currentQueue)
 
-  connections.current = optionalNumber(record.connections?.current)
-  connections.available = optionalNumber(record.connections?.available)
-  connections.active = optionalNumber(record.connections?.active)
-  queuedOps.readers = optionalNumber(record.globalLock?.currentQueue?.readers)
-  queuedOps.writers = optionalNumber(record.globalLock?.currentQueue?.writers)
+  connections.current = optionalNumber(connectionStats?.current)
+  connections.available = optionalNumber(connectionStats?.available)
+  connections.active = optionalNumber(connectionStats?.active)
+  queuedOps.readers = optionalNumber(currentQueue?.readers)
+  queuedOps.writers = optionalNumber(currentQueue?.writers)
 
   return { connections, queuedOps }
 }
@@ -166,8 +164,8 @@ export function parseServerStatus(result: unknown): {
 function planFromDoc(doc: RawCurrentOpDoc): string {
   let raw: unknown = doc.planSummary
   if (typeof raw !== 'string' || raw.length === 0) {
-    const cursor = doc.cursor
-    if (cursor != null && typeof cursor === 'object') {
+    const cursor = asRecord(doc.cursor)
+    if (cursor != null) {
       raw = cursor.planSummary
     }
   }

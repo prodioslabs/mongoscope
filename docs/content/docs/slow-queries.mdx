@@ -8,3 +8,5 @@ description: Static log patterns and live system.profile sampling
 - Live requires profiling on the selected database: press `e` → confirm dialog (sets profiler level 1 + `slowms`, default 100).
 - Sort: `c` count · `a` avg ms · `p` plan. Details: Enter. From details, `i` jumps to Indexes with a suggested vs existing index (read-only).
 - Live sample window: `Shift+T` (presets / custom). Cycle databases: `[` / `]`.
+- **Export (`x`):** write all patterns in the current sort order (not just the visible rows) to JSON, CSV, or Markdown on the machine running mongoscope (relevant over SSH). Each row includes pattern aggregates (namespace, op, shape, counts, timings, plan) plus the slowest-sample **query detail** shown in the detail dialog: filter/pipeline, stage, command, suggested index, context, and work metrics. Sample filters and commands may contain literal query values. Credentials and connection URIs are never included. Choose a format and destination path in the dialog; Enter writes (confirms overwrite if the file exists), Esc cancels.
+- See also: [Indexing guide](/docs/indexing-guide)

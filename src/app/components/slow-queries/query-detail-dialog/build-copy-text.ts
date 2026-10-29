@@ -5,7 +5,6 @@ import {
 } from '../format'
 import type { PatternExplain, QueryPattern } from '../../../../query-patterns'
 
-/** Pretty-print JSON when possible; otherwise return the input unchanged. */
 export function prettyDisplay(value: string): string {
   if (value === 'n/a') {
     return value
@@ -140,9 +139,6 @@ export function buildQueryDetailCopyText(
   return text
 }
 
-/**
- * Plain-text suggested index shell command, or null when none is shown.
- */
 export function buildSuggestedIndexCopyText(explain: PatternExplain | null): string | null {
   const command = explain?.suggestedIndex?.command
   if (command == null) {

@@ -16,7 +16,7 @@ Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are at
 
 | Area         | What it surfaces                                                |
 | ------------ | --------------------------------------------------------------- |
-| Slow Queries | Aggregated patterns from logs, or live `system.profile` samples |
+| Slow Queries | Aggregated patterns from logs or live `system.profile`; export JSON/CSV/Markdown |
 | Live Ops     | `currentOp`, COLLSCAN highlights, kill-op, collection `top`     |
 | Replication  | Topology, oplog window, lag sparkline, heartbeats, elections    |
 | Indexes      | Inventory, build %, `$indexStats`, jump from a slow query       |
@@ -77,6 +77,7 @@ If a log directory (or selected file) is unreadable due to permissions, Welcome 
 | `1`–`5` / Tab | Switch tabs                                    |
 | `c`           | Connections (Live Ops / Replication / Indexes) |
 | `l`           | Toggle Static ↔ Live (Slow Queries / Logs)     |
+| `x`           | Export Slow Queries patterns (JSON/CSV/Markdown) |
 | `?`           | Help                                           |
 | `Ctrl+K`      | Command palette                                |
 | `m` / `t`     | Light-dark / cycle theme                       |
