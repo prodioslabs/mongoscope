@@ -1,9 +1,12 @@
 import { platform } from 'node:os'
 import { appConfigFilePath } from '../lib/config-paths'
 import { errorMessageText } from '../lib/error-message'
+import type { SecretBackend } from './secret-backend'
 import { createPlaintextSecretBackend } from './plaintext-secret-backend'
 import type { ConnectionsBlob } from './types'
 import { emptyConnectionsBlob, validateConnectionsBlob } from './validate'
+
+export type { SecretBackend } from './secret-backend'
 
 export const SECRET_SERVICE = 'com.mongoscope.cli'
 
@@ -20,13 +23,6 @@ export class SecretStoreError extends Error {
     this.name = 'SecretStoreError'
     this.code = code
   }
-}
-
-/** Low-level backend — injectable for tests; never logs secret values. */
-export type SecretBackend = {
-  get(options: { service: string; name: string }): Promise<string | null>
-  set(options: { service: string; name: string; value: string }): Promise<void>
-  delete(options: { service: string; name: string }): Promise<boolean>
 }
 
 export type SecretStore = {
