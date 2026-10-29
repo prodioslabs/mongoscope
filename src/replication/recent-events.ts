@@ -1,4 +1,5 @@
 import { isRecord } from '../lib/is-record'
+import { parseMongoLogTimestampMs } from '../lib/mongo-log-timestamp'
 import type { RecentReplicationEvent } from './types'
 
 const REPLICATION_COMPONENTS = new Set(['REPL', 'ELECTION', 'REPL_HB', 'INITSYNC', 'ROLLBACK'])
@@ -70,7 +71,7 @@ function parseLogLine(line: string): RecentReplicationEvent | null {
     return null
   }
 
-  const timestampMs = parseLogTimestampMs(doc.t)
+  const timestampMs = parseMongoLogTimestampMs(doc.t)
   return {
     timestampMs,
     timestampLabel: formatEventTimestamp(timestampMs),
@@ -92,24 +93,6 @@ function buildMessage(doc: Record<string, unknown>): string {
     }
   }
   return ''
-}
-
-function parseLogTimestampMs(t: unknown): number | null {
-  if (t == null) {
-    return null
-  }
-  if (typeof t === 'string') {
-    const ms = Date.parse(t)
-    return Number.isFinite(ms) ? ms : null
-  }
-  if (isRecord(t) && '$date' in t) {
-    const raw = t.$date
-    if (typeof raw === 'string' || typeof raw === 'number') {
-      const ms = new Date(raw).getTime()
-      return Number.isFinite(ms) ? ms : null
-    }
-  }
-  return null
 }
 
 function formatEventTimestamp(ms: number | null): string {

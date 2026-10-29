@@ -1,14 +1,12 @@
-import { encodeSeverity, scanHotFields, severityLabel, SEVERITY_RAW } from '../parser'
 import { isRecord } from '../lib/is-record'
+import { parseMongoLogTimestampMs } from '../lib/mongo-log-timestamp'
+import { encodeSeverity, scanHotFields, severityLabel, SEVERITY_RAW } from '../parser'
 import { extractLogLineAttrFields } from './attr-fields'
 import type { TailLogLine } from './types'
 
 const TEXT_ENCODER = new TextEncoder()
 
-/**
- * Parse one complete log line (JSON structured or raw) into a {@link TailLogLine}.
- * Shared by file-tail byte ingest and getLog string ingest.
- */
+/** Shared by file-tail byte ingest and getLog string ingest. */
 export function parseTailLogLineFromText(text: string): TailLogLine {
   if (text.length === 0) {
     return rawLine('', Number.NaN)
@@ -91,19 +89,5 @@ function rawLine(text: string, timestamp: number): TailLogLine {
 }
 
 function parseTimestampLoose(t: unknown): number {
-  if (t == null) {
-    return Number.NaN
-  }
-  if (typeof t === 'string') {
-    const ms = Date.parse(t)
-    return Number.isNaN(ms) ? Number.NaN : ms
-  }
-  if (isRecord(t) && '$date' in t) {
-    const raw = t.$date
-    if (typeof raw === 'string' || typeof raw === 'number') {
-      const ms = new Date(raw).getTime()
-      return Number.isFinite(ms) ? ms : Number.NaN
-    }
-  }
-  return Number.NaN
+  return parseMongoLogTimestampMs(t) ?? Number.NaN
 }
