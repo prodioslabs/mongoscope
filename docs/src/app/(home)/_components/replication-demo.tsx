@@ -22,7 +22,9 @@ export function ReplicationDemo() {
         previous.map((samples, index) => {
           const range = replicaMembers[index]?.lagRange
           const last = samples[samples.length - 1]
-          if (!range || last === undefined) return samples
+          if (!range || last === undefined) {
+            return samples
+          }
           return [...samples, nextLag(last, range, rolls[index] ?? 0.5)].slice(-lagHistoryLength)
         }),
       )

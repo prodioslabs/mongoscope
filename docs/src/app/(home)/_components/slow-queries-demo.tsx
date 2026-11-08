@@ -34,11 +34,15 @@ export function SlowQueriesDemo({ className }: SlowQueriesDemoProps) {
   function moveSelection(delta: number) {
     const index = ordered.findIndex((pattern) => pattern.namespace === selectedNamespace)
     const next = ordered[Math.min(ordered.length - 1, Math.max(0, index + delta))]
-    if (next) setSelectedNamespace(next.namespace)
+    if (next) {
+      setSelectedNamespace(next.namespace)
+    }
   }
 
   function openSuggestedIndex() {
-    if (selected?.suggestedIndex) showIndexes(selected.namespace)
+    if (selected?.suggestedIndex) {
+      showIndexes(selected.namespace)
+    }
   }
 
   return (
@@ -76,7 +80,7 @@ export function SlowQueriesDemo({ className }: SlowQueriesDemoProps) {
       className={className}
     >
       <Screen>
-        <div className="min-w-[31rem]">
+        <div className="min-w-124">
           <div className={cn(rowGrid, 'pb-1', tone.muted)}>
             <span>NAMESPACE</span>
             <span>OP</span>

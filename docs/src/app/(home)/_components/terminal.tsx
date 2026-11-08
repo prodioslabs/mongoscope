@@ -15,32 +15,52 @@ export const tone = {
 } as const
 
 export function planTone(plan: PlanSummary) {
-  if (plan === 'COLLSCAN') return tone.error
-  if (plan === 'IXSCAN+SORT') return tone.warning
+  if (plan === 'COLLSCAN') {
+    return tone.error
+  }
+  if (plan === 'IXSCAN+SORT') {
+    return tone.warning
+  }
   return tone.success
 }
 
 export function latencyTone(ms: number) {
-  if (ms >= 500) return tone.error
-  if (ms >= 150) return tone.warning
+  if (ms >= 500) {
+    return tone.error
+  }
+  if (ms >= 150) {
+    return tone.warning
+  }
   return tone.muted
 }
 
 export function secondsTone(seconds: number) {
-  if (seconds >= 10) return tone.error
-  if (seconds >= 3) return tone.warning
+  if (seconds >= 10) {
+    return tone.error
+  }
+  if (seconds >= 3) {
+    return tone.warning
+  }
   return tone.muted
 }
 
 export function lagTone(seconds: number) {
-  if (seconds < 2) return tone.success
-  if (seconds < 10) return tone.warning
+  if (seconds < 2) {
+    return tone.success
+  }
+  if (seconds < 10) {
+    return tone.warning
+  }
   return tone.error
 }
 
 export function severityTone(severity: LogSeverity) {
-  if (severity === 'E') return tone.error
-  if (severity === 'W') return tone.warning
+  if (severity === 'E') {
+    return tone.error
+  }
+  if (severity === 'W') {
+    return tone.warning
+  }
   return tone.success
 }
 

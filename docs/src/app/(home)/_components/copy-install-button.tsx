@@ -17,7 +17,9 @@ export function CopyInstallButton({ variant = 'inline', className }: CopyInstall
 
   useEffect(
     function resetCopyStatus() {
-      if (status === 'idle') return
+      if (status === 'idle') {
+        return
+      }
       const timer = window.setTimeout(() => setStatus('idle'), 1600)
       return () => window.clearTimeout(timer)
     },

@@ -49,7 +49,9 @@ export function LogsDemo({ className }: LogsDemoProps) {
     const timer = window.setInterval(() => {
       const template = logTemplates[Math.floor(Math.random() * logTemplates.length)]
       const gap = 1 + Math.floor(Math.random() * 3)
-      if (!template) return
+      if (!template) {
+        return
+      }
       setLines((previous) => {
         const last = previous[previous.length - 1]
         const line = {
@@ -80,8 +82,11 @@ export function LogsDemo({ className }: LogsDemoProps) {
   function toggleCategory(category: LogCategory) {
     setEnabled((previous) => {
       const next = new Set(previous)
-      if (next.has(category)) next.delete(category)
-      else next.add(category)
+      if (next.has(category)) {
+        next.delete(category)
+      } else {
+        next.add(category)
+      }
       return next
     })
   }
@@ -130,7 +135,9 @@ export function LogsDemo({ className }: LogsDemoProps) {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Escape') event.currentTarget.blur()
+                if (event.key === 'Escape') {
+                  event.currentTarget.blur()
+                }
               }}
               placeholder="search messages"
               className="w-47.5 max-w-[52vw] rounded-lg border border-fd-border bg-fd-background py-0.5 pr-2 pl-7 text-[0.8125rem] outline-none focus-visible:ring-2 focus-visible:ring-(--home-accent)"
@@ -194,7 +201,9 @@ type HighlightedProps = {
 
 function Highlighted({ text, query }: HighlightedProps) {
   const index = query ? text.toLowerCase().indexOf(query) : -1
-  if (index < 0) return text
+  if (index < 0) {
+    return text
+  }
 
   return (
     <>

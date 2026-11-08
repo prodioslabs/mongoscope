@@ -70,7 +70,9 @@ export function LiveOpsDemo() {
 
   useEffect(
     function clearNoticeLater() {
-      if (!notice) return
+      if (!notice) {
+        return
+      }
       const timer = window.setTimeout(() => setNotice(null), noticeMs)
       return () => window.clearTimeout(timer)
     },
@@ -78,11 +80,15 @@ export function LiveOpsDemo() {
   )
 
   function askToKill() {
-    if (selected) setConfirming(true)
+    if (selected) {
+      setConfirming(true)
+    }
   }
 
   function answerKill(kill: boolean) {
-    if (!confirming) return
+    if (!confirming) {
+      return
+    }
     setConfirming(false)
     if (kill && selected) {
       dispatch({ type: 'kill', id: selected.id })
@@ -93,7 +99,9 @@ export function LiveOpsDemo() {
   function moveSelection(delta: number) {
     const index = running.findIndex((op) => op.id === selected?.id)
     const next = running[Math.min(running.length - 1, Math.max(0, index + delta))]
-    if (next) setSelectedId(next.id)
+    if (next) {
+      setSelectedId(next.id)
+    }
   }
 
   const scans = running.filter((op) => op.plan === 'COLLSCAN').length

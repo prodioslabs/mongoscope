@@ -30,7 +30,9 @@ export function ExportDemo() {
 
   useEffect(
     function advanceWriteStatus() {
-      if (status === 'idle') return
+      if (status === 'idle') {
+        return
+      }
       const timer = window.setTimeout(
         () => setStatus(status === 'writing' ? 'written' : 'idle'),
         status === 'writing' ? 500 : 3500,

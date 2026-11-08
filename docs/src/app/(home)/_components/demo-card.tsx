@@ -71,7 +71,9 @@ export function DemoCard({
 
   useEffect(
     function releasePressedKey() {
-      if (!pressed) return
+      if (!pressed) {
+        return
+      }
       const timer = window.setTimeout(() => setPressed(null), 160)
       return () => window.clearTimeout(timer)
     },
@@ -87,7 +89,9 @@ export function DemoCard({
 
   const handleKey = useCallback((key: string) => {
     const run = keysRef.current[key]
-    if (!run) return false
+    if (!run) {
+      return false
+    }
     run()
     setPressed({ key, at: Date.now() })
     return true
@@ -105,7 +109,9 @@ export function DemoCard({
 
   function moveSpotlight(event: PointerEvent<HTMLElement>) {
     const card = cardRef.current
-    if (!card) return
+    if (!card) {
+      return
+    }
     const rect = card.getBoundingClientRect()
     card.style.setProperty('--mx', `${event.clientX - rect.left}px`)
     card.style.setProperty('--my', `${event.clientY - rect.top}px`)
@@ -118,12 +124,16 @@ export function DemoCard({
       aria-labelledby={`${id}-demo-title`}
       onPointerMove={moveSpotlight}
       onPointerEnter={(event) => {
-        if (event.pointerType === 'mouse') activate()
+        if (event.pointerType === 'mouse') {
+          activate()
+        }
       }}
       onPointerLeave={deactivate}
       onFocus={activate}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) deactivate()
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          deactivate()
+        }
       }}
       className={cn(
         'group/card relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border border-fd-border bg-tui-card p-4.5 shadow-[0_1px_2px_var(--tui-shadow-soft)] transition-[box-shadow,translate] duration-300 sm:p-5',

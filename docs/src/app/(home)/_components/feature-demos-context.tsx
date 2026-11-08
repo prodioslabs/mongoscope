@@ -18,7 +18,9 @@ const FeatureDemosContext = createContext<FeatureDemos | null>(null)
 
 export function useFeatureDemos() {
   const value = use(FeatureDemosContext)
-  if (!value) throw new Error('useFeatureDemos must be used inside FeatureDemosProvider')
+  if (!value) {
+    throw new Error('useFeatureDemos must be used inside FeatureDemosProvider')
+  }
   return value
 }
 

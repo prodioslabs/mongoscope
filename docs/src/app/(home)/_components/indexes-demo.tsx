@@ -46,7 +46,9 @@ export function IndexesDemo() {
   function stepCollection(delta: number) {
     const index = collections.indexOf(indexesCollection)
     const next = collections[(index + delta + collections.length) % collections.length]
-    if (next) setIndexesCollection(next)
+    if (next) {
+      setIndexesCollection(next)
+    }
   }
 
   const inventory = [...(indexInventory[indexesCollection] ?? [])]
