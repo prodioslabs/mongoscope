@@ -37,6 +37,8 @@ chore(docs): clarify ephemeral CLI connect in getting started
 
 - Read files in full before wide-ranging changes, before editing files you have not fully inspected, and when asked to investigate or audit. Do not rely on search snippets for broad changes.
 - No `any` unless absolutely necessary.
+- No runtime checks of values whose types TypeScript already guarantees (no `typeof` / `instanceof` / `Array.isArray` / shape guards on typed parameters, typed callback results, or typed declarations). Validate only at trust boundaries (CLI argv, Mongo wire input, file/config parse).
+- Inline single-line helpers that have only one call site.
 - Check `node_modules` for external API types; don't guess.
 - No inline imports (`await import()`, `import("pkg").Type`, dynamic type imports). Top-level imports only.
 - Never remove or downgrade code to fix type errors from outdated deps; upgrade the dep instead.
@@ -133,6 +135,39 @@ const b = {
 b.green.toUpperCase() // string
 b.red.map((n) => n / 255) // tuple
 ```
+
+### Shortcuts and keybindings
+
+Never hardcode key strings in handlers, footers, or help text. Define shortcuts in `src/app/shortcuts/<feature>.ts` (and `global.ts` for app-wide bindings), then wire UI through `toBindings()`, `toFooter()`, and `toHelpSection()`.
+
+```tsx
+// ❌ BAD — key string duplicated outside the shortcuts module
+useBindings([{ key: 'x', cmd: 'slow-queries.export-open' }])
+
+// ✅ GOOD — single source of truth
+useBindings(toBindings(SLOW_QUERIES_SHORTCUTS))
+```
+
+Dialog chrome may bind `escape` to a close command when that is the shared overlay contract; feature actions still belong in the shortcuts modules.
+
+## Agent skills (TUI / docs)
+
+Load the matching skill before non-trivial work in that area:
+
+| Need | Skill |
+| ---- | ----- |
+| OpenTUI components, keymap, layout, React bindings, testing helpers | `.agents/skills/opentui/SKILL.md` |
+| Smoke / debug the interactive TUI in a controlled terminal | `.agents/skills/interactive-testing/SKILL.md` |
+| Product docs under `docs/content/docs/` (or root/docs READMEs) | `.agents/skills/developer-documentation/SKILL.md` |
+
+## Commands
+
+- After code changes (not docs-only): run `bun run typecheck` and fix errors before treating the work as done. For check-only lint/format use `bunx oxlint` and `bunx oxfmt --check` (the `lint` / `format` scripts mutate files).
+- Never run `bun run test` (full suite) or `bun run build` unless the user asks. Prefer a targeted Vitest run for files you touched: `bunx vitest run path/to/file.test.ts`.
+- If you create or modify a test file, run that test and iterate until it passes.
+- For ad-hoc scripts, write them to a temp file (e.g. `/tmp`), run, edit if needed, remove when done. Do not embed multi-line scripts in shell one-liners.
+- Never commit unless the user asks.
+- Do not treat piped / non-TTY `bun start` as a valid TUI check. For interactive smoke tests, follow the **interactive-testing** skill (tmux) or use a real terminal.
 
 ## Folder placement
 
@@ -258,13 +293,17 @@ function LogFileSection({ ... }: LogFileSectionProps) {
 
 ## Docs content writing
 
-When creating or editing product documentation under `docs/content/docs/` (or the root/docs READMEs), follow the **developer-documentation** skill:
+When creating or editing product documentation under `docs/content/docs/` (or the root/docs READMEs), follow the **developer-documentation** skill (see [Agent skills](#agent-skills-tui--docs)):
 
 - Skill: `.agents/skills/developer-documentation/SKILL.md`
 - Page types: `.agents/skills/developer-documentation/references/documentation-types.md`
 - Writing standard: `.agents/skills/developer-documentation/references/writing-standard.md`
 
 Choose the page type by the reader's job, verify claims against the CLI/TUI, and keep `docs/content/docs/meta.json` in sync with the sidebar.
+
+## User override
+
+If the user's instructions conflict with any rule in this document, ask for explicit confirmation before overriding. Only then execute their instructions.
 
 ## Cursor Cloud specific instructions
 
