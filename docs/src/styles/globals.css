@@ -2,13 +2,47 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
-/* Mark accent — matches TUI gruvbox theme.accent */
+/* Brand accent — matches TUI gruvbox theme.accent. Also Fumadocs' primary, so docs
+   active states (sidebar, TOC, breadcrumb, tabs) carry the brand instead of grey. */
 :root {
   --ms-accent: #427b58;
+  --color-fd-primary: var(--ms-accent);
 }
 
 .dark {
   --ms-accent: #8ec07c;
+  --color-fd-primary: var(--ms-accent);
+}
+
+@theme {
+  /* Same face as the home page terminals; `--font-jetbrains-mono` comes from the root layout. */
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  --animate-ms-blink: ms-blink 1s steps(1) infinite;
+  --animate-ms-rise: ms-rise 0.3s ease-out;
+  --animate-ms-flash: ms-flash 1.4s ease-out;
+
+  @keyframes ms-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ms-rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* Inset: home demo cards clip overflow for their cursor spotlight. */
+  @keyframes ms-flash {
+    30% {
+      box-shadow:
+        inset 0 0 0 1px var(--home-accent),
+        inset 0 0 0 6px var(--home-accent-soft);
+    }
+  }
 }
 
 html {

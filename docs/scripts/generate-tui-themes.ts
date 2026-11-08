@@ -1,0 +1,180 @@
+/**
+ * Writes `src/app/(home)/_components/tui-themes.ts` from the TUI built-in themes
+ * so the home page cycles the same palettes, in the same order, as `t` in the
+ * app. Mirrors `resolveTheme` in `src/app/theme/default-themes.ts`.
+ *
+ * The output is committed: the docs Docker build only sees `docs/`, not the TUI
+ * sources, so this runs on `dev` and by hand rather than in `build`.
+ */
+import { readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+type ColorValue = string | number | { dark: ColorValue; light: ColorValue }
+
+type ThemeJson = {
+  defs?: Record<string, ColorValue>
+  theme: Record<string, ColorValue>
+}
+
+type Mode = 'dark' | 'light'
+
+const docsRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+const tuiAppDir = join(docsRoot, '../src/app')
+const outPath = join(docsRoot, 'src/app/(home)/_components/tui-themes.ts')
+
+/** Palette field → TUI theme key, resolved in dark mode (the terminal mockups are always dark). */
+const paletteKeys = {
+  background: 'background',
+  panel: 'backgroundPanel',
+  border: 'border',
+  text: 'text',
+  muted: 'textMuted',
+  primary: 'primary',
+  accent: 'accent',
+  error: 'error',
+  warning: 'warning',
+  success: 'success',
+  info: 'info',
+} as const
+
+const ansiColors = [
+  '#000000',
+  '#800000',
+  '#008000',
+  '#808000',
+  '#000080',
+  '#800080',
+  '#008080',
+  '#c0c0c0',
+  '#808080',
+  '#ff0000',
+  '#00ff00',
+  '#ffff00',
+  '#0000ff',
+  '#ff00ff',
+  '#00ffff',
+  '#ffffff',
+]
+
+function hex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('')}`
+}
+
+function ansiToHex(code: number): string {
+  if (code < 16) {
+    return ansiColors[code] ?? '#000000'
+  }
+  if (code < 232) {
+    const index = code - 16
+    const level = (x: number) => (x === 0 ? 0 : x * 40 + 55)
+    return hex(level(Math.floor(index / 36)), level(Math.floor(index / 6) % 6), level(index % 6))
+  }
+  if (code < 256) {
+    const gray = (code - 232) * 10 + 8
+    return hex(gray, gray, gray)
+  }
+  return '#000000'
+}
+
+function resolveColor(theme: ThemeJson, value: ColorValue, mode: Mode, chain: string[]): string {
+  if (typeof value === 'number') {
+    return ansiToHex(value)
+  }
+  if (typeof value === 'object') {
+    return resolveColor(theme, value[mode], mode, chain)
+  }
+  if (value.startsWith('#')) {
+    return value.toLowerCase()
+  }
+  if (chain.includes(value)) {
+    throw new Error(`Circular color reference: ${[...chain, value].join(' -> ')}`)
+  }
+  const next = theme.defs?.[value] ?? theme.theme[value]
+  if (next === undefined) {
+    throw new Error(`Color reference "${value}" not found in defs or theme`)
+  }
+  return resolveColor(theme, next, mode, [...chain, value])
+}
+
+/** Built-in theme names in `DEFAULT_THEMES` order, with their asset files. */
+function readCatalog(): Array<{ name: string; file: string }> {
+  const source = readFileSync(join(tuiAppDir, 'theme/default-themes.ts'), 'utf8')
+  const files = new Map(
+    [...source.matchAll(/^import (\w+) from '\.\/assets\/([\w-]+\.json)'/gm)].map((m) => [
+      m[1],
+      m[2],
+    ]),
+  )
+  const catalog = [...source.matchAll(/^\s*'?([\w-]+)'?: requireThemeJson\((\w+)\),$/gm)].map(
+    (m) => ({ name: m[1], file: files.get(m[2]) }),
+  )
+  if (catalog.length === 0 || catalog.some((entry) => entry.file === undefined)) {
+    throw new Error('Could not read DEFAULT_THEMES from src/app/theme/default-themes.ts')
+  }
+  return catalog as Array<{ name: string; file: string }>
+}
+
+function readDefaultThemeName(): string {
+  const source = readFileSync(join(tuiAppDir, 'config/types.ts'), 'utf8')
+  const name = source.match(/DEFAULT_THEME_NAME = '([\w-]+)'/)?.[1]
+  if (!name) {
+    throw new Error('Could not read DEFAULT_THEME_NAME from src/app/config/types.ts')
+  }
+  return name
+}
+
+function propertyKey(name: string): string {
+  return /^[a-z]\w*$/i.test(name) ? name : `'${name}'`
+}
+
+function buildModule(): string {
+  const catalog = readCatalog()
+  const defaultName = readDefaultThemeName()
+  if (!catalog.some((entry) => entry.name === defaultName)) {
+    throw new Error(`Default theme "${defaultName}" is not a built-in theme`)
+  }
+
+  const themes = catalog.map(({ name, file }) => {
+    const theme = JSON.parse(
+      readFileSync(join(tuiAppDir, 'theme/assets', file), 'utf8'),
+    ) as ThemeJson
+    const fields = Object.entries(paletteKeys).map(
+      ([field, key]) =>
+        `    ${field}: '${resolveColor(theme, theme.theme[key] ?? key, 'dark', [])}',`,
+    )
+    // Light-mode accent tints page text and highlights when the site is in light mode.
+    fields.push(
+      `    accentLight: '${resolveColor(theme, theme.theme.accent ?? 'accent', 'light', [])}',`,
+    )
+    return `  ${propertyKey(name)}: {\n${fields.join('\n')}\n  },`
+  })
+
+  return `// Generated by scripts/generate-tui-themes.ts from the TUI built-in themes. Do not edit by hand.
+
+export const tuiThemes = {
+${themes.join('\n')}
+} as const
+
+export type TuiThemeName = keyof typeof tuiThemes
+
+export const tuiThemeNames = Object.keys(tuiThemes) as TuiThemeName[]
+
+export const defaultTuiTheme: TuiThemeName = '${defaultName}'
+`
+}
+
+const next = buildModule()
+let current = ''
+try {
+  current = readFileSync(outPath, 'utf8')
+} catch {
+  // First run — nothing to compare against.
+}
+
+if (current === next) {
+  console.log(`unchanged ${outPath}`)
+} else {
+  writeFileSync(outPath, next)
+  console.log(`wrote ${outPath}`)
+}

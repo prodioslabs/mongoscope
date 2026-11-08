@@ -2,120 +2,189 @@
 
 import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
 import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { docsRoute, githubRepoUrl, installCurlCommand } from '@/lib/shared'
+import { docsRoute, installCurlCommand, latestRelease, releasesUrl } from '@/lib/shared'
+import { Kbd } from './kbd'
+import { HomeSection, SectionHeading } from './section'
 
-type InstallSectionProps = {
-  className?: string
-}
+type Platform = 'unix' | 'windows'
 
-export function InstallSection({ className }: InstallSectionProps) {
+const pointCommands = [
+  '# offline: parse a log file',
+  'mongoscope --log-path ./mongod.log',
+  '',
+  '# live: session-only connection',
+  'mongoscope --uri mongodb://localhost:27017',
+].join('\n')
+
+export function InstallSteps() {
+  const [platform, setPlatform] = useState<Platform>('unix')
+
   return (
-    <section
-      className={cn('mx-auto w-full max-w-(--fd-layout-width) min-w-0 px-4 sm:px-6', className)}
-      aria-labelledby="install-heading"
-    >
-      <div className="rounded-2xl border border-fd-border bg-fd-card px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2
-            id="install-heading"
-            className="text-lg font-semibold tracking-tight text-fd-foreground sm:text-xl"
-          >
-            Install
-          </h2>
-          <ul className="flex flex-wrap items-center gap-2">
-            <OsChip brand="apple" icon={<AppleMark className="size-4" />} label="macOS" />
-            <OsChip brand="linux" icon={<LinuxMark className="size-4" />} label="Linux" />
-            <OsChip
-              brand="windows"
-              icon={<WindowsMark className="size-4" />}
-              label="Windows"
-              muted
-            />
-          </ul>
-        </div>
+    <HomeSection id="install" labelledBy="install-heading">
+      <SectionHeading
+        id="install-heading"
+        eyebrow="Up in a minute"
+        title="Install, point, explore."
+        description="No server, no agent, no port. Bring a log file or a connection string."
+      />
 
-        <p className="mb-4 max-w-2xl text-sm text-pretty text-fd-muted-foreground">
-          One command for macOS and Linux — the installer detects your OS and architecture. Windows
-          builds ship on{' '}
-          <a
-            href={`${githubRepoUrl}/releases`}
-            className="font-medium text-fd-primary underline-offset-4 hover:underline"
-            target="_blank"
-            rel="noreferrer noopener"
-          >
-            GitHub Releases
-          </a>
-          .
-        </p>
+      <ol className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
+        <Step number={1} title="Install">
+          <div role="group" aria-label="Operating system" className="mb-3 flex flex-wrap gap-1.5">
+            <PlatformButton
+              selected={platform === 'unix'}
+              onSelect={() => setPlatform('unix')}
+              icon={
+                <>
+                  <AppleMark className="size-3.5" />
+                  <LinuxMark className="size-3.5" />
+                </>
+              }
+            >
+              macOS / Linux
+            </PlatformButton>
+            <PlatformButton
+              selected={platform === 'windows'}
+              onSelect={() => setPlatform('windows')}
+              icon={<WindowsMark className="size-3.5" />}
+            >
+              Windows
+            </PlatformButton>
+          </div>
+          {platform === 'unix' ? (
+            <CodeBlock code={installCurlCommand} />
+          ) : (
+            <p className="text-sm text-fd-muted-foreground">
+              Download{' '}
+              <code className="text-fd-foreground">
+                mongoscope_{latestRelease.version}_windows_amd64.zip
+              </code>{' '}
+              from{' '}
+              <a
+                href={releasesUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="font-medium text-(--home-accent-ink) underline-offset-4 hover:underline"
+              >
+                GitHub Releases
+              </a>
+              , unzip it, and put <code className="text-fd-foreground">mongoscope.exe</code> on your
+              PATH.
+            </p>
+          )}
+        </Step>
 
-        <div className="min-w-0 overflow-x-auto">
-          <DynamicCodeBlock
-            lang="bash"
-            code={installCurlCommand}
-            codeblock={{
-              title: 'Terminal',
-              className: 'my-0 max-w-full',
-              viewportProps: {
-                className: 'overflow-x-auto',
-              },
-            }}
-          />
-        </div>
+        <Step
+          number={2}
+          title="Point it at something"
+          description="Analyse a log file offline, or connect live."
+        >
+          <CodeBlock code={pointCommands} />
+        </Step>
 
-        <p className="mt-4 text-sm text-fd-muted-foreground">
-          Building from source?{' '}
-          <Link
-            href={`${docsRoute}/getting-started`}
-            className="font-medium text-fd-foreground underline-offset-4 hover:underline"
-          >
-            Contributor setup
-          </Link>{' '}
-          (clone, <code className="text-fd-foreground">bun install</code>,{' '}
-          <code className="text-fd-foreground">bun start</code>).
-        </p>
-      </div>
-    </section>
+        <Step
+          number={3}
+          title="Explore with the keyboard"
+          description={
+            <>
+              Switch tabs with <Kbd>1</Kbd>–<Kbd>5</Kbd>, open anything with <Kbd>Ctrl</Kbd>{' '}
+              <Kbd>K</Kbd>, press <Kbd>?</Kbd> for help.
+            </>
+          }
+        >
+          <p className="rounded-lg border border-fd-border bg-fd-secondary/50 px-3 py-2 font-mono text-xs text-fd-muted-foreground">
+            c count · a avg · p plan · enter details
+          </p>
+        </Step>
+      </ol>
+
+      <p className="mt-5 text-sm text-fd-muted-foreground">
+        Building from source?{' '}
+        <Link
+          href={`${docsRoute}/getting-started`}
+          className="font-medium text-fd-foreground underline-offset-4 hover:underline"
+        >
+          Contributor setup
+        </Link>{' '}
+        (clone, <code className="text-fd-foreground">bun install</code>,{' '}
+        <code className="text-fd-foreground">bun start</code>).
+      </p>
+    </HomeSection>
   )
 }
 
-type OsBrand = 'apple' | 'linux' | 'windows'
-
-type OsChipProps = {
-  brand: OsBrand
-  icon: ReactNode
-  label: string
-  muted?: boolean
+type StepProps = {
+  number: number
+  title: string
+  description?: ReactNode
+  children: ReactNode
 }
 
-const osChipBrandHover: Record<OsBrand, string> = {
-  // Apple mark is mono — black / white invert by theme
-  apple:
-    'hover:border-neutral-900 hover:bg-neutral-900 hover:text-white hover:shadow-neutral-900/25 dark:hover:border-white dark:hover:bg-white dark:hover:text-neutral-900 dark:hover:shadow-white/20',
-  // Tux yellow
-  linux:
-    'hover:border-[#e5a800] hover:bg-[#fcc624] hover:text-neutral-900 hover:shadow-[#fcc624]/35',
-  // Windows / Microsoft blue
-  windows: 'hover:border-[#0078d4] hover:bg-[#00a4ef] hover:text-white hover:shadow-[#00a4ef]/35',
-}
-
-function OsChip({ brand, icon, label, muted = false }: OsChipProps) {
+function Step({ number, title, description, children }: StepProps) {
   return (
-    <li
+    <li className="min-w-0 rounded-2xl border border-fd-border bg-fd-card p-5">
+      <h3 className="mb-1.5 flex items-center gap-2.5 font-semibold">
+        <span className="grid size-6 place-items-center rounded-full border border-fd-border text-xs text-fd-muted-foreground">
+          {number}
+        </span>
+        {title}
+      </h3>
+      {description ? (
+        <p className="mb-3 text-sm text-pretty text-fd-muted-foreground">{description}</p>
+      ) : null}
+      {children}
+    </li>
+  )
+}
+
+type CodeBlockProps = {
+  code: string
+}
+
+function CodeBlock({ code }: CodeBlockProps) {
+  return (
+    <div className="min-w-0">
+      <DynamicCodeBlock
+        lang="bash"
+        code={code}
+        codeblock={{
+          // A title moves the copy button into a header instead of over long commands.
+          title: 'Terminal',
+          className: 'my-0 max-w-full',
+          viewportProps: {
+            className: 'overflow-x-auto',
+          },
+        }}
+      />
+    </div>
+  )
+}
+
+type PlatformButtonProps = {
+  selected: boolean
+  onSelect: () => void
+  icon: ReactNode
+  children: ReactNode
+}
+
+function PlatformButton({ selected, onSelect, icon, children }: PlatformButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium',
-        'transition-[color,background-color,border-color,transform,box-shadow] duration-200 ease-out',
-        'hover:shadow-md',
-        muted
-          ? 'border-fd-border/80 bg-fd-secondary/20 text-fd-muted-foreground'
-          : 'border-fd-border bg-fd-secondary/50 text-fd-foreground',
-        osChipBrandHover[brand],
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+        selected
+          ? 'border-fd-foreground bg-fd-foreground text-fd-background'
+          : 'border-fd-border text-fd-muted-foreground hover:text-fd-foreground',
       )}
     >
       {icon}
-      <span>{label}</span>
-    </li>
+      {children}
+    </button>
   )
 }
 

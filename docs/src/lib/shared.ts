@@ -14,6 +14,14 @@ export const gitConfig = {
 
 export const githubRepoUrl = `https://github.com/${gitConfig.user}/${gitConfig.repo}`
 
+export const releasesUrl = `${githubRepoUrl}/releases`
+
+/** Release called out on the home page — bump with the root package.json on each release. */
+export const latestRelease = {
+  version: '0.3.0',
+  highlight: 'Export to JSON, CSV & Markdown',
+} as const
+
 /** Raw install.sh on the default branch — same URL the README curl one-liner uses. */
 const installScriptUrl = `https://raw.githubusercontent.com/${gitConfig.user}/${gitConfig.repo}/${gitConfig.branch}/install.sh`
 
