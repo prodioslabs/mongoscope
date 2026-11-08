@@ -10,13 +10,17 @@ import { HomeSection, SectionHeading } from './section'
 
 type Platform = 'unix' | 'windows'
 
-const pointCommands = [
-  '# offline: parse a log file',
-  'mongoscope --log-path ./mongod.log',
-  '',
-  '# live: session-only connection',
-  'mongoscope --uri mongodb://localhost:27017',
-].join('\n')
+/** Labels sit outside the highlighter — Shiki comment tokens fail WCAG AA on the dark code bg. */
+const pointExamples = [
+  {
+    label: 'Offline — parse a log file',
+    code: 'mongoscope --log-path ./mongod.log',
+  },
+  {
+    label: 'Live — session-only connection',
+    code: 'mongoscope --uri mongodb://localhost:27017',
+  },
+] as const
 
 export function InstallSteps() {
   const [platform, setPlatform] = useState<Platform>('unix')
@@ -81,7 +85,16 @@ export function InstallSteps() {
           title="Point it at something"
           description="Analyse a log file offline, or connect live."
         >
-          <CodeBlock code={pointCommands} />
+          <div className="flex flex-col gap-3">
+            {pointExamples.map((example) => (
+              <div key={example.code} className="min-w-0">
+                <p className="mb-1.5 text-xs font-medium text-fd-muted-foreground">
+                  {example.label}
+                </p>
+                <CodeBlock code={example.code} />
+              </div>
+            ))}
+          </div>
         </Step>
 
         <Step

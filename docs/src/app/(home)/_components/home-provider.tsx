@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from 'react'
 import { cn } from '@/lib/utils'
+import { accessibleMutedColor, tintWithCard } from './accessible-muted'
 import { previewTabs } from './demo-data'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { defaultTuiTheme, tuiThemeNames, tuiThemes, type TuiThemeName } from './tui-themes'
@@ -328,6 +329,9 @@ export function HomeProvider({ children }: HomeProviderProps) {
   )
 }
 
+/** Light-mode paper used by `color-mix(..., var(--tui-card))` — matches `:root` in globals.css. */
+const lightCardHex = '#ffffff'
+
 /**
  * The TUI theme's light and dark palettes, picked by the site's `color-scheme`
  * through `light-dark()` — terminals and accents follow `m` like in the app.
@@ -339,12 +343,21 @@ function paletteStyle(name: TuiThemeName): CSSProperties {
   // the theme on near-white paper and let the theme's text colours carry it.
   const tint = (key: keyof typeof light, percent: number) =>
     `light-dark(color-mix(in srgb, ${light[key]} ${percent}%, var(--tui-card)), ${dark[key]})`
+
+  // Some theme muted tokens fail WCAG AA on title-bar / table chrome (e.g. gruvbox
+  // `#928374` on `#3c3836`). Lift muted toward text until both surfaces clear 4.5:1.
+  const lightMuted = accessibleMutedColor(light.muted, light.text, [
+    tintWithCard(light.background, 30, lightCardHex),
+    tintWithCard(light.panel, 50, lightCardHex),
+  ])
+  const darkMuted = accessibleMutedColor(dark.muted, dark.text, [dark.background, dark.panel])
+
   return {
     '--tui-bg': tint('background', 30),
     '--tui-panel': tint('panel', 50),
     '--tui-border': tint('border', 55),
     '--tui-fg': pick('text'),
-    '--tui-muted': pick('muted'),
+    '--tui-muted': `light-dark(${lightMuted}, ${darkMuted})`,
     '--tui-primary': pick('primary'),
     '--tui-accent': pick('accent'),
     '--tui-info': pick('info'),

@@ -26,12 +26,14 @@ function GitHubStarLinkInner(props: GitHubStarLinkProps) {
 }
 
 function GitHubStarAnchor({ stars, className }: GitHubStarLinkProps & { stars: number | null }) {
+  // Accessible name must match visible text (Lighthouse label-content-name-mismatch).
+  // Extra context goes in `title`, which does not replace the accessible name.
   return (
     <a
       href={githubRepoUrl}
       target="_blank"
       rel="noreferrer noopener"
-      aria-label={
+      title={
         stars != null
           ? `Star ${appName} on GitHub (${starFormatter.format(stars)} stars)`
           : `Star ${appName} on GitHub`
