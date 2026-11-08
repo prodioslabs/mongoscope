@@ -60,8 +60,17 @@
   --color-tui-card: var(--tui-card);
   --color-tui-overlay: var(--tui-overlay);
 
-  /* Same face as the home page terminals; `--font-jetbrains-mono` comes from the root layout. */
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  /*
+   * System fonts only — no webfont on the mobile critical path. Keep stacks short: Chrome on
+   * Linux (Lighthouse / PageSpeed hosts) resolves every listed family per weight and size
+   * during first layout, and misses (`ui-sans-serif`, `-apple-system`, …) each cost an IPC.
+   * `system-ui` already maps to SF / Segoe UI / Roboto on Apple / Windows / Android.
+   */
+  --font-sans: system-ui, sans-serif;
+
+  /* `ui-monospace` = SF Mono in Safari, whose generic `monospace` is Courier; Menlo and
+     Consolas cover Chrome / Firefox on macOS and Windows; Linux uses generic `monospace`. */
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
   --animate-ms-blink: ms-blink 1s steps(1) infinite;
   --animate-ms-rise: ms-rise 0.3s ease-out;
@@ -92,6 +101,7 @@
 
 html {
   scrollbar-gutter: stable;
+  font-family: var(--font-sans);
 }
 
 html > body[data-scroll-locked] {

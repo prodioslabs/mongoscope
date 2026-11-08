@@ -1,17 +1,10 @@
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import '../styles/globals.css'
-import { Inter, JetBrains_Mono } from 'next/font/google'
 import type { Metadata } from 'next'
 import { appName, siteDescription } from '@/lib/shared'
 
-const inter = Inter({
-  subsets: ['latin'],
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
-})
+// No webfonts: body and code use system stacks (see globals.css). A webfont download and its
+// fallback-face lookups sat in front of the hero paint on mobile Lighthouse.
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || undefined
 
@@ -31,11 +24,7 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.className} ${jetbrainsMono.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen" suppressHydrationWarning>
         <RootProvider>{children}</RootProvider>
       </body>
