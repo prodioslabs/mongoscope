@@ -1,11 +1,35 @@
 ---
 title: Live Ops
-description: currentOp table, kill-op, and collection top
+description: Watch currentOp, collection top, and kill an operation on a live connection
 ---
 
-Requires a selected live connection. Polls ~1s.
+Use Live Ops to inspect active and queued operations and collection activity on a connected MongoDB.
 
-- `currentOp` table (active & queued), plan column with **COLLSCAN** highlighted as error severity
-- Collection top chart (read/write time from `top`)
-- Sidebar: connections, queued ops, lock waits
-- `x` → confirm kill op · `e` → jump to matching Slow Queries detail/explain when a pattern matches
+## Prerequisites
+
+- A selected live connection — see [Connections](/docs/connections)
+- Permissions for `currentOp`, `top`, and (for kill) `killOp`
+
+## What the tab shows
+
+While the tab is open and connected, MongoScope polls about every 1 second.
+
+| Area | Contents |
+| ---- | -------- |
+| Operations table | `currentOp` rows (active and queued). The plan column highlights `COLLSCAN` as error severity. |
+| Collection top | Read/write time deltas from consecutive `top` samples (mongotop-style · 1s sample). The first poll is a baseline (“waiting for first sample…”). |
+| Sidebar | Connections, queued ops, lock waits |
+
+## Kill an operation
+
+Killing an operation can interrupt in-flight work for that client.
+
+1. Select the operation row.
+2. Press `x`.
+3. Confirm the dialog.
+
+MongoScope runs `killOp` for that `opid`. Rows without a usable `opid` cannot be killed.
+
+## Jump to Slow Queries explain
+
+Press `e` on a selected operation to open matching Slow Queries detail when a pattern matches. If nothing matches, the jump does nothing useful for that row.

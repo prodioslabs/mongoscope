@@ -3,9 +3,9 @@ title: Indexing guide
 description: How aggregation pipelines and compound indexes use MongoDB indexes, and how to verify with explain and $indexStats
 ---
 
-Indexes help MongoDB locate matching documents without scanning a whole collection. Whether a query or aggregation actually uses them depends on pipeline shape, predicate form, and index key order. This page is a practical reference for any MongoDB deployment. For the classic equality / sort / range layout discussion, see [Optimizing MongoDB Compound Indexes](https://emptysqua.re/blog/optimizing-mongodb-compound-indexes/).
+Indexes help MongoDB locate matching documents without scanning a whole collection. Whether a query or aggregation uses them depends on pipeline shape, predicate form, and index key order. This page is a concept guide for any MongoDB deployment. For equality / sort / range layout, see [Optimizing MongoDB Compound Indexes](https://emptysqua.re/blog/optimizing-mongodb-compound-indexes/).
 
-In mongoscope, the [Slow Queries](/docs/slow-queries) tab shows a plan column and examined / returned ratios from profile or log samples. The [Indexes](/docs/indexes) tab lists inventory and `$indexStats` ops / since for the connected node. Neither surface warns about the patterns below; use `explain` and `$indexStats` in mongosh to confirm.
+In MongoScope, the [Slow Queries](/docs/slow-queries) tab shows a plan column and examined / returned ratios from profile or log samples. The [Indexes](/docs/indexes) tab lists inventory and `$indexStats` ops / since for the connected node. Neither surface warns about every pattern below; confirm with `explain` and `$indexStats` in mongosh.
 
 ## Pipelines run left to right
 
@@ -57,7 +57,7 @@ db.orders.aggregate([
 
 A useful foreign index for that shape is often `{ customerId: 1, status: 1 }`. Confirm with `explain("executionStats")` on the full pipeline; look for index use under the `$lookup` portion (`indexesUsed`, `totalKeysExamined`, `collectionScans`).
 
-If a unique equality appears in the join (for example matching a unique `orderId`), the planner usually picks that unique index and may ignore a broader compound index for the same predicate. Treat that as expected when `explain` shows it, not as a guarantee for every plan.
+If a unique equality appears in the join (for example matching a unique `orderId`), the planner usually picks that unique index and might ignore a broader compound index for the same predicate. Treat that as expected when `explain` shows it, not as a guarantee for every plan.
 
 ### `$match` after `$lookup`
 
@@ -84,7 +84,7 @@ A `$match` on the joined array **without** an immediate `$unwind` runs against d
 
 Sorting on fields from the joined array after `$lookup` usually cannot use an index on the foreign collection for a blocking sort of the joined result. Sort on the source collection before the join when that matches the query, or `$sort` inside the `$lookup` pipeline when you need foreign-side order.
 
-## `$expr` and indexes (by version)
+## `$expr` and indexes by version
 
 Prefer ordinary query predicates when you can. They use indexes the same way `find` does:
 
@@ -140,7 +140,7 @@ db.orders.find({
 db.orders.createIndex({ status: 1, amount: -1, createdAt: 1 })
 ```
 
-Equality keys come first (any order relative to each other). Put sort keys next when avoiding an in-memory sort matters. Range keys come last so they do not break the sorted prefix. If the range predicate is extremely selective and an in-memory sort is acceptable, an equality → range → sort (ERS) layout can be better—confirm with `explain`.
+Equality keys come first (any order relative to each other). Put sort keys next when avoiding an in-memory sort matters. Range keys come last so they do not break the sorted prefix. If the range predicate is extremely selective and an in-memory sort is acceptable, an equality → range → sort (ERS) layout can be better — confirm with `explain`.
 
 | Symptom | Likely cause | What to try |
 | --- | --- | --- |
@@ -149,7 +149,7 @@ Equality keys come first (any order relative to each other). Put sort keys next 
 | High `totalDocsExamined` vs `nReturned` | Weak selectivity or wrong field order | Tighten `$match`, move selective equality earlier in the index |
 | Good source plan, slow `$lookup` | Missing foreign index | Index `foreignField` or the `$lookup` pipeline `$match` fields |
 
-## Verify with `explain("executionStats")`
+## Verify with explain
 
 ```javascript
 db.orders.explain("executionStats").aggregate([
@@ -165,7 +165,7 @@ Read at least:
 - `nReturned` — documents returned
 - Stage names such as `IXSCAN`, `COLLSCAN`, `FETCH`, `SORT`
 
-A healthy selective plan often keeps examined counts close to `nReturned` and shows `IXSCAN` without a blocking `SORT` when the index covers the sort. A `COLLSCAN` or examined ≫ returned ratio is a signal to reshape the query or the index. mongoscope’s Slow Queries plan and examined / returned columns surface the same ideas from logged or profiled samples; re-check the live plan in mongosh when you change indexes.
+A healthy selective plan often keeps examined counts close to `nReturned` and shows `IXSCAN` without a blocking `SORT` when the index covers the sort. A `COLLSCAN` or examined ≫ returned ratio is a signal to reshape the query or the index. MongoScope’s Slow Queries plan and examined / returned columns surface the same ideas from logged or profiled samples; re-check the live plan in mongosh when you change indexes.
 
 ## Reading `$indexStats`
 
@@ -173,9 +173,9 @@ A healthy selective plan often keeps examined counts close to `nReturned` and sh
 db.orders.aggregate([{ $indexStats: {} }])
 ```
 
-Each document includes `accesses.ops` (user operations that used the index on this host) and `accesses.since` (when that counter started). Counters reset when `mongod` restarts, when the index is dropped and recreated, or when the index is modified with `collMod`. Stats are **per member**: run `$indexStats` on each replica-set or shard node you care about. mongoscope’s Indexes tab shows ops / since for the connected node only.
+Each document includes `accesses.ops` (user operations that used the index on this host) and `accesses.since` (when that counter started). Counters reset when `mongod` restarts, when the index is dropped and recreated, or when the index is modified with `collMod`. Stats are **per member**: run `$indexStats` on each replica-set or shard node you care about. MongoScope’s Indexes tab shows ops / since for the connected node only.
 
-TTL deletions, chunk splits, and migrations do **not** increment `ops`. A TTL index can therefore show low or zero ops while still expiring documents. Do not drop `_id`, and do not drop a unique index only because `ops` is low—uniqueness and primary-key access are not the same thing as a busy read index.
+TTL deletions, chunk splits, and migrations do **not** increment `ops`. A TTL index can therefore show low or zero ops while still expiring documents. Do not drop `_id`, and do not drop a unique index only because `ops` is low — uniqueness and primary-key access are not the same thing as a busy read index.
 
 ## Cautious removal checklist
 

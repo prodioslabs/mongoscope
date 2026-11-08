@@ -1,12 +1,52 @@
 ---
 title: Slow Queries
-description: Static log patterns and live system.profile sampling
+description: Aggregate slow-query patterns from a log file or live system.profile samples
 ---
 
-- **Static (default):** aggregates slow-query patterns from the parsed log file.
-- **Live:** reads newest `system.profile` samples from the selected connection (poll ~2s). Toggle with `l` when a connection is selected.
-- Live requires profiling on the selected database: press `e` → confirm dialog (sets profiler level 1 + `slowms`, default 100).
-- Sort: `c` count · `a` avg ms · `p` plan. Details: Enter. From details, `i` jumps to Indexes with a suggested vs existing index (read-only).
-- Live sample window: `Shift+T` (presets / custom). Cycle databases: `[` / `]`.
-- **Export (`x`):** write all patterns in the current sort order (not just the visible rows) to JSON, CSV, or Markdown on the machine running mongoscope (relevant over SSH). Each row includes pattern aggregates (namespace, op, shape, counts, timings, plan) plus the slowest-sample **query detail** shown in the detail dialog: filter/pipeline, stage, command, suggested index, context, and work metrics. Sample filters and commands may contain literal query values. Credentials and connection URIs are never included. Choose a format and destination path in the dialog; Enter writes (confirms overwrite if the file exists), Esc cancels.
-- See also: [Indexing guide](/docs/indexing-guide)
+Use the Slow Queries tab to inspect repeated slow shapes from a parsed log file or from live `system.profile` samples on a selected connection.
+
+## Prerequisites
+
+- Dashboard open with a parsed log (Static) — see [Getting started](/docs/getting-started)
+- For Live mode: a selected connection — see [Connections](/docs/connections)
+- For Live profiling enable: permission to run `profile` on the selected database
+
+## Choose Static or Live
+
+| Mode | Data source | Default |
+| ---- | ----------- | ------- |
+| Static | Aggregated patterns from the Welcome / `--log-path` parse (tail of the file) | Yes |
+| Live | Newest `system.profile` samples from the selected connection | No |
+
+Press `l` to toggle when a connection is selected. Live polls about every 2 seconds while the tab is active and connected.
+
+## Enable profiling (Live)
+
+Live mode only records what `system.profile` already contains. To turn profiling on for the selected database:
+
+1. Switch to Live (`l`).
+2. Press `e`.
+3. Confirm the dialog.
+
+MongoScope sets profiler level `1` and `slowms` (default `100`). It never sets level `2`.
+
+## Sort and inspect patterns
+
+| Key | Action |
+| --- | ------ |
+| `c` / `a` / `p` | Sort by count / average ms / plan (same column again toggles direction) |
+| Enter | Open pattern details |
+| `[` / `]` | Cycle databases (Live) |
+| `Shift+T` | Live sample window (presets / custom; default 100000, clamp 1–1000000) |
+
+From details, press `i` to jump to Indexes with a suggested vs existing index comparison (read-only — create indexes outside MongoScope). See the [Indexing guide](/docs/indexing-guide).
+
+## Export patterns
+
+1. Press `x`.
+2. Choose JSON, CSV, or Markdown and a destination path.
+3. Press Enter to write (confirms overwrite if the file exists), or Esc to cancel.
+
+Export writes **all** patterns in the current sort order, not only visible rows. Each row includes pattern aggregates (namespace, op, shape, counts, timings, plan) plus the slowest-sample query detail shown in the detail dialog: filter/pipeline, stage, command, suggested index, context, and work metrics.
+
+Sample filters and commands might contain literal query values. Credentials and connection URIs are never included. Default filename shape: `mongoscope-slow-queries-YYYYMMDD-HHMMSS.<ext>`. Export writes on the machine running MongoScope (relevant over SSH).

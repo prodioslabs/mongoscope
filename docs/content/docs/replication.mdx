@@ -1,13 +1,27 @@
 ---
 title: Replication
-description: Replica-set topology, oplog, lag trend, heartbeats, and elections
+description: Inspect replica-set topology, oplog window, lag trend, heartbeats, and elections
 ---
 
-Requires a selected live connection. Auto-refresh ~5s.
+Use the Replication tab for a read-only view of replica-set health on the connected node.
 
-- Replica-set **topology** (primary → secondaries tree, lag, priority/votes)
-- **Oplog window** (size, fill, growth)
-- **Lag trend** sparkline (session samples since connect, ~10m window, no backfill)
-- **Heartbeats** (ping edges from this node)
-- **Recent elections / state changes** from server `getLog` RAM buffer (not a fixed multi-day history)
-- Default **write concern** (majority wait is not exposed read-only → shown as n/a)
+## Prerequisites
+
+- A selected live connection — see [Connections](/docs/connections)
+- A replica set (standalone nodes have little useful topology data)
+- Permissions for the replication and log commands the tab issues
+
+## Refresh behavior
+
+While the tab is open and connected, MongoScope refreshes about every 5 seconds. Open connections management with `c` when saved profiles exist.
+
+## Panels
+
+| Panel | Contents |
+| ----- | -------- |
+| Topology | Primary → secondaries tree with lag, priority, and votes |
+| Oplog window | Size, fill, and growth |
+| Lag trend | Sparkline of session samples since connect (~10 minute window). No historical backfill; needs at least two samples before the chart is meaningful. |
+| Heartbeats | Ping edges from this node |
+| Recent elections / state changes | Parsed from the server `getLog` RAM buffer — not a fixed multi-day history |
+| Write concern | Default write concern. Majority wait is not exposed read-only and shows as `n/a`. |

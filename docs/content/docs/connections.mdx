@@ -1,25 +1,64 @@
 ---
 title: Connections
-description: DbSelector, connections dialog, keychain storage, and Static vs Live
+description: Save MongoDB profiles, switch Static vs Live, and use CLI ephemeral connect
 ---
 
-Press `c` on Live Ops / Replication / Indexes (or Ctrl+K → **Manage connections**). With no saved profiles, those tabs show an inline add form.
+Use connections when Live Ops, Replication, Indexes, or live Slow Queries / Logs need a MongoDB URI. Static Slow Queries and Logs work from a parsed log file without a connection.
 
-URIs are stored under service `com.mongoscope.cli` (OS keychain when available, otherwise plaintext in `config.json`).
+## Prerequisites
 
-After a connection is selected, Slow Queries and Logs can toggle **Static** vs **Live** with `l`.
+- MongoScope open on the dashboard — see [Getting started](/docs/getting-started)
+- Network reachability to the MongoDB host you intend to use
 
-There is no separate full-screen connections flow — switching, adding, editing, and deleting happen through **DbSelector** + the connections dialog.
+## Open the connections UI
 
-## Credential store
+1. Go to Live Ops, Replication, or Indexes (`2`–`4`), or switch Slow Queries / Logs to Live after a connection exists.
+2. Press `c`, or open Ctrl+K → **Manage connections**.
 
-Saved connections prefer `Bun.secrets`:
+With no saved profiles, those live tabs show an inline add form. There is no separate full-screen connections flow — switching, adding, editing, and deleting happen through **DbSelector** and the connections dialog.
+
+`c` is bound only when at least one saved profile exists and the connections dialog is not already open. With only a CLI ephemeral connection, DbSelector can still show `[c]` chrome while the binding stays off until you save a profile.
+
+## Add or edit a saved profile
+
+1. Open the connections dialog (`c` or the command palette).
+2. Add a new profile, or select an existing one and edit it.
+3. Enter a MongoDB URI (or the fields your dialog form accepts).
+4. Save, then select the profile from DbSelector.
+
+Expected result: DbSelector shows `{name} · {host}` (or `CLI · {host}` for an ephemeral session) with a connection status of `connected`, `connecting…`, `disconnected`, or `error`.
+
+## Toggle Static vs Live
+
+On Slow Queries and Logs:
+
+1. Select a connection in DbSelector.
+2. Press `l` to toggle between **Static** (log file) and **Live** (server).
+
+| Source | Slow Queries | Logs |
+| ------ | ------------ | ---- |
+| Static | Patterns from the parsed log file | File tail of the analyzed log |
+| Live | Newest `system.profile` samples | `getLog: 'global'` buffer |
+
+Live data requires the source toggle to be Live **and** a connected session. Disconnecting or returning to Welcome resets sources to Static.
+
+## Credential storage
+
+Saved connections prefer `Bun.secrets` under service `com.mongoscope.cli`:
 
 - macOS: Keychain
-- Linux: Secret Service (GNOME Keyring, KWallet, etc.)
+- Linux: Secret Service (GNOME Keyring, KWallet, and similar)
 
 If `Bun.secrets` is missing or the OS credential store is unavailable, the same connections blob is stored in plaintext under `secrets` in `~/.config/mongoscope/config.json` (or `$XDG_CONFIG_HOME/mongoscope/config.json`). Theme settings in that file are preserved.
 
-## CLI connection flags
+## Session-only CLI connect
 
-`--uri` or `--host` / `--port` / `--username` / `--password` / `--auth-db` activate an **ephemeral** live connection for this session only — credentials are **not** written to the credential store. Use the in-app connections dialog to save a profile. See [CLI flags](/docs/cli).
+`--uri`, or `--host` with optional `--port` / `--username` / `--password` / `--auth-db`, activates an **ephemeral** live connection for this process only. Credentials are **not** written to the credential store. Use the in-app dialog when you want a saved profile.
+
+```bash
+mongoscope --uri 'mongodb://USER:PASSWORD@HOST:27017/?authSource=admin'
+```
+
+Do not combine `--uri` with the discrete host flags. Default port when building a URI from `--host` is `27017`. Live-only startup (connection flags without `--log-path`) opens the dashboard with Slow Queries and Logs already in Live mode.
+
+Full flag reference: [CLI flags](/docs/cli).
