@@ -74,13 +74,6 @@ const pressedKeyMs = 170
 const toastMs = 1900
 const globalKeys = new Set<string>(['1', '2', '3', '4', '5', 'm', 't', 'q', '?'])
 
-/** Page accent follows the TUI theme: its light-mode accent on light, dark-mode accent on dark. */
-const accentVars = cn(
-  '[--home-accent:var(--home-accent-light)] dark:[--home-accent:var(--home-accent-dark)]',
-  '[--home-accent-ink:color-mix(in_srgb,var(--home-accent)_70%,black)] dark:[--home-accent-ink:var(--home-accent)]',
-  '[--home-accent-soft:color-mix(in_srgb,var(--home-accent)_14%,transparent)]',
-)
-
 type HomeProviderProps = {
   children: ReactNode
 }
@@ -316,10 +309,7 @@ export function HomeProvider({ children }: HomeProviderProps) {
   return (
     <HomeActionsContext value={actions}>
       <HomeStateContext value={state}>
-        <div
-          style={paletteStyle(tuiTheme)}
-          className={cn('flex flex-1 flex-col overflow-x-clip', accentVars)}
-        >
+        <div style={paletteStyle(tuiTheme)} className="flex flex-1 flex-col overflow-x-clip">
           {children}
           <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
           <div
@@ -338,22 +328,33 @@ export function HomeProvider({ children }: HomeProviderProps) {
   )
 }
 
+/**
+ * The TUI theme's light and dark palettes, picked by the site's `color-scheme`
+ * through `light-dark()` — terminals and accents follow `m` like in the app.
+ */
 function paletteStyle(name: TuiThemeName): CSSProperties {
-  const palette = tuiThemes[name]
+  const { light, dark } = tuiThemes[name]
+  const pick = (key: keyof typeof light) => `light-dark(${light[key]}, ${dark[key]})`
+  // Light surfaces at full strength (gruvbox cream, etc.) flood the page; keep a tint of
+  // the theme on near-white paper and let the theme's text colours carry it.
+  const tint = (key: keyof typeof light, percent: number) =>
+    `light-dark(color-mix(in srgb, ${light[key]} ${percent}%, white), ${dark[key]})`
   return {
-    '--tui-bg': palette.background,
-    '--tui-panel': palette.panel,
-    '--tui-border': palette.border,
-    '--tui-fg': palette.text,
-    '--tui-muted': palette.muted,
-    '--tui-primary': palette.primary,
-    '--tui-accent': palette.accent,
-    '--tui-info': palette.info,
-    '--tui-success': palette.success,
-    '--tui-warning': palette.warning,
-    '--tui-error': palette.error,
-    '--home-accent-light': palette.accentLight,
-    '--home-accent-dark': palette.accent,
+    '--tui-bg': tint('background', 30),
+    '--tui-panel': tint('panel', 50),
+    '--tui-border': tint('border', 55),
+    '--tui-fg': pick('text'),
+    '--tui-muted': pick('muted'),
+    '--tui-primary': pick('primary'),
+    '--tui-accent': pick('accent'),
+    '--tui-info': pick('info'),
+    '--tui-success': pick('success'),
+    '--tui-warning': pick('warning'),
+    '--tui-error': pick('error'),
+    '--home-accent': pick('accent'),
+    // Light accents are mid-tones; darken them for text on a light page.
+    '--home-accent-ink': `light-dark(color-mix(in srgb, ${light.accent} 80%, black), ${dark.accent})`,
+    '--home-accent-soft': 'color-mix(in srgb, var(--home-accent) 14%, transparent)',
   } as CSSProperties
 }
 

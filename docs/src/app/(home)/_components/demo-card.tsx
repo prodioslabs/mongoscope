@@ -126,7 +126,7 @@ export function DemoCard({
         if (!event.currentTarget.contains(event.relatedTarget)) deactivate()
       }}
       className={cn(
-        'group/card relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border border-fd-border bg-fd-card p-4.5 transition-[box-shadow,translate] duration-300 sm:p-5',
+        'group/card relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border border-fd-border bg-white p-4.5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:bg-fd-card dark:shadow-none transition-[box-shadow,translate] duration-300 sm:p-5',
         'hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-28px_rgb(0_0_0/0.45)] focus-within:-translate-y-0.5',
         // Cursor spotlight: soft fill plus a lit border ring that follows the pointer.
         'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(480px_circle_at_var(--mx,50%)_var(--my,-40%),var(--home-accent-soft),transparent_45%)] before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100 focus-within:before:opacity-100',

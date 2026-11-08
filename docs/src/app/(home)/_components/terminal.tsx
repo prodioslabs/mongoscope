@@ -54,7 +54,7 @@ export function TerminalWindow({ title, className, children }: TerminalWindowPro
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-xl border border-(--tui-border) bg-(--tui-bg) font-mono text-xs leading-6 text-(--tui-fg) shadow-[0_30px_60px_-24px_rgb(0_0_0/0.5)] transition-colors duration-300',
+        'overflow-hidden rounded-xl border border-(--tui-border) bg-(--tui-bg) font-mono text-xs leading-6 text-(--tui-fg) shadow-[0_24px_48px_-28px_rgb(0_0_0/0.22)] dark:shadow-[0_30px_60px_-24px_rgb(0_0_0/0.5)] transition-colors duration-300',
         className,
       )}
     >

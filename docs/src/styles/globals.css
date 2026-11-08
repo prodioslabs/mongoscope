@@ -7,11 +7,14 @@
 :root {
   --ms-accent: #427b58;
   --color-fd-primary: var(--ms-accent);
+  /* Declared here too (next-themes also sets it) so `light-dark()` works before hydration. */
+  color-scheme: light;
 }
 
 .dark {
   --ms-accent: #8ec07c;
   --color-fd-primary: var(--ms-accent);
+  color-scheme: dark;
 }
 
 @theme {

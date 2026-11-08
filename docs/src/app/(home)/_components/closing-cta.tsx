@@ -7,7 +7,7 @@ import { CopyInstallButton } from './copy-install-button'
 export function ClosingCta() {
   return (
     <section className="px-4 pb-16 sm:px-6 sm:pb-18" aria-labelledby="closing-heading">
-      <div className="mx-auto w-full max-w-(--fd-layout-width) rounded-3xl border border-fd-border bg-fd-card bg-[radial-gradient(ellipse_at_top,var(--home-accent-soft),transparent_70%)] px-6 py-11 text-center">
+      <div className="mx-auto w-full max-w-(--fd-layout-width) rounded-3xl border border-fd-border bg-white dark:bg-fd-card bg-[radial-gradient(ellipse_at_top,var(--home-accent-soft),transparent_70%)] px-6 py-11 text-center">
         <MongoScopeMark className="mx-auto size-14" />
         <h2
           id="closing-heading"
