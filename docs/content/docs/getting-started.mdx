@@ -7,7 +7,7 @@ Install the binary first — see [Installation](/docs/installation). Then run `m
 
 ## Welcome flow
 
-1. **Welcome** — pick a MongoDB log from `/var/log/mongodb` or `--log-dir` (default `.`), then Enter to parse the last **100k** lines and open the dashboard.
+1. **Welcome** — pick a MongoDB log from `/var/log/mongodb` or `--log-dir` (default `.`), then press Enter to parse its most recent lines and open the dashboard. Only the tail of the file is read, so even large production logs open quickly.
 2. **Dashboard tabs** (`1`–`5`, or Tab / Shift+Tab): Slow Queries · Live Ops · Replication · Indexes · Logs.
 3. **Connections** — press `c` on Live Ops / Replication / Indexes (or Ctrl+K → Manage connections). With no saved profiles, those tabs show an inline add form. URIs are stored under service `com.mongoscope.cli` in the OS keychain when available, otherwise plaintext in `~/.config/mongoscope/config.json`.
 4. After a connection is selected, Slow Queries and Logs can toggle **Static** vs **Live** with `l`.
