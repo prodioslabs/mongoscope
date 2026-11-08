@@ -10,6 +10,8 @@ Open [http://localhost:3000](http://localhost:3000). Pages live under `/docs`. S
 
 Product install and TUI quickstart stay in the [root README](../README.md). This folder is the reference site you edit and ship.
 
+Agent writing standards for MDX pages live in [`.agents/skills/developer-documentation/`](../.agents/skills/developer-documentation/) (documentation types + writing standard).
+
 ## What’s here
 
 | Path                | Role                                                           |
