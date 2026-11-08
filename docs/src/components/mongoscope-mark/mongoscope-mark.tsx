@@ -1,6 +1,6 @@
 import {
   markBars,
-  markColors,
+  markColorVars,
   markHandle,
   markLens,
   markSpike,
@@ -28,19 +28,19 @@ export function MongoScopeMark({ className }: MongoScopeMarkProps) {
         width={markTile.size}
         height={markTile.size}
         rx={markTile.radius}
-        fill={markColors.tile}
-        stroke={markColors.tileEdge}
+        fill={markColorVars.tile}
+        stroke={markColorVars.tileEdge}
       />
       <circle
         cx={markLens.cx}
         cy={markLens.cy}
         r={markLens.r}
-        stroke={markColors.lens}
+        stroke={markColorVars.lens}
         strokeWidth={markLens.strokeWidth}
       />
-      <path d={markHandle.d} stroke={markColors.lens} strokeWidth={markHandle.strokeWidth} />
-      <path d={markBars.d} stroke={markColors.bars} strokeWidth={markBars.strokeWidth} />
-      <path d={markSpike.d} stroke={markColors.spike} strokeWidth={markSpike.strokeWidth} />
+      <path d={markHandle.d} stroke={markColorVars.lens} strokeWidth={markHandle.strokeWidth} />
+      <path d={markBars.d} stroke={markColorVars.bars} strokeWidth={markBars.strokeWidth} />
+      <path d={markSpike.d} stroke={markColorVars.spike} strokeWidth={markSpike.strokeWidth} />
     </svg>
   )
 }

@@ -338,7 +338,7 @@ function paletteStyle(name: TuiThemeName): CSSProperties {
   // Light surfaces at full strength (gruvbox cream, etc.) flood the page; keep a tint of
   // the theme on near-white paper and let the theme's text colours carry it.
   const tint = (key: keyof typeof light, percent: number) =>
-    `light-dark(color-mix(in srgb, ${light[key]} ${percent}%, white), ${dark[key]})`
+    `light-dark(color-mix(in srgb, ${light[key]} ${percent}%, var(--tui-card)), ${dark[key]})`
   return {
     '--tui-bg': tint('background', 30),
     '--tui-panel': tint('panel', 50),
@@ -353,7 +353,7 @@ function paletteStyle(name: TuiThemeName): CSSProperties {
     '--tui-error': pick('error'),
     '--home-accent': pick('accent'),
     // Light accents are mid-tones; darken them for text on a light page.
-    '--home-accent-ink': `light-dark(color-mix(in srgb, ${light.accent} 80%, black), ${dark.accent})`,
+    '--home-accent-ink': `light-dark(color-mix(in srgb, ${light.accent} 80%, var(--tui-ink)), ${dark.accent})`,
     '--home-accent-soft': 'color-mix(in srgb, var(--home-accent) 14%, transparent)',
   } as CSSProperties
 }

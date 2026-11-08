@@ -32,7 +32,19 @@ export const markSpike = {
   strokeWidth: 2.2,
 } as const
 
-/** Gruvbox-dark hexes from the TUI default theme. The tile stays dark in both site modes. */
+/**
+ * CSS vars for the React mark (values in `globals.css`). Favicon bake still needs hex —
+ * keep `markColors` identical to `--tui-mark-*`.
+ */
+export const markColorVars = {
+  tile: 'var(--tui-mark-tile)',
+  tileEdge: 'var(--tui-mark-tile-edge)',
+  lens: 'var(--tui-mark-lens)',
+  bars: 'var(--tui-mark-bars)',
+  spike: 'var(--tui-mark-spike)',
+} as const
+
+/** Gruvbox-dark hexes for `scripts/generate-icon.ts` only. Mirror `--tui-mark-*` in globals.css. */
 export const markColors = {
   tile: '#282828',
   tileEdge: '#3c3836',

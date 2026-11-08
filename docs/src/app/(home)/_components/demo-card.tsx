@@ -130,7 +130,7 @@ export function DemoCard({
         'hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-28px_var(--tui-shadow-strong)] focus-within:-translate-y-0.5',
         // Cursor spotlight: soft fill plus a lit border ring that follows the pointer.
         'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(480px_circle_at_var(--mx,50%)_var(--my,-40%),var(--home-accent-soft),transparent_45%)] before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100 focus-within:before:opacity-100',
-        'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-[radial-gradient(260px_circle_at_var(--mx,50%)_var(--my,-40%),var(--home-accent),transparent_70%)] after:p-px after:opacity-0 after:transition-opacity after:duration-300 after:[mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)] hover:after:opacity-100',
+        'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-[radial-gradient(260px_circle_at_var(--mx,50%)_var(--my,-40%),var(--home-accent),transparent_70%)] after:p-px after:opacity-0 after:transition-opacity after:duration-300 after:[mask:linear-gradient(var(--tui-ink)_0_0)_content-box_exclude,linear-gradient(var(--tui-ink)_0_0)] hover:after:opacity-100',
         className,
       )}
     >
