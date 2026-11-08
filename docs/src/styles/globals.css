@@ -25,6 +25,26 @@
   --tui-mark-spike: #fe8019;
   /* Declared here too (next-themes also sets it) so `light-dark()` works before hydration. */
   color-scheme: light;
+
+  /*
+   * Default home TUI palette = accessible gruvbox (same as `defaultTuiTheme`).
+   * Kept in CSS so first paint does not wait on `HomeProvider` / theme JS.
+   * Non-default themes still override via inline style after `t`.
+   */
+  --tui-bg: light-dark(#fefbee, #282828);
+  --tui-panel: light-dark(#f5edd8, #3c3836);
+  --tui-border: light-dark(#dbd2c4, #665c54);
+  --tui-fg: light-dark(#3c3836, #ebdbb2);
+  --tui-muted: light-dark(#766a5f, #b0a189);
+  --tui-primary: light-dark(#076678, #8ba99a);
+  --tui-accent: light-dark(#427b58, #8ec07c);
+  --tui-info: light-dark(#b57614, #fabd2f);
+  --tui-success: light-dark(#79740e, #b8bb26);
+  --tui-warning: light-dark(#af3a03, #fe8019);
+  --tui-error: light-dark(#9d0006, #f58064);
+  --home-accent: light-dark(#427b58, #8ec07c);
+  --home-accent-ink: light-dark(#356246, #8ec07c);
+  --home-accent-soft: color-mix(in srgb, var(--home-accent) 14%, transparent);
 }
 
 .dark {

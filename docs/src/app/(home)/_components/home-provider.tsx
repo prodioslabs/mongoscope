@@ -1,6 +1,7 @@
 'use client'
 
 import { useSearchContext } from 'fumadocs-ui/contexts/search'
+import dynamic from 'next/dynamic'
 import { useTheme } from 'next-themes'
 import {
   createContext,
@@ -14,10 +15,27 @@ import {
   type ReactNode,
 } from 'react'
 import { cn } from '@/lib/utils'
-import { accessibleMutedColor, tintWithCard } from './accessible-muted'
 import { previewTabs } from './demo-data'
-import { ShortcutsDialog } from './shortcuts-dialog'
-import { defaultTuiTheme, tuiThemeNames, tuiThemes, type TuiThemeName } from './tui-themes'
+import type { TuiThemeName } from './tui-themes'
+
+const ShortcutsDialog = dynamic(() =>
+  import('./shortcuts-dialog').then((module) => module.ShortcutsDialog),
+)
+
+/** Keep in sync with `Object.keys(tuiThemes)` order in `tui-themes.ts` (generated). */
+const tuiThemeNames = [
+  'catppuccin',
+  'catppuccin-frappe',
+  'catppuccin-macchiato',
+  'github',
+  'gruvbox',
+  'nord',
+  'one-dark',
+  'synthwave84',
+  'tokyonight',
+] as const satisfies readonly TuiThemeName[]
+
+const defaultTuiTheme: TuiThemeName = 'gruvbox'
 
 export type QuitState = 'idle' | 'confirm' | 'exited'
 
@@ -59,13 +77,17 @@ const HomeActionsContext = createContext<HomeActions | null>(null)
 
 export function useHomeState() {
   const value = use(HomeStateContext)
-  if (!value) throw new Error('useHomeState must be used inside HomeProvider')
+  if (!value) {
+    throw new Error('useHomeState must be used inside HomeProvider')
+  }
   return value
 }
 
 export function useHomeActions() {
   const value = use(HomeActionsContext)
-  if (!value) throw new Error('useHomeActions must be used inside HomeProvider')
+  if (!value) {
+    throw new Error('useHomeActions must be used inside HomeProvider')
+  }
   return value
 }
 
@@ -85,6 +107,7 @@ export function HomeProvider({ children }: HomeProviderProps) {
   const mounted = useSyncExternalStore(subscribeNever, getMountedSnapshot, getMountedServerSnapshot)
 
   const [tuiTheme, setTuiTheme] = useState<TuiThemeName>(defaultTuiTheme)
+  const [themeStyle, setThemeStyle] = useState<CSSProperties | undefined>(undefined)
   const [tabIndex, setTabIndex] = useState(0)
   const [keyLog, setKeyLog] = useState<KeyLogEntry[]>([])
   const [quitState, setQuitState] = useState<QuitState>('idle')
@@ -114,7 +137,9 @@ export function HomeProvider({ children }: HomeProviderProps) {
 
   useEffect(
     function hideToastLater() {
-      if (!toast) return
+      if (!toast) {
+        return
+      }
       const timer = window.setTimeout(() => setToast(null), toastMs)
       return () => window.clearTimeout(timer)
     },
@@ -124,7 +149,9 @@ export function HomeProvider({ children }: HomeProviderProps) {
   useEffect(function clearTimersOnUnmount() {
     const pending = timers.current
     return () => {
-      for (const timer of pending) window.clearTimeout(timer)
+      for (const timer of pending) {
+        window.clearTimeout(timer)
+      }
       pending.clear()
     }
   }, [])
@@ -143,7 +170,9 @@ export function HomeProvider({ children }: HomeProviderProps) {
       later(() => {
         setPressedKeys((previous) => {
           const next = new Set(previous)
-          for (const key of keys) next.delete(key)
+          for (const key of keys) {
+            next.delete(key)
+          }
           return next
         })
       }, pressedKeyMs)
@@ -156,7 +185,9 @@ export function HomeProvider({ children }: HomeProviderProps) {
 
     /** Toast only when the keyboard section's mini terminal is off-screen. */
     function announce(message: string) {
-      if (!miniTerminalVisible.current) setToast({ id: Date.now(), message })
+      if (!miniTerminalVisible.current) {
+        setToast({ id: Date.now(), message })
+      }
     }
 
     function selectTab(index: number) {
@@ -171,7 +202,21 @@ export function HomeProvider({ children }: HomeProviderProps) {
 
     function answerQuit(quit: boolean) {
       setQuitState(quit ? 'exited' : 'idle')
-      if (!quit) logKey('n', 'quit cancelled')
+      if (!quit) {
+        logKey('n', 'quit cancelled')
+      }
+    }
+
+    function applyTheme(next: TuiThemeName) {
+      setTuiTheme(next)
+      if (next === defaultTuiTheme) {
+        // Fall back to the static gruvbox tokens in globals.css.
+        setThemeStyle(undefined)
+        return
+      }
+      void import('./tui-palette-style').then((module) => {
+        setThemeStyle(module.paletteStyle(next))
+      })
     }
 
     function perform(key: GlobalKey) {
@@ -187,7 +232,7 @@ export function HomeProvider({ children }: HomeProviderProps) {
         case 't': {
           const index = tuiThemeNames.indexOf(state.tuiTheme)
           const next = tuiThemeNames[(index + 1) % tuiThemeNames.length] ?? defaultTuiTheme
-          setTuiTheme(next)
+          applyTheme(next)
           logKey('t', `theme → ${next}`)
           announce(`t · theme → ${next}`)
           return
@@ -233,7 +278,9 @@ export function HomeProvider({ children }: HomeProviderProps) {
           restart()
           return
         }
-        if (state.quitState === 'confirm') setQuitState('idle')
+        if (state.quitState === 'confirm') {
+          setQuitState('idle')
+        }
         flash(key === 'ctrl+k' ? ['ctrl', 'k'] : [key])
         perform(key)
       },
@@ -257,47 +304,77 @@ export function HomeProvider({ children }: HomeProviderProps) {
   }, [])
 
   useEffect(
-    function listenForPageShortcuts() {
-      function onKeyDown(event: KeyboardEvent) {
-        if (event.repeat) return
-        // Fumadocs opens search on this chord (and may preventDefault first); mirror it only.
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-          flash(['ctrl', 'k'])
-          logKey('ctrl+k', 'search docs')
-          return
-        }
-        const state = latest.current
-        if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return
-        if (state.helpOpen || !state.shortcutsEnabled || isTypingTarget(event.target)) return
+    function listenForPageShortcutsWhenIdle() {
+      let cancelled = false
+      let remove: (() => void) | undefined
 
-        if (state.quitState === 'exited') {
-          if (event.key.length === 1) {
-            event.preventDefault()
-            actions.restart()
-          }
-          return
-        }
-        if (state.quitState === 'confirm') {
-          if (event.key === 'y' || event.key === 'n' || event.key === 'Escape') {
-            event.preventDefault()
-            actions.answerQuit(event.key === 'y')
-          }
+      function attach() {
+        if (cancelled) {
           return
         }
 
-        const key = event.key === ' ' ? 'space' : event.key
-        if (scopedKeys.current?.handler(key)) {
+        function onKeyDown(event: KeyboardEvent) {
+          if (event.repeat) {
+            return
+          }
+          // Fumadocs opens search on this chord (and may preventDefault first); mirror it only.
+          if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+            flash(['ctrl', 'k'])
+            logKey('ctrl+k', 'search docs')
+            return
+          }
+          const state = latest.current
+          if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+            return
+          }
+          if (state.helpOpen || !state.shortcutsEnabled || isTypingTarget(event.target)) {
+            return
+          }
+
+          if (state.quitState === 'exited') {
+            if (event.key.length === 1) {
+              event.preventDefault()
+              actions.restart()
+            }
+            return
+          }
+          if (state.quitState === 'confirm') {
+            if (event.key === 'y' || event.key === 'n' || event.key === 'Escape') {
+              event.preventDefault()
+              actions.answerQuit(event.key === 'y')
+            }
+            return
+          }
+
+          const key = event.key === ' ' ? 'space' : event.key
+          if (scopedKeys.current?.handler(key)) {
+            event.preventDefault()
+            return
+          }
+          if (!globalKeys.has(key)) {
+            return
+          }
           event.preventDefault()
-          return
+          flash([key])
+          perform(key as GlobalKey)
         }
-        if (!globalKeys.has(key)) return
-        event.preventDefault()
-        flash([key])
-        perform(key as GlobalKey)
+
+        window.addEventListener('keydown', onKeyDown)
+        remove = () => window.removeEventListener('keydown', onKeyDown)
       }
 
-      window.addEventListener('keydown', onKeyDown)
-      return () => window.removeEventListener('keydown', onKeyDown)
+      // Defer shortcut wiring until after the first paint (mobile TBT).
+      let outerFrame = 0
+      let innerFrame = 0
+      outerFrame = window.requestAnimationFrame(() => {
+        innerFrame = window.requestAnimationFrame(attach)
+      })
+      return () => {
+        cancelled = true
+        window.cancelAnimationFrame(outerFrame)
+        window.cancelAnimationFrame(innerFrame)
+        remove?.()
+      }
     },
     [actions, flash, logKey, perform],
   )
@@ -310,9 +387,9 @@ export function HomeProvider({ children }: HomeProviderProps) {
   return (
     <HomeActionsContext value={actions}>
       <HomeStateContext value={state}>
-        <div style={paletteStyle(tuiTheme)} className="flex flex-1 flex-col overflow-x-clip">
+        <div style={themeStyle} className="flex flex-1 flex-col overflow-x-clip">
           {children}
-          <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+          {helpOpen ? <ShortcutsDialog open onClose={() => setHelpOpen(false)} /> : null}
           <div
             role="status"
             aria-live="polite"
@@ -327,48 +404,6 @@ export function HomeProvider({ children }: HomeProviderProps) {
       </HomeStateContext>
     </HomeActionsContext>
   )
-}
-
-/** Light-mode paper used by `color-mix(..., var(--tui-card))` — matches `:root` in globals.css. */
-const lightCardHex = '#ffffff'
-
-/**
- * The TUI theme's light and dark palettes, picked by the site's `color-scheme`
- * through `light-dark()` — terminals and accents follow `m` like in the app.
- */
-function paletteStyle(name: TuiThemeName): CSSProperties {
-  const { light, dark } = tuiThemes[name]
-  const pick = (key: keyof typeof light) => `light-dark(${light[key]}, ${dark[key]})`
-  // Light surfaces at full strength (gruvbox cream, etc.) flood the page; keep a tint of
-  // the theme on near-white paper and let the theme's text colours carry it.
-  const tint = (key: keyof typeof light, percent: number) =>
-    `light-dark(color-mix(in srgb, ${light[key]} ${percent}%, var(--tui-card)), ${dark[key]})`
-
-  // Some theme muted tokens fail WCAG AA on title-bar / table chrome (e.g. gruvbox
-  // `#928374` on `#3c3836`). Lift muted toward text until both surfaces clear 4.5:1.
-  const lightMuted = accessibleMutedColor(light.muted, light.text, [
-    tintWithCard(light.background, 30, lightCardHex),
-    tintWithCard(light.panel, 50, lightCardHex),
-  ])
-  const darkMuted = accessibleMutedColor(dark.muted, dark.text, [dark.background, dark.panel])
-
-  return {
-    '--tui-bg': tint('background', 30),
-    '--tui-panel': tint('panel', 50),
-    '--tui-border': tint('border', 55),
-    '--tui-fg': pick('text'),
-    '--tui-muted': `light-dark(${lightMuted}, ${darkMuted})`,
-    '--tui-primary': pick('primary'),
-    '--tui-accent': pick('accent'),
-    '--tui-info': pick('info'),
-    '--tui-success': pick('success'),
-    '--tui-warning': pick('warning'),
-    '--tui-error': pick('error'),
-    '--home-accent': pick('accent'),
-    // Light accents are mid-tones; darken them for text on a light page.
-    '--home-accent-ink': `light-dark(color-mix(in srgb, ${light.accent} 80%, var(--tui-ink)), ${dark.accent})`,
-    '--home-accent-soft': 'color-mix(in srgb, var(--home-accent) 14%, transparent)',
-  } as CSSProperties
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -430,5 +465,7 @@ function writeShortcutPreference(enabled: boolean) {
   } catch {
     // Storage blocked — the in-memory fallback carries the choice.
   }
-  for (const listener of shortcutListeners) listener()
+  for (const listener of shortcutListeners) {
+    listener()
+  }
 }

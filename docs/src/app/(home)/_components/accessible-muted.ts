@@ -50,30 +50,30 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 /**
- * Mix `muted` toward `text` until it clears WCAG AA against every surface.
- * Keeps theme muted colours when they already pass; lifts failing ones (e.g. gruvbox
- * muted on the title-bar panel) without rewriting the generated palette file.
+ * Mix `foreground` toward `blendToward` until it clears WCAG AA against every surface.
+ * Keeps theme colours when they already pass; lifts failing ones (e.g. gruvbox muted /
+ * error on the title-bar panel) without rewriting the generated palette file.
  */
-export function accessibleMutedColor(
-  muted: string,
-  text: string,
+export function accessibleForegroundColor(
+  foreground: string,
+  blendToward: string,
   surfaces: readonly string[],
 ): string {
-  if (surfaces.every((surface) => contrastRatio(muted, surface) >= minContrastRatio)) {
-    return muted
+  if (surfaces.every((surface) => contrastRatio(foreground, surface) >= minContrastRatio)) {
+    return foreground
   }
 
   let amount = 0.02
-  let candidate = muted
+  let candidate = foreground
   while (amount <= 1) {
-    candidate = mixHexColors(muted, text, amount)
+    candidate = mixHexColors(foreground, blendToward, amount)
     if (surfaces.every((surface) => contrastRatio(candidate, surface) >= minContrastRatio)) {
       return candidate
     }
     amount += 0.02
   }
 
-  return text
+  return blendToward
 }
 
 /** Match `color-mix(in srgb, color percent%, card)` used by `paletteStyle` tints. */
