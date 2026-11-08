@@ -2,7 +2,7 @@ import { RootProvider } from 'fumadocs-ui/provider/next'
 import '../styles/globals.css'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import type { Metadata } from 'next'
-import { appName } from '@/lib/shared'
+import { appName, siteDescription } from '@/lib/shared'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -26,6 +26,7 @@ export const metadata: Metadata = {
     default: appName,
     template: `%s | ${appName}`,
   },
+  description: siteDescription,
 }
 
 export default function Layout({ children }: LayoutProps<'/'>) {

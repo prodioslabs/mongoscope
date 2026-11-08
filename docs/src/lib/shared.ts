@@ -1,6 +1,11 @@
 import { createGetUrl } from 'fumadocs-core/source'
 
 export const appName = 'MongoScope'
+
+/** Default `<meta name="description">` / Open Graph blurb for the marketing home page. */
+export const siteDescription =
+  'Find slow queries, watch live operations, check replication lag, audit indexes and tail logs — one keyboard-driven TUI for MongoDB. No browser, no agent.'
+
 export const docsRoute = '/docs'
 const docsImageRoute = '/og/docs'
 export const docsContentRoute = '/llms.mdx/docs'
