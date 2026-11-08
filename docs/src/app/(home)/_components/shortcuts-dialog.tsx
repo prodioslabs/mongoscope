@@ -55,7 +55,7 @@ export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
-      className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-2xl border border-fd-border bg-fd-popover p-0 text-fd-popover-foreground shadow-2xl backdrop:bg-black/45 backdrop:backdrop-blur-[3px]"
+      className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-2xl border border-fd-border bg-fd-popover p-0 text-fd-popover-foreground shadow-2xl backdrop:bg-tui-overlay backdrop:backdrop-blur-[3px]"
     >
       <div className="flex items-center justify-between border-b border-fd-border px-4 py-3.5">
         <h2 id="shortcuts-dialog-title" className="font-semibold">

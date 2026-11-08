@@ -124,7 +124,7 @@ type StepProps = {
 
 function Step({ number, title, description, children }: StepProps) {
   return (
-    <li className="min-w-0 rounded-2xl border border-fd-border bg-white p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:bg-fd-card dark:shadow-none">
+    <li className="min-w-0 rounded-2xl border border-fd-border bg-tui-card p-5 shadow-[0_1px_2px_var(--tui-shadow-soft)]">
       <h3 className="mb-1.5 flex items-center gap-2.5 font-semibold">
         <span className="grid size-6 place-items-center rounded-full border border-fd-border text-xs text-fd-muted-foreground">
           {number}

@@ -13,7 +13,7 @@ export function Hero() {
             href={`${releasesUrl}/tag/v${latestRelease.version}`}
             target="_blank"
             rel="noreferrer noopener"
-            className="group inline-flex max-w-full items-center gap-2 rounded-full border border-fd-border bg-white py-1 pr-3 dark:bg-fd-card pl-1 text-[0.8125rem] text-fd-muted-foreground transition-colors hover:text-fd-foreground"
+            className="group inline-flex max-w-full items-center gap-2 rounded-full border border-fd-border bg-tui-card py-1 pr-3 pl-1 text-[0.8125rem] text-fd-muted-foreground transition-colors hover:text-fd-foreground"
           >
             <span className="rounded-full bg-(--home-accent-soft) px-2 py-0.5 text-xs font-semibold text-(--home-accent-ink)">
               v{latestRelease.version}
@@ -35,7 +35,7 @@ export function Hero() {
             logs — one keyboard-driven TUI. No browser, no agent.
           </p>
 
-          <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-fd-border bg-white py-2.5 pr-2.5 dark:bg-fd-card pl-3.5 text-[0.8125rem]">
+          <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-fd-border bg-tui-card py-2.5 pr-2.5 pl-3.5 text-[0.8125rem]">
             <code className="min-w-0 flex-1 overflow-x-auto font-mono whitespace-nowrap scrollbar-none">
               <span className="text-(--home-accent-ink) select-none">$ </span>
               {installCurlCommand}

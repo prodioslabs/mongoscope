@@ -126,8 +126,8 @@ export function DemoCard({
         if (!event.currentTarget.contains(event.relatedTarget)) deactivate()
       }}
       className={cn(
-        'group/card relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border border-fd-border bg-white p-4.5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] dark:bg-fd-card dark:shadow-none transition-[box-shadow,translate] duration-300 sm:p-5',
-        'hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-28px_rgb(0_0_0/0.45)] focus-within:-translate-y-0.5',
+        'group/card relative isolate flex min-w-0 flex-col gap-3 overflow-hidden rounded-2xl border border-fd-border bg-tui-card p-4.5 shadow-[0_1px_2px_var(--tui-shadow-soft)] transition-[box-shadow,translate] duration-300 sm:p-5',
+        'hover:-translate-y-0.5 hover:shadow-[0_24px_48px_-28px_var(--tui-shadow-strong)] focus-within:-translate-y-0.5',
         // Cursor spotlight: soft fill plus a lit border ring that follows the pointer.
         'before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(480px_circle_at_var(--mx,50%)_var(--my,-40%),var(--home-accent-soft),transparent_45%)] before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100 focus-within:before:opacity-100',
         'after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:bg-[radial-gradient(260px_circle_at_var(--mx,50%)_var(--my,-40%),var(--home-accent),transparent_70%)] after:p-px after:opacity-0 after:transition-opacity after:duration-300 after:[mask:linear-gradient(#000_0_0)_content-box_exclude,linear-gradient(#000_0_0)] hover:after:opacity-100',
@@ -220,7 +220,7 @@ export function KeyChip({
         active
           ? 'border-(--home-accent)/55 bg-(--home-accent-soft) text-(--home-accent-ink)'
           : 'border-fd-border bg-fd-background hover:bg-fd-accent',
-        danger && !active && 'hover:border-red-500/50 hover:text-red-600 dark:hover:text-red-400',
+        danger && !active && 'hover:border-(--tui-error)/50 hover:text-(--tui-error)',
         pressed && 'translate-y-px scale-[0.97]',
       )}
     >

@@ -75,7 +75,7 @@ export function KeyboardSection() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <div className="grid gap-5 rounded-[1.125rem] border border-fd-border bg-linear-to-b from-white to-fd-background dark:from-fd-secondary dark:to-fd-card p-5.5">
+        <div className="grid gap-5 rounded-[1.125rem] border border-fd-border bg-linear-to-b from-tui-card to-fd-background dark:from-fd-secondary dark:to-fd-card p-5.5">
           <KeyGroup title="Move around">
             <KeyItem label="jump to a tab">
               {(['1', '2', '3', '4', '5'] as const).map((key) => keycap(key, key))}
@@ -206,7 +206,7 @@ export function KeyboardSection() {
             role="switch"
             checked={shortcutsEnabled}
             onChange={(event) => setShortcutsEnabled(event.target.checked)}
-            className="relative h-5 w-8.5 cursor-pointer appearance-none rounded-full bg-fd-border transition-colors after:absolute after:top-0.75 after:left-0.75 after:size-3.5 after:rounded-full after:bg-white after:transition-transform checked:bg-(--home-accent) checked:after:translate-x-3.5"
+            className="relative h-5 w-8.5 cursor-pointer appearance-none rounded-full bg-fd-border transition-colors after:absolute after:top-0.75 after:left-0.75 after:size-3.5 after:rounded-full after:bg-tui-card after:transition-transform checked:bg-(--home-accent) checked:after:translate-x-3.5"
           />
           Page shortcuts
         </label>
@@ -262,7 +262,7 @@ function Keycap({ label, pressed, wide = false, onPress }: KeycapProps) {
         wide ? 'min-w-18.5 text-[0.8125rem]' : 'min-w-11.5 text-[0.9375rem]',
         pressed
           ? 'translate-y-0.75 border-(--home-accent) bg-(--home-accent-soft) text-(--home-accent-ink) shadow-[0_0_0_4px_var(--home-accent-soft)]'
-          : 'border-fd-border bg-linear-to-b from-white to-fd-secondary/70 dark:from-fd-card dark:to-fd-secondary shadow-[0_3px_0_0_var(--color-fd-border),0_8px_16px_-10px_rgb(0_0_0/0.45)] hover:border-(--home-accent)/50',
+          : 'border-fd-border bg-linear-to-b from-tui-card to-fd-secondary/70 dark:to-fd-secondary shadow-[0_3px_0_0_var(--color-fd-border),0_8px_16px_-10px_var(--tui-shadow-strong)] hover:border-(--home-accent)/50',
       )}
     >
       {label}

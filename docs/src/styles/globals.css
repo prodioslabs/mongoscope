@@ -7,6 +7,13 @@
 :root {
   --ms-accent: #427b58;
   --color-fd-primary: var(--ms-accent);
+  /* Elevated home surfaces (cards, keycaps, CTAs). Pure paper in light; Fumadocs card in dark. */
+  --tui-card: #ffffff;
+  /* Shadow ink — soft rest elevation is light-only; mid/strong deepen slightly in dark. */
+  --tui-shadow-soft: rgb(0 0 0 / 0.04);
+  --tui-shadow: rgb(0 0 0 / 0.22);
+  --tui-shadow-strong: rgb(0 0 0 / 0.45);
+  --tui-overlay: rgb(0 0 0 / 0.45);
   /* Declared here too (next-themes also sets it) so `light-dark()` works before hydration. */
   color-scheme: light;
 }
@@ -14,10 +21,16 @@
 .dark {
   --ms-accent: #8ec07c;
   --color-fd-primary: var(--ms-accent);
+  --tui-card: var(--color-fd-card);
+  --tui-shadow-soft: transparent;
+  --tui-shadow: rgb(0 0 0 / 0.5);
   color-scheme: dark;
 }
 
 @theme {
+  --color-tui-card: var(--tui-card);
+  --color-tui-overlay: var(--tui-overlay);
+
   /* Same face as the home page terminals; `--font-jetbrains-mono` comes from the root layout. */
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
