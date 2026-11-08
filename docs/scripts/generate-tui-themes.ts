@@ -109,10 +109,13 @@ function readCatalog(): Array<{ name: string; file: string }> {
   const catalog = [...source.matchAll(/^\s*'?([\w-]+)'?: requireThemeJson\((\w+)\),$/gm)].map(
     (m) => ({ name: m[1], file: files.get(m[2]) }),
   )
-  if (catalog.length === 0 || catalog.some((entry) => entry.file === undefined)) {
+  const resolved = catalog.filter(
+    (entry): entry is { name: string; file: string } => entry.file !== undefined,
+  )
+  if (catalog.length === 0 || resolved.length !== catalog.length) {
     throw new Error('Could not read DEFAULT_THEMES from src/app/theme/default-themes.ts')
   }
-  return catalog as Array<{ name: string; file: string }>
+  return resolved
 }
 
 function readDefaultThemeName(): string {
@@ -157,7 +160,7 @@ ${themes.join('\n')}
 
 export type TuiThemeName = keyof typeof tuiThemes
 
-export const tuiThemeNames = Object.keys(tuiThemes) as TuiThemeName[]
+export const tuiThemeNames = [${catalog.map(({ name }) => `'${name}'`).join(', ')}] as const satisfies readonly TuiThemeName[]
 
 export const defaultTuiTheme: TuiThemeName = '${defaultName}'
 `

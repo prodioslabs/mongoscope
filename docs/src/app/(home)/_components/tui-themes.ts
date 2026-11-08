@@ -257,6 +257,6 @@ export const tuiThemes = {
 
 export type TuiThemeName = keyof typeof tuiThemes
 
-export const tuiThemeNames = Object.keys(tuiThemes) as TuiThemeName[]
+export const tuiThemeNames = ['catppuccin', 'catppuccin-frappe', 'catppuccin-macchiato', 'github', 'gruvbox', 'nord', 'one-dark', 'synthwave84', 'tokyonight'] as const satisfies readonly TuiThemeName[]
 
 export const defaultTuiTheme: TuiThemeName = 'gruvbox'

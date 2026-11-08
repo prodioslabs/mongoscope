@@ -95,7 +95,12 @@ const shortcutsStorageKey = 'mongoscope:page-shortcuts'
 const keyLogLimit = 7
 const pressedKeyMs = 170
 const toastMs = 1900
-const globalKeys = new Set<string>(['1', '2', '3', '4', '5', 'm', 't', 'q', '?'])
+const globalKeyList = ['1', '2', '3', '4', '5', 'm', 't', 'q', '?'] as const satisfies readonly GlobalKey[]
+const globalKeys = new Set<string>(globalKeyList)
+
+function isGlobalKey(key: string): key is GlobalKey {
+  return globalKeys.has(key)
+}
 
 type HomeProviderProps = {
   children: ReactNode
@@ -351,12 +356,12 @@ export function HomeProvider({ children }: HomeProviderProps) {
             event.preventDefault()
             return
           }
-          if (!globalKeys.has(key)) {
+          if (!isGlobalKey(key)) {
             return
           }
           event.preventDefault()
           flash([key])
-          perform(key as GlobalKey)
+          perform(key)
         }
 
         window.addEventListener('keydown', onKeyDown)

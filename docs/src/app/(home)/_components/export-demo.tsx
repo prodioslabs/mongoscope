@@ -127,28 +127,34 @@ type PreviewProps = {
   rows: SlowPattern[]
 }
 
+type JsonField =
+  | { key: string; kind: 'string'; value: string }
+  | { key: string; kind: 'number'; value: number }
+
 function JsonPreview({ rows }: PreviewProps) {
   const first = rows[0]
-  if (!first) return null
-  const fields: Array<[string, string | number]> = [
-    ['namespace', first.namespace],
-    ['op', first.op],
-    ['count', first.count],
-    ['avgMs', first.avgMs],
-    ['plan', first.plan],
+  if (!first) {
+    return null
+  }
+  const fields: JsonField[] = [
+    { key: 'namespace', kind: 'string', value: first.namespace },
+    { key: 'op', kind: 'string', value: first.op },
+    { key: 'count', kind: 'number', value: first.count },
+    { key: 'avgMs', kind: 'number', value: first.avgMs },
+    { key: 'plan', kind: 'string', value: first.plan },
   ]
 
   return (
     <>
       {'[\n  {\n'}
-      {fields.map(([key, value], index) => (
-        <Fragment key={key}>
+      {fields.map((field, index) => (
+        <Fragment key={field.key}>
           {'    '}
-          <span className={tone.primary}>"{key}"</span>:{' '}
-          {typeof value === 'number' ? (
-            <span className={tone.warning}>{value}</span>
+          <span className={tone.primary}>"{field.key}"</span>:{' '}
+          {field.kind === 'number' ? (
+            <span className={tone.warning}>{field.value}</span>
           ) : (
-            <span className={tone.success}>"{value}"</span>
+            <span className={tone.success}>"{field.value}"</span>
           )}
           {index < fields.length - 1 ? ',' : ''}
           {'\n'}
