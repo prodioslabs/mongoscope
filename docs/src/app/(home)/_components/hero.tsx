@@ -2,7 +2,7 @@ import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { docsRoute, installCurlCommand, latestRelease, releasesUrl } from '@/lib/shared'
 import { CopyInstallButton } from './copy-install-button'
-import { TuiPreview } from './tui-preview'
+import { TuiPreviewLazy } from './tui-preview-lazy'
 
 export function Hero() {
   return (
@@ -70,7 +70,7 @@ export function Hero() {
           </ul>
         </div>
 
-        <TuiPreview />
+        <TuiPreviewLazy />
       </div>
     </section>
   )
