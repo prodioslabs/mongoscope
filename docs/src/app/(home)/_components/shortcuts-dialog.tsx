@@ -3,30 +3,33 @@
 import Link from 'next/link'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { docsRoute } from '@/lib/shared'
+import { globalShortcutRows } from './demo-data'
 import { Kbd } from './kbd'
 
-const globalShortcuts: Array<{ keys: ReactNode; action: string }> = [
-  { keys: <Kbd>?</Kbd>, action: 'Help' },
-  {
-    keys: (
-      <>
-        <Kbd>Ctrl</Kbd> <Kbd>K</Kbd>
-      </>
-    ),
-    action: 'Command palette (searches the docs here)',
-  },
-  {
-    keys: (
-      <>
-        <Kbd>1</Kbd>–<Kbd>5</Kbd> · <Kbd>Tab</Kbd>
-      </>
-    ),
-    action: 'Dashboard tabs',
-  },
-  { keys: <Kbd>m</Kbd>, action: 'Toggle light / dark' },
-  { keys: <Kbd>t</Kbd>, action: 'Cycle theme' },
-  { keys: <Kbd>q</Kbd>, action: 'Quit' },
-]
+function shortcutKeys(id: (typeof globalShortcutRows)[number]['id']): ReactNode {
+  switch (id) {
+    case 'help':
+      return <Kbd>?</Kbd>
+    case 'palette':
+      return (
+        <>
+          <Kbd>Ctrl</Kbd> <Kbd>K</Kbd>
+        </>
+      )
+    case 'tabs':
+      return (
+        <>
+          <Kbd>1</Kbd>–<Kbd>5</Kbd> · <Kbd>Tab</Kbd>
+        </>
+      )
+    case 'mode':
+      return <Kbd>m</Kbd>
+    case 'theme':
+      return <Kbd>t</Kbd>
+    case 'quit':
+      return <Kbd>q</Kbd>
+  }
+}
 
 type ShortcutsDialogProps = {
   open: boolean
@@ -39,9 +42,15 @@ export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
   useEffect(
     function syncDialogOpen() {
       const dialog = dialogRef.current
-      if (!dialog) return
-      if (open && !dialog.open) dialog.showModal()
-      if (!open && dialog.open) dialog.close()
+      if (!dialog) {
+        return
+      }
+      if (open && !dialog.open) {
+        dialog.showModal()
+      }
+      if (!open && dialog.open) {
+        dialog.close()
+      }
     },
     [open],
   )
@@ -53,7 +62,9 @@ export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
       onClose={onClose}
       // Clicks on the backdrop land on the <dialog> itself.
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (event.target === event.currentTarget) {
+          onClose()
+        }
       }}
       className="m-auto w-[min(32rem,calc(100%-2rem))] rounded-2xl border border-fd-border bg-fd-popover p-0 text-fd-popover-foreground shadow-2xl backdrop:bg-tui-overlay backdrop:backdrop-blur-[3px]"
     >
@@ -71,9 +82,9 @@ export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
       </div>
       <table className="w-full text-sm">
         <tbody>
-          {globalShortcuts.map(({ keys, action }) => (
-            <tr key={action} className="border-b border-fd-border">
-              <td className="w-[42%] px-4 py-2 whitespace-nowrap">{keys}</td>
+          {globalShortcutRows.map(({ id, action }) => (
+            <tr key={id} className="border-b border-fd-border">
+              <td className="w-[42%] px-4 py-2 whitespace-nowrap">{shortcutKeys(id)}</td>
               <td className="px-4 py-2">{action}</td>
             </tr>
           ))}

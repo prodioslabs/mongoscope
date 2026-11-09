@@ -4,20 +4,13 @@ import Link from 'next/link'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { docsRoute } from '@/lib/shared'
-import { previewTabs } from './demo-data'
+import { previewTabDefs } from './demo-data'
 import { useHomeActions, useHomeState, type GlobalKey } from './home-provider'
 import { Kbd } from './kbd'
 import { HomeSection, SectionHeading } from './section'
 import { TerminalButton, TerminalCursor, TerminalWindow, tone } from './terminal'
 
-const miniTabLabels = ['1 Slow', '2 Live', '3 Repl', '4 Indexes', '5 Logs'] as const
-
-const tabKeys: Array<{ tab: string; keys: string[] }> = [
-  { tab: 'Slow Queries', keys: ['c', 'a', 'p', 'x'] },
-  { tab: 'Live Ops', keys: ['x', 'e'] },
-  { tab: 'Indexes', keys: ['s', 'o', '[', ']'] },
-  { tab: 'Logs', keys: ['space', '/', 'f'] },
-]
+const tabKeys = previewTabDefs.filter((tab) => tab.keys.length > 0)
 
 export function KeyboardSection() {
   const { tabIndex, tuiTheme, keyLog, quitState, pressedKeys, shortcutsEnabled, colorMode } =
@@ -29,7 +22,9 @@ export function KeyboardSection() {
   useEffect(
     function trackMiniTerminalVisibility() {
       const terminal = terminalRef.current
-      if (!terminal) return
+      if (!terminal) {
+        return
+      }
       const observer = new IntersectionObserver(
         ([entry]) => setMiniTerminalVisible(entry?.isIntersecting ?? false),
         { threshold: 0.4 },
@@ -117,12 +112,12 @@ export function KeyboardSection() {
         <div ref={terminalRef} className="flex min-w-0">
           <TerminalWindow
             className="flex w-full flex-col"
-            title={`mongoscope · ${previewTabs[tabIndex]} · ${tuiTheme}${colorMode ? ` · ${colorMode}` : ''}`}
+            title={`mongoscope · ${previewTabDefs[tabIndex].name} · ${tuiTheme}${colorMode ? ` · ${colorMode}` : ''}`}
           >
             <div className="flex gap-3.5 overflow-hidden border-b border-(--tui-border)/60 px-3.5 py-1 whitespace-nowrap text-(--tui-muted)">
-              {miniTabLabels.map((label, index) => (
-                <span key={label} className={cn(index === tabIndex && tone.accent)}>
-                  {label}
+              {previewTabDefs.map((tab, index) => (
+                <span key={tab.miniLabel} className={cn(index === tabIndex && tone.accent)}>
+                  {tab.miniLabel}
                 </span>
               ))}
             </div>
@@ -182,10 +177,10 @@ export function KeyboardSection() {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-5 gap-y-3">
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[0.8125rem] text-fd-muted-foreground">
           <b className="font-medium text-fd-foreground">Inside tabs:</b>
-          {tabKeys.map(({ tab, keys }) => (
-            <span key={tab} className="inline-flex items-center gap-1">
-              {tab}
-              {keys.map((key) => (
+          {tabKeys.map((tab) => (
+            <span key={tab.name} className="inline-flex items-center gap-1">
+              {tab.name}
+              {tab.keys.map((key) => (
                 <Kbd key={key}>{key}</Kbd>
               ))}
             </span>

@@ -15,38 +15,23 @@ import {
   type ReactNode,
 } from 'react'
 import { cn } from '@/lib/utils'
-import { previewTabs } from './demo-data'
-import type { TuiThemeName } from './tui-themes'
+import { previewTabDefs } from './demo-data'
+import { defaultTuiTheme, tuiThemeNames, type TuiThemeName } from './tui-theme-names'
 
 const ShortcutsDialog = dynamic(() =>
   import('./shortcuts-dialog').then((module) => module.ShortcutsDialog),
 )
 
-/** Keep in sync with `Object.keys(tuiThemes)` order in `tui-themes.ts` (generated). */
-const tuiThemeNames = [
-  'catppuccin',
-  'catppuccin-frappe',
-  'catppuccin-macchiato',
-  'github',
-  'gruvbox',
-  'nord',
-  'one-dark',
-  'synthwave84',
-  'tokyonight',
-] as const satisfies readonly TuiThemeName[]
+type QuitState = 'idle' | 'confirm' | 'exited'
 
-const defaultTuiTheme: TuiThemeName = 'gruvbox'
-
-export type QuitState = 'idle' | 'confirm' | 'exited'
-
-export type KeyLogEntry = {
+type KeyLogEntry = {
   id: number
   key: string
   message: string
 }
 
 /** Returns true when a hovered or focused demo card consumed the key. */
-export type ScopedKeyHandler = (key: string) => boolean
+type ScopedKeyHandler = (key: string) => boolean
 
 /** Page-wide keys, mirroring the TUI's global shortcuts. */
 export type GlobalKey = '1' | '2' | '3' | '4' | '5' | 'tab' | 'm' | 't' | 'q' | '?' | 'ctrl+k'
@@ -95,7 +80,17 @@ const shortcutsStorageKey = 'mongoscope:page-shortcuts'
 const keyLogLimit = 7
 const pressedKeyMs = 170
 const toastMs = 1900
-const globalKeyList = ['1', '2', '3', '4', '5', 'm', 't', 'q', '?'] as const satisfies readonly GlobalKey[]
+const globalKeyList = [
+  '1',
+  '2',
+  '3',
+  '4',
+  '5',
+  'm',
+  't',
+  'q',
+  '?',
+] as const satisfies readonly GlobalKey[]
 const globalKeys = new Set<string>(globalKeyList)
 
 function isGlobalKey(key: string): key is GlobalKey {
@@ -196,7 +191,7 @@ export function HomeProvider({ children }: HomeProviderProps) {
     }
 
     function selectTab(index: number) {
-      setTabIndex(((index % previewTabs.length) + previewTabs.length) % previewTabs.length)
+      setTabIndex(((index % previewTabDefs.length) + previewTabDefs.length) % previewTabDefs.length)
     }
 
     function restart() {
@@ -261,17 +256,17 @@ export function HomeProvider({ children }: HomeProviderProps) {
           latestCallbacks.current.setOpenSearch(true)
           return
         case 'tab': {
-          const next = (state.tabIndex + 1) % previewTabs.length
+          const next = (state.tabIndex + 1) % previewTabDefs.length
           selectTab(next)
-          logKey('tab', `tab → ${previewTabs[next]}`)
-          announce(`tab · ${previewTabs[next]}`)
+          logKey('tab', `tab → ${previewTabDefs[next].name}`)
+          announce(`tab · ${previewTabDefs[next].name}`)
           return
         }
         default: {
           const next = Number(key) - 1
           selectTab(next)
-          logKey(key, `tab → ${previewTabs[next]}`)
-          announce(`${key} · ${previewTabs[next]}`)
+          logKey(key, `tab → ${previewTabDefs[next].name}`)
+          announce(`${key} · ${previewTabDefs[next].name}`)
         }
       }
     }

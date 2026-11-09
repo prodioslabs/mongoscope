@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { previewTabs, slowPatterns, sortSlowPatterns } from './demo-data'
+import { previewTabDefs, slowPatterns, sortSlowPatterns } from './demo-data'
 import { useHomeActions, useHomeState } from './home-provider'
 import { Kbd } from './kbd'
 import {
@@ -36,7 +36,7 @@ export function TuiPreview() {
       <TerminalWindow
         title={
           <>
-            mongoscope · {previewTabs[tabIndex]} · {tuiTheme}
+            mongoscope · {previewTabDefs[tabIndex].name} · {tuiTheme}
           </>
         }
       >
@@ -45,9 +45,9 @@ export function TuiPreview() {
           aria-label="MongoScope dashboard tabs"
           className="flex gap-0.5 overflow-x-auto border-b border-(--tui-border)/60 px-2.5 pt-1.5 scrollbar-none"
         >
-          {previewTabs.map((name, index) => (
+          {previewTabDefs.map((tab, index) => (
             <button
-              key={name}
+              key={tab.name}
               id={`preview-tab-${index}`}
               type="button"
               role="tab"
@@ -61,7 +61,7 @@ export function TuiPreview() {
                   : 'border-transparent text-(--tui-muted) hover:text-(--tui-fg)',
               )}
             >
-              {index + 1} {name}
+              {index + 1} {tab.name}
             </button>
           ))}
         </div>

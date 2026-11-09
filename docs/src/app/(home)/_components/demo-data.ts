@@ -3,7 +3,24 @@
  * log components mirror the TUI; the numbers are made up.
  */
 
-export const previewTabs = ['Slow Queries', 'Live Ops', 'Replication', 'Indexes', 'Logs'] as const
+/** Dashboard tabs: full name, mini-terminal label, and in-tab keys shown on the home page. */
+export const previewTabDefs = [
+  { name: 'Slow Queries', miniLabel: '1 Slow', keys: ['c', 'a', 'p', 'x'] },
+  { name: 'Live Ops', miniLabel: '2 Live', keys: ['x', 'e'] },
+  { name: 'Replication', miniLabel: '3 Repl', keys: [] },
+  { name: 'Indexes', miniLabel: '4 Indexes', keys: ['s', 'o', '[', ']'] },
+  { name: 'Logs', miniLabel: '5 Logs', keys: ['space', '/', 'f'] },
+] as const
+
+/** Page-global shortcut rows shared by the `?` dialog (and kept aligned with the keyboard section). */
+export const globalShortcutRows = [
+  { id: 'help', keys: ['?'], action: 'Help' },
+  { id: 'palette', keys: ['Ctrl', 'K'], action: 'Command palette (searches the docs here)' },
+  { id: 'tabs', keys: ['1', '5', 'Tab'], action: 'Dashboard tabs' },
+  { id: 'mode', keys: ['m'], action: 'Toggle light / dark' },
+  { id: 'theme', keys: ['t'], action: 'Cycle theme' },
+  { id: 'quit', keys: ['q'], action: 'Quit' },
+] as const
 
 export type PlanSummary = 'COLLSCAN' | 'IXSCAN+SORT' | 'IXSCAN'
 
@@ -71,8 +88,12 @@ const planRank: Record<PlanSummary, number> = {
 
 export function sortSlowPatterns(sort: SlowSort): SlowPattern[] {
   return [...slowPatterns].sort((a, b) => {
-    if (sort === 'count') return b.count - a.count
-    if (sort === 'plan') return planRank[a.plan] - planRank[b.plan] || b.avgMs - a.avgMs
+    if (sort === 'count') {
+      return b.count - a.count
+    }
+    if (sort === 'plan') {
+      return planRank[a.plan] - planRank[b.plan] || b.avgMs - a.avgMs
+    }
     return b.avgMs - a.avgMs
   })
 }
@@ -82,7 +103,7 @@ export type LiveOp = {
   namespace: string
   op: string
   seconds: number
-  plan: 'COLLSCAN' | 'IXSCAN'
+  plan: Exclude<PlanSummary, 'IXSCAN+SORT'>
   /** Ticks since the op was killed; the row lingers struck-through before it drops. */
   killedFor?: number
 }
@@ -103,7 +124,7 @@ export const liveOpNamespaces = [
 
 export const liveOpKinds = ['find', 'update', 'aggregate', 'insert', 'getMore']
 
-export type ReplicaMember = {
+type ReplicaMember = {
   host: string
   state: 'PRIMARY' | 'SECONDARY'
   /** Lag range in seconds; null for the primary. */
@@ -137,7 +158,9 @@ function seededRandom(seed: number) {
 }
 
 export const initialLagHistory: number[][] = replicaMembers.map((member, index) => {
-  if (!member.lagRange) return []
+  if (!member.lagRange) {
+    return []
+  }
   const random = seededRandom(index + 7)
   const [low, high] = member.lagRange
   const samples = [(low + high) / 2]
@@ -147,7 +170,7 @@ export const initialLagHistory: number[][] = replicaMembers.map((member, index) 
   return samples
 })
 
-export type IndexEntry = {
+type IndexEntry = {
   name: string
   ops: number
   sizeMb: number
@@ -178,8 +201,12 @@ export const buildingIndex = {
 } as const
 
 export function formatOps(ops: number) {
-  if (ops >= 1_000_000) return `${(ops / 1_000_000).toFixed(1)}M`
-  if (ops >= 1_000) return `${Math.round(ops / 1_000)}k`
+  if (ops >= 1_000_000) {
+    return `${(ops / 1_000_000).toFixed(1)}M`
+  }
+  if (ops >= 1_000) {
+    return `${Math.round(ops / 1_000)}k`
+  }
   return String(ops)
 }
 
