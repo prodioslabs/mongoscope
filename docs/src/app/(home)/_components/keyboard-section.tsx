@@ -99,7 +99,7 @@ export function KeyboardSection() {
             </KeyItem>
           </KeyGroup>
           <KeyGroup title="Everything else">
-            <KeyItem label="command palette · searches the docs here">
+            <KeyItem label="command palette">
               {keycap('ctrl+k', 'Ctrl', { pressedAs: ['ctrl'], wide: true })}
               <span className="text-[0.8125rem] text-fd-muted-foreground">+</span>
               {keycap('ctrl+k', 'K', { pressedAs: ['k'] })}

@@ -15,8 +15,8 @@ export const previewTabDefs = [
 /** Page-global shortcut rows shared by the `?` dialog (and kept aligned with the keyboard section). */
 export const globalShortcutRows = [
   { id: 'help', keys: ['?'], action: 'Help' },
-  { id: 'palette', keys: ['Ctrl', 'K'], action: 'Command palette (searches the docs here)' },
-  { id: 'tabs', keys: ['1', '5', 'Tab'], action: 'Dashboard tabs' },
+  { id: 'palette', keys: ['Ctrl', 'K'], action: 'Command palette' },
+  { id: 'tabs', keys: ['1–5', 'Tab', '⇧Tab'], action: 'Dashboard tabs' },
   { id: 'mode', keys: ['m'], action: 'Toggle light / dark' },
   { id: 'theme', keys: ['t'], action: 'Cycle theme' },
   { id: 'quit', keys: ['q'], action: 'Quit' },

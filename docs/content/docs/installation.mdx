@@ -7,11 +7,11 @@ Install the standalone binary for everyday use. Contributor and from-source setu
 
 ## Supported platforms
 
-| Platform | Curl installer | Release archive |
-| -------- | -------------- | --------------- |
-| Linux amd64 / arm64 | Yes | Yes |
-| macOS Intel / Apple Silicon | Yes | Yes |
-| Windows x86_64 | No | Yes (`*.zip`) |
+| Platform                    | Curl installer | Release archive |
+| --------------------------- | -------------- | --------------- |
+| Linux amd64 / arm64         | Yes            | Yes             |
+| macOS Intel / Apple Silicon | Yes            | Yes             |
+| Windows x86_64              | No             | Yes (`*.zip`)   |
 
 The installer requires `bash`, `curl`, `tar`, and either `sha256sum` or `shasum`. Pipe into `bash`, not `sh`.
 
@@ -33,22 +33,22 @@ mongoscope --version
 
 The script detects OS and architecture (`linux` / `darwin` × `amd64` / `arm64`), downloads the matching archive from the latest GitHub Release, verifies it against `checksums.txt`, and installs to `$PREFIX/bin/mongoscope`. It does not modify your shell `PATH`; if `$PREFIX/bin` is missing from `PATH`, the installer prints a warning.
 
-| Platform | Default `$PREFIX` | Default binary path |
-| -------- | ----------------- | ------------------- |
-| Linux | `/usr/local` | `/usr/local/bin/mongoscope` |
-| macOS | `$HOME/.local` | `~/.local/bin/mongoscope` |
+| Platform | Default `$PREFIX` | Default binary path         |
+| -------- | ----------------- | --------------------------- |
+| Linux    | `/usr/local`      | `/usr/local/bin/mongoscope` |
+| macOS    | `$HOME/.local`    | `~/.local/bin/mongoscope`   |
 
 ### Optional installer environment variables
 
-| Variable | Effect |
-| -------- | ------ |
-| `MONGOSCOPE_VERSION` | Pin a release tag (for example `v0.1.0`). Default: `latest`. |
-| `MONGOSCOPE_PREFIX` | Install under `$MONGOSCOPE_PREFIX/bin` instead of the platform default. |
+| Variable             | Effect                                                                  |
+| -------------------- | ----------------------------------------------------------------------- |
+| `MONGOSCOPE_VERSION` | Pin a release tag (for example `v0.3.0`). Default: `latest`.            |
+| `MONGOSCOPE_PREFIX`  | Install under `$MONGOSCOPE_PREFIX/bin` instead of the platform default. |
 
 Pin a version or a custom prefix:
 
 ```bash
-MONGOSCOPE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
+MONGOSCOPE_VERSION=v0.3.0 curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
 
 MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
 ```
@@ -61,31 +61,31 @@ Use this path when you prefer not to pipe a script into bash, or when you need W
 2. Optional: verify the archive against `checksums.txt` from the same release.
 3. Extract the archive and place the binary on your `PATH`.
 
-Asset names use the version **without** the `v` prefix (tag `v0.1.0` → `0.1.0` in the filename):
+Asset names use the version **without** the `v` prefix (tag `v0.3.0` → `0.3.0` in the filename):
 
-| Platform | Archive |
-| -------- | ------- |
-| Linux x86_64 | `mongoscope_<version>_linux_amd64.tar.gz` |
-| Linux arm64 | `mongoscope_<version>_linux_arm64.tar.gz` |
-| macOS Intel | `mongoscope_<version>_darwin_amd64.tar.gz` |
+| Platform            | Archive                                    |
+| ------------------- | ------------------------------------------ |
+| Linux x86_64        | `mongoscope_<version>_linux_amd64.tar.gz`  |
+| Linux arm64         | `mongoscope_<version>_linux_arm64.tar.gz`  |
+| macOS Intel         | `mongoscope_<version>_darwin_amd64.tar.gz` |
 | macOS Apple Silicon | `mongoscope_<version>_darwin_arm64.tar.gz` |
-| Windows x86_64 | `mongoscope_<version>_windows_amd64.zip` |
+| Windows x86_64      | `mongoscope_<version>_windows_amd64.zip`   |
 
-Example URLs for tag `v0.1.0`:
+Example URLs for tag `v0.3.0`:
 
 ```text
-https://github.com/prodioslabs/mongoscope/releases/download/v0.1.0/mongoscope_0.1.0_linux_amd64.tar.gz
-https://github.com/prodioslabs/mongoscope/releases/download/v0.1.0/mongoscope_0.1.0_linux_arm64.tar.gz
-https://github.com/prodioslabs/mongoscope/releases/download/v0.1.0/mongoscope_0.1.0_darwin_amd64.tar.gz
-https://github.com/prodioslabs/mongoscope/releases/download/v0.1.0/mongoscope_0.1.0_darwin_arm64.tar.gz
-https://github.com/prodioslabs/mongoscope/releases/download/v0.1.0/mongoscope_0.1.0_windows_amd64.zip
-https://github.com/prodioslabs/mongoscope/releases/download/v0.1.0/checksums.txt
+https://github.com/prodioslabs/mongoscope/releases/download/v0.3.0/mongoscope_0.3.0_linux_amd64.tar.gz
+https://github.com/prodioslabs/mongoscope/releases/download/v0.3.0/mongoscope_0.3.0_linux_arm64.tar.gz
+https://github.com/prodioslabs/mongoscope/releases/download/v0.3.0/mongoscope_0.3.0_darwin_amd64.tar.gz
+https://github.com/prodioslabs/mongoscope/releases/download/v0.3.0/mongoscope_0.3.0_darwin_arm64.tar.gz
+https://github.com/prodioslabs/mongoscope/releases/download/v0.3.0/mongoscope_0.3.0_windows_amd64.zip
+https://github.com/prodioslabs/mongoscope/releases/download/v0.3.0/checksums.txt
 ```
 
 On Unix, the archive contains a `mongoscope` binary at the root:
 
 ```bash
-tar -xzf mongoscope_0.1.0_linux_amd64.tar.gz
+tar -xzf mongoscope_0.3.0_linux_amd64.tar.gz
 sudo install -m 755 mongoscope /usr/local/bin/mongoscope
 ```
 
@@ -112,7 +112,7 @@ Re-run the [curl installer](#install-with-the-curl-installer). The installer rep
 To pin an upgrade to a known tag:
 
 ```bash
-MONGOSCOPE_VERSION=v0.1.0 curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
+MONGOSCOPE_VERSION=v0.3.0 curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
 ```
 
 ## Uninstall MongoScope
@@ -203,15 +203,15 @@ mongoscope --help
 
 That path is separate from release binaries:
 
-| Script | Purpose |
-| ------ | ------- |
-| `bun start` | Launch the TUI from source |
-| `bun link` | Expose `mongoscope` on `PATH` for local development |
-| `bun run build` | Native-platform binary → `dist/mongoscope` |
-| `bun run build:release` | All five targets + archives + `checksums.txt` under `dist/release/` |
-| `bun run typecheck` | Typecheck |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check |
-| `bun run test` | Vitest |
+| Script                               | Purpose                                                             |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `bun start`                          | Launch the TUI from source                                          |
+| `bun link`                           | Expose `mongoscope` on `PATH` for local development                 |
+| `bun run build`                      | Native-platform binary → `dist/mongoscope`                          |
+| `bun run build:release`              | All five targets + archives + `checksums.txt` under `dist/release/` |
+| `bun run typecheck`                  | Typecheck                                                           |
+| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                                                 |
+| `bun run test`                       | Vitest                                                              |
 
 Docs site (this site): `cd docs && bun install && bun run dev`.
 

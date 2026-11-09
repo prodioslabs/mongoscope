@@ -10,7 +10,7 @@ export function validateAppConfig(value: unknown): AppConfig {
 
   const record = value
 
-  // Secrets-only file (plaintext fallback wrote before any theme save) → defaults in memory.
+  // Legacy secrets-only config (no version) → treat as defaults.
   if (record.version === undefined && record.secrets !== undefined) {
     return { ...DEFAULT_APP_CONFIG }
   }
