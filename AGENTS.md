@@ -150,7 +150,7 @@ useBindings(toBindings(SLOW_QUERIES_SHORTCUTS))
 
 Dialog chrome may bind `escape` to a close command when that is the shared overlay contract; feature actions still belong in the shortcuts modules.
 
-## Agent skills (TUI / docs)
+## Agent skills (TUI)
 
 Load the matching skill before non-trivial work in that area:
 
@@ -158,7 +158,8 @@ Load the matching skill before non-trivial work in that area:
 | ---- | ----- |
 | OpenTUI components, keymap, layout, React bindings, testing helpers | `.agents/skills/opentui/SKILL.md` |
 | Smoke / debug the interactive TUI in a controlled terminal | `.agents/skills/interactive-testing/SKILL.md` |
-| Product docs under `docs/content/docs/` (or root/docs READMEs) | `.agents/skills/developer-documentation/SKILL.md` |
+
+Product docs under `docs/content/docs/` (and root / `docs/` READMEs) follow [Docs content writing](#docs-content-writing) in this file — there is no separate docs skill.
 
 ## Commands
 
@@ -293,13 +294,77 @@ function LogFileSection({ ... }: LogFileSectionProps) {
 
 ## Docs content writing
 
-When creating or editing product documentation under `docs/content/docs/` (or the root/docs READMEs), follow the **developer-documentation** skill (see [Agent skills](#agent-skills-tui--docs)):
+Match the style of the existing MDX under `docs/content/docs/`. Prefer editing an existing page over inventing a new form. Verify every flag, key, default, path, poll interval, and version against `src/`, `install.sh`, `--help`, and in-app shortcuts (`?`) — never from memory.
 
-- Skill: `.agents/skills/developer-documentation/SKILL.md`
-- Page types: `.agents/skills/developer-documentation/references/documentation-types.md`
-- Writing standard: `.agents/skills/developer-documentation/references/writing-standard.md`
+### Layout and sidebar
 
-Choose the page type by the reader's job, verify claims against the CLI/TUI, and keep `docs/content/docs/meta.json` in sync with the sidebar.
+| Path | Role |
+| ---- | ---- |
+| `docs/content/docs/*.mdx` | Product pages (Fumadocs MDX) |
+| `docs/content/docs/meta.json` | Sidebar order and `---Section---` dividers |
+| `docs/README.md` | Docs package front door (dev / build) |
+| Root `README.md` | Install + TUI quickstart (keep in sync with installation / getting-started / CLI) |
+
+When adding, removing, or renaming a page, update `meta.json` in the same change.
+
+Current shape (keep unless restructuring intentionally):
+
+```text
+index → installation → getting-started → connections
+---Tabs--- slow-queries, live-ops, replication, indexes, logs
+---Reference--- indexing-guide, themes, cli, shortcuts
+```
+
+One maintained procedure per topic — link instead of copying steps across pages.
+
+### Page skeleton (every MDX page)
+
+```mdx
+---
+title: Short page title
+description: One line — reader job or what the page covers
+---
+
+Opening paragraph: who/when to use this page (imperative or “Use X to …”).
+
+## Prerequisites   <!-- tab / how-to pages; skip on pure reference if nothing to list -->
+
+## …sections as ## only…
+```
+
+- Frontmatter: `title` + `description` only (unless an existing page already uses more).
+- Fumadocs renders `title` as H1 — **no** `#` heading in the body. Start at `##`.
+- Links between docs: site paths (`/docs/installation`, `/docs/getting-started#…`), not relative filesystem paths.
+- Code fences: `bash` for shell, `javascript` for mongosh/aggregation examples when needed.
+- Copy-paste commands: **no** `$` prompt prefix.
+- Prefer **two-column markdown tables** for keys, flags, modes, panels, and env vars. Numbered lists when order matters; bullets when it does not.
+- Tone: short, direct, technical. No filler (“seamless”, “robust”, “powerful”). No emojis.
+- Keys and UI labels in backticks or bold only where existing pages do (`l`, `Ctrl+K`, **Slow Queries**).
+
+### Page roles (mirror what we already ship)
+
+| Role | Examples | Pattern |
+| ---- | -------- | ------- |
+| Overview | `index.mdx` | Who it is for, tab map, requirements, “Start here” numbered path, optional `<Cards>` / `<Card>` to next pages |
+| Install | `installation.mdx` | Platforms table → curl steps → verify → pin/env → archives → update/uninstall → contributors |
+| Quickstart | `getting-started.mdx` | Prerequisites → numbered first success → expected result → global keys → edge cases (permissions) |
+| Connections / setup | `connections.mdx` | Prerequisites → how to open UI → Static vs Live → persistence vs CLI ephemeral |
+| Tab how-to | `slow-queries`, `live-ops`, `replication`, `indexes`, `logs` | Prerequisites → data source / refresh → key tables → important limits (permissions, poll interval, what the tab does **not** do) |
+| Concept | `indexing-guide.mdx` | Mental model + mongosh examples; point at tab pages for MongoScope UI, do not duplicate shortcut tables |
+| Reference | `cli.mdx`, `shortcuts.mdx`, `themes.mdx` | Exact flags/keys/names and defaults; `shortcuts.mdx` defers to in-app `?` as authoritative |
+
+Root `README.md`: bold one-line opener, working install example in the first lines, two-column tables, no `$` prompts; deeper detail links into `/docs`.
+
+### Components
+
+Use Fumadocs `<Cards>` / `<Card>` on overview-style pages when linking a set of next steps (`index.mdx`). Do not sprinkle Cards through every tab page — tab pages stay markdown tables + procedures.
+
+### Claims that must stay true
+
+- CLI ephemeral connect is session-only (not keychain / `config.json`).
+- Live vs Static toggle is `l` when a connection is selected (Slow Queries / Logs).
+- Poll / default numbers must match code (e.g. Live Ops ~1s, Replication/Indexes ~5s, Slow Queries live ~2s, Logs static ~100ms / live getLog ~1s, profiler `slowms` default 100).
+- Install examples that pin a version should match current `package.json` / latest release tag (or a clearly marked placeholder).
 
 ## User override
 
