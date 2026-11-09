@@ -36,6 +36,15 @@ mongoscope --log-path /path/to/mongod.log
 
 Invalid paths exit with status `1`. See [CLI flags](/docs/cli).
 
+### Try a sample log
+
+No MongoDB log handy? The repository ships a synthetic one-hour `mongod` log with collection scans, an index-plus-sort plan, and a slow delete:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/prodioslabs/mongoscope/main/examples/mongod.log.sample
+mongoscope --log-path mongod.log.sample
+```
+
 ## Use the dashboard
 
 | Goal | Action |

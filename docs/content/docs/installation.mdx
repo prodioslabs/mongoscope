@@ -188,10 +188,10 @@ cd mongoscope
 bun install
 ```
 
-2. Launch the TUI from source:
+2. Launch the TUI from source. The bundled synthetic log opens Slow Queries and Logs without a server:
 
 ```bash
-bun start
+bun start --log-path examples/mongod.log.sample
 ```
 
 Optional: expose `mongoscope` on your `PATH` for local development (requires Bun on `PATH`):
@@ -214,5 +214,7 @@ That path is separate from release binaries:
 | `bun run test`                       | Vitest                                                              |
 
 Docs site (this site): `cd docs && bun install && bun run dev`.
+
+Pull request checks, project layout, commit format, and the release process: [CONTRIBUTING.md](https://github.com/prodioslabs/mongoscope/blob/main/CONTRIBUTING.md).
 
 Next: [Getting started](/docs/getting-started).

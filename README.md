@@ -1,16 +1,40 @@
 # MongoScope
 
+[![Release](https://img.shields.io/github/v/release/prodioslabs/mongoscope)](https://github.com/prodioslabs/mongoscope/releases)
+[![License](https://img.shields.io/github/license/prodioslabs/mongoscope)](./LICENSE)
+[![Docs](https://img.shields.io/badge/docs-mongoscope.prodioslabs.in-informational)](https://mongoscope.prodioslabs.in/docs)
+
 **See which MongoDB queries are killing your latency—without leaving the terminal.**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
 ```
 
-Then run `mongoscope`. Pick a log file. Hit Enter. You get slow-query patterns, live ops, replica lag, indexes, and log tails in one keyboard-driven TUI.
+![MongoScope on a sample mongod log: Slow Queries patterns, query detail, Logs tab, theme switch, and command palette](.github/assets/mongoscope-demo.gif)
 
-Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui). Needs a real interactive TTY (don't pipe stdout).
+MongoScope groups slow queries in a `mongod` log by shape, ranks them by count, latency, and plan, and shows live ops, replica lag, indexes, and log tails in one keyboard-driven TUI. Linux and macOS install with the script above; Windows uses the release `.zip` ([Install](#install)).
 
-Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are attached to [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases) (the curl installer is Unix-only).
+[Documentation](https://mongoscope.prodioslabs.in/docs) · [Releases](https://github.com/prodioslabs/mongoscope/releases) · [Contributing](./CONTRIBUTING.md)
+
+## Try it on a sample log
+
+No MongoDB log handy? Download the synthetic sample (one hour of fake `shop` and `analytics` traffic) and open it:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/prodioslabs/mongoscope/main/examples/mongod.log.sample
+mongoscope --log-path mongod.log.sample
+```
+
+Press `Enter` on a pattern for the query detail, `5` for Logs, `q` to quit.
+
+## Why MongoScope
+
+| You have                                  | MongoScope gives you                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| A `mongod.log` from an incident           | Slow queries grouped by shape, with count, avg ms, examined/returned, plan, and a trend sparkline |
+| A shell on the database host and no GUI   | A single binary with no runtime to install; runs in any terminal, including over SSH              |
+| Self-hosted MongoDB without Atlas tooling | Log and `system.profile` analysis that needs only file access or a connection string              |
+| A live incident                           | `currentOp` with COLLSCAN highlights and kill-op, replica lag and elections, index build progress |
 
 ## What you get
 
@@ -24,53 +48,15 @@ Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are at
 
 Connections land in your OS keychain (`Bun.secrets`) when available, otherwise plaintext under `secrets` in `~/.config/mongoscope/config.json`. Themes (gruvbox, catppuccin, nord, …) persist in that same config directory.
 
-## Install options
+## Quick start
 
-| Method             | Command / notes                                                                               |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| curl (recommended) | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh \| bash` |
-| Pin a version      | `MONGOSCOPE_VERSION=v0.3.0 curl -fsSL … \| bash`                                              |
-| Custom prefix      | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                         |
+1. Run `mongoscope` in a real interactive terminal (do not pipe stdout).
+2. On the Welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`).
+3. Press `Enter`. MongoScope parses the last 100k lines and opens the dashboard on **Slow Queries**.
 
-The installer downloads the matching archive from GitHub Releases, verifies `checksums.txt`, installs to `/usr/local/bin` (Linux) or `~/.local/bin` (macOS), and runs `mongoscope --version`.
+For live tabs, press `2` (Live Ops) and fill in the inline add form, use `Ctrl+K` → Manage connections, or start with `mongoscope --uri mongodb://localhost:27017` for a session-only connect. See [Connections](https://mongoscope.prodioslabs.in/docs/connections).
 
-## For contributors
-
-Needs [Bun](https://bun.sh). Optional: a MongoDB log and/or a reachable instance.
-
-```bash
-git clone https://github.com/prodioslabs/mongoscope.git
-cd mongoscope
-bun install
-bun start
-```
-
-For a global `mongoscope` during development (script entry — requires Bun on PATH):
-
-```bash
-bun link
-mongoscope --help
-```
-
-That is separate from release binaries:
-
-| Script                               | Purpose                                                             |
-| ------------------------------------ | ------------------------------------------------------------------- |
-| `bun start`                          | Launch the TUI from source                                          |
-| `bun link`                           | Expose `mongoscope` on PATH for local dev                           |
-| `bun run build`                      | Native-platform binary → `dist/mongoscope`                          |
-| `bun run build:release`              | All five targets + archives + `checksums.txt` under `dist/release/` |
-| `bun run typecheck`                  | Typecheck                                                           |
-| `bunx oxlint` / `bunx oxfmt --check` | Lint / format check                                                 |
-| `bun run test`                       | Vitest                                                              |
-
-### Releasing
-
-Bump and commit `package.json` `"version"`, then push a matching SemVer tag (`vX.Y.Z` or `vX.Y.Z-rc.1`). The release job compares the linux-amd64 binary `--version` to the tag without `v` and fails on mismatch. CircleCI builds all five platform archives, writes `checksums.txt`, and publishes to [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases). Hyphenated tags are published with `--prerelease` so they never become `latest`. Requires `GITHUB_TOKEN` in CircleCI Project Settings → Environment Variables (permission to create releases on this repo).
-
-On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (default `.`). Enter parses the last 100k lines and opens the dashboard.
-
-If a log directory (or selected file) is unreadable due to permissions, Welcome shows a permission error and offers **retry with sudo** (`r`). Confirming runs a short-lived elevated `ls` / `tail` — the app itself does **not** run as root — and your password may be requested. Elevation is scoped to Welcome log listing and file read only (not live connect, secrets, kill-op, profiler, or config). `sudo` is optional: without it the app still runs, but protected directories stay inaccessible.
+If `/var/log/mongodb` is root-owned, Welcome offers **retry with sudo** (`r`): a short-lived `sudo ls` / `sudo tail`, while the app itself never runs as root. See [Permissions and elevated access](https://mongoscope.prodioslabs.in/docs/getting-started#permissions-and-elevated-access).
 
 | Key                       | Action                                           |
 | ------------------------- | ------------------------------------------------ |
@@ -83,13 +69,24 @@ If a log directory (or selected file) is unreadable due to permissions, Welcome 
 | `m` / `t`                 | Light-dark / cycle theme                         |
 | `q`                       | Quit                                             |
 
-Deeper reference lives in [`docs/`](./docs) — `cd docs && bun install && bun run dev`.
+Full reference: [Keyboard shortcuts](https://mongoscope.prodioslabs.in/docs/shortcuts).
+
+## Install
+
+| Method              | Command / notes                                                                                                                                                   |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| curl (Linux, macOS) | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh \| bash`                                                                     |
+| Pin a version       | `MONGOSCOPE_VERSION=v0.3.0 curl -fsSL … \| bash`                                                                                                                  |
+| Custom prefix       | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                                                                                             |
+| Windows x86_64      | Download `mongoscope_<version>_windows_amd64.zip` from [Releases](https://github.com/prodioslabs/mongoscope/releases), unzip, put `mongoscope.exe` on your `PATH` |
+| Manual archive      | Linux / macOS `.tar.gz` and `checksums.txt` on [Releases](https://github.com/prodioslabs/mongoscope/releases)                                                     |
+
+The installer downloads the matching archive from GitHub Releases, verifies `checksums.txt`, installs to `/usr/local/bin` (Linux) or `~/.local/bin` (macOS), and runs `mongoscope --version`. Update by re-running it. Details: [Installation](https://mongoscope.prodioslabs.in/docs/installation).
 
 ## CLI flags
 
 ```bash
 mongoscope --help
-# or: bun start --help
 ```
 
 | Flag                                                        | Status                                                                                                |
@@ -99,6 +96,21 @@ mongoscope --help
 | `--log-path`                                                | Parse that log file on startup (skips picker; invalid path exits 1)                                   |
 | `--uri`                                                     | Ephemeral live connect for this session (not saved to keychain)                                       |
 | `--host`, `--port`, `--username`, `--password`, `--auth-db` | Build a URI and ephemeral-connect (do not combine with `--uri`; default port 27017)                   |
+
+## Contributing
+
+Bug reports, fixes, and docs edits are welcome. Start with [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, checks, and the release process, or pick an issue labeled [`good first issue`](https://github.com/prodioslabs/mongoscope/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+
+```bash
+git clone https://github.com/prodioslabs/mongoscope.git
+cd mongoscope
+bun install
+bun start --log-path examples/mongod.log.sample
+```
+
+Report security issues privately — see [SECURITY.md](./SECURITY.md). Participation follows the [Code of conduct](./CODE_OF_CONDUCT.md).
+
+Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui).
 
 ## License
 
