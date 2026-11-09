@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a new view, data source, or workflow
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to find out or fix in MongoDB, and what gets in the way today?
+      placeholder: During incidents I need to see which slow query patterns started after a deploy, but ...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What MongoScope should show or do. Mention the tab and keys if you have an idea.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Slow Queries
+        - Live Ops
+        - Replication
+        - Indexes
+        - Logs
+        - Connections
+        - Install / CLI
+        - New tab or data source
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Current workaround
+      description: mongosh commands, other tools, or scripts you use today
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on this

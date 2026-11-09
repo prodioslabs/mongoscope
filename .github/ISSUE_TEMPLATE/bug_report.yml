@@ -1,0 +1,92 @@
+name: Bug report
+description: Something in MongoScope does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Redact connection strings, passwords, hostnames, and private log lines before posting.
+        Security problems go through [private vulnerability reporting](https://github.com/prodioslabs/mongoscope/security/advisories/new), not issues.
+  - type: input
+    id: version
+    attributes:
+      label: MongoScope version
+      description: Output of `mongoscope --version`
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Install method
+      options:
+        - curl installer
+        - Release archive
+        - From source (bun start)
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: OS and architecture
+      placeholder: Ubuntu 24.04 x86_64, macOS 15 arm64, Windows 11 x86_64
+    validations:
+      required: true
+  - type: input
+    id: terminal
+    attributes:
+      label: Terminal
+      description: Terminal emulator, plus tmux / screen / SSH if involved
+      placeholder: Ghostty, iTerm2, Windows Terminal, tmux over SSH
+  - type: input
+    id: mongodb-version
+    attributes:
+      label: MongoDB version
+      description: Needed for live tabs and log-format issues
+      placeholder: 7.0.14 replica set
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where it happens
+      options:
+        - Welcome / log picker
+        - Slow Queries
+        - Live Ops
+        - Replication
+        - Indexes
+        - Logs
+        - Connections
+        - Installer
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Commands you ran and keys you pressed
+      placeholder: |
+        1. mongoscope --log-path mongod.log
+        2. Press Enter on the first pattern
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Error text, screenshots, or a recording help a lot
+    validations:
+      required: true
+  - type: textarea
+    id: log-lines
+    attributes:
+      label: Redacted log lines
+      description: For parsing bugs, a few redacted `mongod` log lines that trigger the problem
+      render: text

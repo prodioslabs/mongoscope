@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://mongoscope.prodioslabs.in/docs
+    about: Install, connections, tab guides, CLI flags, and keyboard shortcuts
+  - name: Report a security vulnerability
+    url: https://github.com/prodioslabs/mongoscope/security/advisories/new
+    about: Report privately. Do not open a public issue for security problems.
