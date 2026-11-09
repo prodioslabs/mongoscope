@@ -70,7 +70,9 @@ describe('buildQueryDetailCopyText', () => {
   })
 
   it('returns null for empty raw display', () => {
-    expect(buildQueryDetailCopyText(makeExplain({ rawDisplay: '   ' }), makePattern(), true)).toBeNull()
+    expect(
+      buildQueryDetailCopyText(makeExplain({ rawDisplay: '   ' }), makePattern(), true),
+    ).toBeNull()
     expect(
       buildQueryDetailCopyText(makeExplain({ rawDisplay: 'undefined' }), makePattern(), true),
     ).toBeNull()
@@ -93,11 +95,15 @@ describe('buildQueryDetailCopyText', () => {
     expect(text!).toContain('Yields: 1')
     expect(text!).toContain('Command')
     expect(text!).toContain('"find": "users"')
-    expect(text!).not.toMatch(/\x1b\[/)
+    expect(text!).not.toMatch(new RegExp(`${String.fromCharCode(0x1b)}\\[`))
   })
 
   it('omits suggested index section when none exists', () => {
-    const text = buildQueryDetailCopyText(makeExplain({ suggestedIndex: null }), makePattern(), false)
+    const text = buildQueryDetailCopyText(
+      makeExplain({ suggestedIndex: null }),
+      makePattern(),
+      false,
+    )
     expect(text).not.toContain('Suggested index')
   })
 
