@@ -17,8 +17,6 @@ import {
   type ProfilingStatus,
 } from './types'
 
-export type { ProfilerClient }
-
 export type FetchProfilerSnapshotResult = {
   snapshot: ProfilerSlowQueriesSnapshot
 }

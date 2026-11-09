@@ -1,6 +1,6 @@
 import type { QueryPattern } from './types'
 
-export type LiveOpPatternMatch = {
+type LiveOpPatternMatch = {
   namespace: string
   op: string
   plan: string

@@ -7,7 +7,7 @@ export type ExportSort = {
 
 export type ExportSource = 'static' | 'live'
 
-export type SlowQueriesExportMetadata = {
+type SlowQueriesExportMetadata = {
   mongoscopeVersion: string
   source: ExportSource
   /** Log basename (static) or selected database name (live). Omitted when unavailable. */

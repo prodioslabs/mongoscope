@@ -17,7 +17,7 @@ import { useHomeActions } from './home-provider'
 import { Kbd } from './kbd'
 
 /** Key → action while the card is hovered or focused (same keys as the TUI tab). */
-export type DemoKeys = Record<string, () => void>
+type DemoKeys = Record<string, () => void>
 
 const PressedKeyContext = createContext<string | null>(null)
 
