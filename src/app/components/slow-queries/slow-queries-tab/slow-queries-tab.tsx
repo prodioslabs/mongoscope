@@ -103,7 +103,11 @@ export function SlowQueriesTab() {
             },
           },
         ],
-        bindings: [{ key: 'l', cmd: 'slow-queries.toggle-source' }],
+        bindings: toBindings(
+          SLOW_QUERIES_SHORTCUTS.filter((shortcut) =>
+            shortcut.bindings.some((binding) => binding.cmd === 'slow-queries.toggle-source'),
+          ),
+        ),
       }
     },
     [setSlowQueriesSource, showSourceToggle, slowQueriesSource],
@@ -933,7 +937,11 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
           return
         }
         const currentSnapshot = snapshotRef.current
-        if (currentSnapshot != null && currentSnapshot.errors.read != null && sortedLengthRef.current === 0) {
+        if (
+          currentSnapshot != null &&
+          currentSnapshot.errors.read != null &&
+          sortedLengthRef.current === 0
+        ) {
           showTransientStatus('cannot export while data is errored')
           return
         }
