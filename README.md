@@ -14,23 +14,23 @@ Linux (amd64 / arm64) and macOS (Intel / Apple Silicon). Windows binaries are at
 
 ## What you get
 
-| Area         | What it surfaces                                                |
-| ------------ | --------------------------------------------------------------- |
+| Area         | What it surfaces                                                                 |
+| ------------ | -------------------------------------------------------------------------------- |
 | Slow Queries | Aggregated patterns from logs or live `system.profile`; export JSON/CSV/Markdown |
-| Live Ops     | `currentOp`, COLLSCAN highlights, kill-op, collection `top`     |
-| Replication  | Topology, oplog window, lag sparkline, heartbeats, elections    |
-| Indexes      | Inventory, build %, `$indexStats`, jump from a slow query       |
-| Logs         | File tail or rolling `getLog` buffer from a live connection     |
+| Live Ops     | `currentOp`, COLLSCAN highlights, kill-op, collection `top`                      |
+| Replication  | Topology, oplog window, lag sparkline, heartbeats, elections                     |
+| Indexes      | Inventory, build %, `$indexStats`, jump from a slow query                        |
+| Logs         | File tail or rolling `getLog` buffer from a live connection                      |
 
 Connections land in your OS keychain (`Bun.secrets`) when available, otherwise plaintext under `secrets` in `~/.config/mongoscope/config.json`. Themes (gruvbox, catppuccin, nord, …) persist in that same config directory.
 
 ## Install options
 
-| Method                 | Command / notes                                                                               |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| **curl (recommended)** | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh \| bash` |
-| Pin a version          | `MONGOSCOPE_VERSION=v0.1.0 curl -fsSL … \| bash`                                              |
-| Custom prefix          | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                         |
+| Method             | Command / notes                                                                               |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| curl (recommended) | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh \| bash` |
+| Pin a version      | `MONGOSCOPE_VERSION=v0.3.0 curl -fsSL … \| bash`                                              |
+| Custom prefix      | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                         |
 
 The installer downloads the matching archive from GitHub Releases, verifies `checksums.txt`, installs to `/usr/local/bin` (Linux) or `~/.local/bin` (macOS), and runs `mongoscope --version`.
 
@@ -72,16 +72,16 @@ On the welcome screen, pick a log from `/var/log/mongodb` or your `--log-dir` (d
 
 If a log directory (or selected file) is unreadable due to permissions, Welcome shows a permission error and offers **retry with sudo** (`r`). Confirming runs a short-lived elevated `ls` / `tail` — the app itself does **not** run as root — and your password may be requested. Elevation is scoped to Welcome log listing and file read only (not live connect, secrets, kill-op, profiler, or config). `sudo` is optional: without it the app still runs, but protected directories stay inaccessible.
 
-| Key           | Action                                         |
-| ------------- | ---------------------------------------------- |
-| `1`–`5` / Tab | Switch tabs                                    |
-| `c`           | Connections (Live Ops / Replication / Indexes) |
-| `l`           | Toggle Static ↔ Live (Slow Queries / Logs)     |
-| `x`           | Export Slow Queries patterns (JSON/CSV/Markdown) |
-| `?`           | Help                                           |
-| `Ctrl+K`      | Command palette                                |
-| `m` / `t`     | Light-dark / cycle theme                       |
-| `q`           | Quit                                           |
+| Key                       | Action                                           |
+| ------------------------- | ------------------------------------------------ |
+| `1`–`5` / Tab / Shift+Tab | Switch tabs                                      |
+| `c`                       | Connections (Live Ops / Replication / Indexes)   |
+| `l`                       | Toggle Static ↔ Live (Slow Queries / Logs)       |
+| `x`                       | Export Slow Queries patterns (JSON/CSV/Markdown) |
+| `?`                       | Help                                             |
+| `Ctrl+K`                  | Command palette                                  |
+| `m` / `t`                 | Light-dark / cycle theme                         |
+| `q`                       | Quit                                             |
 
 Deeper reference lives in [`docs/`](./docs) — `cd docs && bun install && bun run dev`.
 

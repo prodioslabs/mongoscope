@@ -11,7 +11,6 @@ const starFormatter = new Intl.NumberFormat('en', {
 
 type GitHubStarLinkProps = {
   className?: string
-  variant?: 'nav' | 'hero'
 }
 
 export function GitHubStarLink(props: GitHubStarLinkProps) {
@@ -26,42 +25,28 @@ function GitHubStarLinkInner(props: GitHubStarLinkProps) {
   return <GitHubStarAnchor stars={use(getGitHubStars())} {...props} />
 }
 
-function GitHubStarAnchor({
-  stars,
-  className,
-  variant = 'nav',
-}: GitHubStarLinkProps & { stars: number | null }) {
-  const isHero = variant === 'hero'
-
+function GitHubStarAnchor({ stars, className }: GitHubStarLinkProps & { stars: number | null }) {
+  // Accessible name must match visible text (Lighthouse label-content-name-mismatch).
+  // Extra context goes in `title`, which does not replace the accessible name.
   return (
     <a
       href={githubRepoUrl}
       target="_blank"
       rel="noreferrer noopener"
-      aria-label={
+      title={
         stars != null
           ? `Star ${appName} on GitHub (${starFormatter.format(stars)} stars)`
           : `Star ${appName} on GitHub`
       }
       className={cn(
-        'inline-flex items-center justify-center gap-1.5 text-sm font-medium transition-colors',
-        isHero
-          ? 'rounded-full border px-5 py-2.5 hover:bg-fd-accent'
-          : 'rounded-lg px-2 py-1.5 text-fd-muted-foreground hover:bg-fd-accent hover:text-fd-accent-foreground',
+        'inline-flex items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium text-fd-muted-foreground transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground',
         className,
       )}
     >
       <GitHubMark className="size-3.5" />
-      <span>{isHero ? 'Star on GitHub' : 'Star'}</span>
+      <span>Star</span>
       {stars != null ? (
-        <span
-          className={cn(
-            'inline-flex items-center gap-1 tabular-nums',
-            isHero
-              ? 'rounded-full bg-fd-accent px-2 py-0.5 text-xs text-fd-accent-foreground'
-              : 'text-fd-foreground',
-          )}
-        >
+        <span className="inline-flex items-center gap-1 text-fd-foreground tabular-nums">
           <Star className="size-3 fill-current" aria-hidden />
           {starFormatter.format(stars)}
         </span>

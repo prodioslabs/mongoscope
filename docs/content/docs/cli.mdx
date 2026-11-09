@@ -1,21 +1,82 @@
 ---
 title: CLI flags
-description: mongoscope startup flags
+description: mongoscope startup flags for log paths and ephemeral live connect
 ---
+
+Start MongoScope from a terminal. Use flags to skip Welcome, point at a log directory, or open a session-only live connection.
+
+## Show help or version
 
 ```bash
 mongoscope --help
-# or: bun start --help
+mongoscope --version
 ```
 
-During development, `bun link` exposes the `mongoscope` command on your PATH (same entry as `bun start`). `bun run build` produces a separate standalone binary at `dist/mongoscope`.
+During development:
 
-| Flag                                                        | Description                                                                           |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `-h`, `--help` / `-v`, `--version`                          | Print and exit immediately (version from `package.json`)                              |
-| `--log-dir`                                                 | Welcome screen’s second log list (default `.`)                                        |
-| `--log-path`                                                | Parse that log file on startup (skips picker; invalid path exits 1)                   |
-| `--uri`                                                     | Ephemeral live connect for this session (**not** saved to the OS keychain)            |
-| `--host`, `--port`, `--username`, `--password`, `--auth-db` | Build a URI and ephemeral-connect (do not combine with `--uri`; default port `27017`) |
+```bash
+bun start --help
+```
 
-Live-only startup (connection flags without `--log-path`) opens the dashboard with Slow Queries / Logs in live mode. Combining `--log-path` with live flags parses the log (static sources) and connects in parallel.
+`bun link` exposes `mongoscope` on your `PATH` (same entry as `bun start`). `bun run build` produces a separate standalone binary at `dist/mongoscope`.
+
+| Flag | Description |
+| ---- | ----------- |
+| `-h`, `--help` | Print help and exit |
+| `-v`, `--version` | Print version and exit. Release binaries use the embedded release version; development builds fall back to `package.json`. |
+
+## Flags
+
+| Flag | Required | Default | Description |
+| ---- | -------- | ------- | ----------- |
+| `--log-dir` | No | `.` | Second Welcome log list (alongside `/var/log/mongodb`) |
+| `--log-path` | No | — | Parse this log file on startup and skip the picker. Must be an existing file; invalid paths exit `1`. |
+| `--uri` | No | — | Ephemeral live connect for this session (**not** saved to the credential store) |
+| `--host` | With discrete flags | — | Host for a built URI |
+| `--port` | No | `27017` when building a URI | Port for a built URI |
+| `--username` | No | — | Username for a built URI |
+| `--password` | No | — | Password for a built URI (requires `--username`) |
+| `--auth-db` | No | — | `authSource` for a built URI |
+
+### Mutual exclusion
+
+Use **either** `--uri` **or** the discrete `--host` / `--port` / `--username` / `--password` / `--auth-db` set — not both. `--host` is required when any of the other discrete flags are set. Password without username fails.
+
+### Ephemeral connect
+
+CLI connection flags activate a session-only live connection (`cli-ephemeral`). Credentials are not written to `Bun.secrets` or `config.json`. Save a profile in the app when you need persistence — see [Connections](/docs/connections).
+
+## Startup combinations
+
+| Flags | Behavior |
+| ----- | -------- |
+| No flags | Welcome screen |
+| `--log-path PATH` | Parse `PATH` (static Slow Queries / Logs), open dashboard |
+| Connection flags only | Open dashboard; Slow Queries and Logs start in Live mode |
+| `--log-path` + connection flags | Parse the log (static sources) and connect in parallel |
+
+## Examples
+
+Parse a log file:
+
+```bash
+mongoscope --log-path /var/log/mongodb/mongod.log
+```
+
+Open with a session-only URI (replace placeholders):
+
+```bash
+mongoscope --uri 'mongodb://USER:PASSWORD@HOST:27017/?authSource=admin'
+```
+
+Build a URI from discrete flags:
+
+```bash
+mongoscope --host HOST --port 27017 --username USER --password PASSWORD --auth-db admin
+```
+
+List logs from a custom directory on Welcome:
+
+```bash
+mongoscope --log-dir /path/to/logs
+```

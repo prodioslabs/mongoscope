@@ -5,8 +5,9 @@
   "license": "MIT",
   "scripts": {
     "generate:icon": "bun run scripts/generate-icon.ts",
+    "generate:themes": "bun run scripts/generate-tui-themes.ts",
     "build": "bun run generate:icon && next build",
-    "dev": "bun run generate:icon && next dev",
+    "dev": "bun run generate:icon && bun run generate:themes && next dev",
     "start": "next start",
     "types:check": "next typegen && tsc --noEmit",
     "lint": "oxlint -c oxlint.json",
@@ -19,6 +20,7 @@
     "fumadocs-ui": "npm:@fumadocs/base-ui@16.15.14",
     "lucide-react": "1.47.0",
     "next": "16.3.5",
+    "next-themes": "0.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -33,5 +35,11 @@
     "postcss": "8.5.28",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2"
-  }
+  },
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 111",
+    "safari >= 16.4"
+  ]
 }

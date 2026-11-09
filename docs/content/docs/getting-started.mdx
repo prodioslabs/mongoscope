@@ -1,37 +1,87 @@
 ---
 title: Getting started
-description: Welcome flow, dashboard tabs, connections, and global keys
+description: Open MongoScope, pick a log, reach the dashboard, and learn the global keys
 ---
 
-Install the binary first — see [Installation](/docs/installation). Then run `mongoscope` in a real interactive TTY (do not pipe stdout).
+Get from an installed binary to a useful dashboard view as quickly as possible.
 
-## Welcome flow
+## Prerequisites
 
-1. **Welcome** — pick a MongoDB log from `/var/log/mongodb` or `--log-dir` (default `.`), then Enter to parse the last **100k** lines and open the dashboard.
-2. **Dashboard tabs** (`1`–`5`, or Tab / Shift+Tab): Slow Queries · Live Ops · Replication · Indexes · Logs.
-3. **Connections** — press `c` on Live Ops / Replication / Indexes (or Ctrl+K → Manage connections). With no saved profiles, those tabs show an inline add form. URIs are stored under service `com.mongoscope.cli` in the OS keychain when available, otherwise plaintext in `~/.config/mongoscope/config.json`.
-4. After a connection is selected, Slow Queries and Logs can toggle **Static** vs **Live** with `l`.
+- MongoScope installed — see [Installation](/docs/installation)
+- A real interactive TTY (do not pipe stdout)
+- Optional: a readable MongoDB log file, or a live MongoDB URI for later tabs
 
-There is no separate full-screen connections flow — switching, adding, editing, and deleting happen through **DbSelector** + the connections dialog.
+## Open the dashboard from a log file
 
-Saved connections prefer an OS credential store (`Bun.secrets`): macOS Keychain, or Linux Secret Service (GNOME Keyring, KWallet, etc.). When that store is unavailable, credentials fall back to plaintext in `config.json`.
+1. Start MongoScope:
 
-### Permissions and elevated access
+```bash
+mongoscope
+```
 
-MongoDB’s default log directory (`/var/log/mongodb`) is often root-owned. Welcome lists each directory with an ordinary (non-root) process. Distinct empty-state messages:
+2. On the Welcome screen, select a log from `/var/log/mongodb` or from the `--log-dir` list (default `.`).
+3. Press Enter to parse the most recent lines and open the dashboard.
 
-| State                                  | Message shown                                                                                       |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Empty (readable, no MongoDB-like logs) | `No log files found`                                                                                |
-| Directory missing                      | `Directory does not exist — pick a different path or confirm MongoDB's log location on this system` |
-| Permission denied (directory)          | `Permission denied — cannot read this directory`                                                    |
-| Other I/O failure                      | The underlying error message from the filesystem                                                    |
+Only the tail of the file is read, so large production logs open quickly. Default tab: **Slow Queries** with a static (log-derived) source.
+
+Expected result: the dashboard with tabs Slow Queries · Live Ops · Replication · Indexes · Logs.
+
+### Skip the picker
+
+Parse a known file on startup:
+
+```bash
+mongoscope --log-path /path/to/mongod.log
+```
+
+Invalid paths exit with status `1`. See [CLI flags](/docs/cli).
+
+## Use the dashboard
+
+| Goal | Action |
+| ---- | ------ |
+| Switch tabs | Press `1`–`5`, or Tab / Shift+Tab |
+| Open help | Press `?` |
+| Open the command palette | Press `Ctrl+K` |
+| Manage live connections | Press `c` where DbSelector is shown, or Ctrl+K → Manage connections |
+| Toggle Static vs Live on Slow Queries / Logs | Press `l` when a connection is selected |
+
+With no saved profiles, Live Ops, Replication, and Indexes show an inline add form. After you select a connection, Slow Queries and Logs can switch between **Static** (log file) and **Live** (server) with `l`.
+
+Details: [Connections](/docs/connections).
+
+## Global keys
+
+| Key | Action |
+| --- | ------ |
+| `?` | Help |
+| `Ctrl+K` | Command palette |
+| `m` | Toggle light / dark |
+| `t` | Cycle theme |
+| `q` | Quit |
+
+Full reference: [Keyboard shortcuts](/docs/shortcuts).
+
+## Permissions and elevated access
+
+MongoDB’s default log directory (`/var/log/mongodb`) is often root-owned. Welcome lists each directory with an ordinary (non-root) process.
+
+| State | Message shown |
+| ----- | ------------- |
+| Empty (readable, no MongoDB-like logs) | `No log files found` |
+| Directory missing | `Directory does not exist — pick a different path or confirm MongoDB's log location on this system` |
+| Permission denied (directory) | `Permission denied — cannot read this directory` |
+| Other I/O failure | The underlying error message from the filesystem |
 
 When a selected **file** is unreadable, Welcome shows:
 
 `Permission denied reading this log file — press r to retry with sudo`
 
-On a permission-denied directory (or after that file message), press **`r`** (footer: `sudo`) to retry with elevated permissions. Focus the section first if needed (`tab`, or the hint `select section, then r for sudo`).
+### Retry with sudo
+
+1. Focus the Welcome section that needs elevation (`tab`, or follow the on-screen hint).
+2. Press `r` (footer: `sudo`).
+3. Confirm the dialog, or press Esc to cancel.
 
 Confirm dialog (exact copy):
 
@@ -43,30 +93,22 @@ Confirm dialog (exact copy):
 - `The app itself will not run as root.`
 - Prompt: `enter confirm · esc cancel` (while waiting: `waiting for sudo…`)
 
-Enter confirms; Esc cancels. Confirming suspends the TUI briefly, runs `sudo -- ls …` or `sudo -- tail …` with an interactive password prompt on the terminal, then resumes. Approval is **session-scoped per directory**: after a successful elevate for that directory, further list/read retries in the same process skip the confirm dialog (password may still be required by `sudo` itself if the OS credential cache expired).
+Confirming suspends the TUI briefly, runs `sudo -- ls …` or `sudo -- tail …` with an interactive password prompt, then resumes. Approval is **session-scoped per directory**: after a successful elevate for that directory, further list/read retries in the same process skip the confirm dialog (`sudo` may still prompt if the OS credential cache expired).
 
-Elevation applies only to Welcome’s log-directory listing and log-file read path. Live connect, keychain secrets, kill-op, profiler, and config do **not** request elevation.
+Elevation applies only to Welcome’s log-directory listing and log-file read path. Live connect, credential storage, kill-op, profiler, and config do **not** request elevation.
 
-Failure messages after a sudo attempt (shown under the section):
+| Situation | Message | What to do |
+| --------- | ------- | ---------- |
+| Wrong password / sudo policy deny | `Incorrect password or sudo denied.` | Press `r` again, or fix sudoers / use a readable `--log-dir` |
+| Esc / cancel before or during elevate | `Elevated access cancelled.` | Press `r` when ready to try again |
+| `sudo` not on `PATH` | `sudo is not available on this system.` | Install `sudo`, or copy logs into a user-readable `--log-dir` |
+| No response within ~90s | `Timed out waiting for sudo. Try again.` | Press `r` and complete the password prompt promptly |
+| Other elevate failure | `Elevated access failed.` (or a more specific error when available) | Retry, or use an accessible log path |
 
-| Situation                             | Message                                                             | What to do                                                                                           |
-| ------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Wrong password / sudo policy deny     | `Incorrect password or sudo denied.`                                | Press `r` again, or fix sudoers / use a readable `--log-dir`                                         |
-| Esc / cancel before or during elevate | `Elevated access cancelled.`                                        | Press `r` when ready to try again                                                                    |
-| `sudo` not on `PATH`                  | `sudo is not available on this system.`                             | Install `sudo`, or copy/symlink logs into a user-readable `--log-dir` (common on minimal containers) |
-| No response within ~90s               | `Timed out waiting for sudo. Try again.`                            | Press `r` and complete the password prompt promptly                                                  |
-| Other elevate failure                 | `Elevated access failed.` (or a more specific error when available) | Retry, or use an accessible log path                                                                 |
+`sudo` is optional. MongoScope runs without it; protected directories stay unreadable.
 
-`sudo` is an **optional** runtime dependency for this feature only — MongoScope runs without it; protected directories stay unreadable.
+## Next steps
 
-## Global keys
-
-| Key      | Action              |
-| -------- | ------------------- |
-| `?`      | Help                |
-| `Ctrl+K` | Command palette     |
-| `m`      | Toggle light / dark |
-| `t`      | Cycle theme         |
-| `q`      | Quit                |
-
-Full reference: [Keyboard shortcuts](/docs/shortcuts) · [CLI flags](/docs/cli) · [Connections](/docs/connections).
+- [Connections](/docs/connections) — save a profile and use live tabs
+- [Slow Queries](/docs/slow-queries) — patterns, profiling, and export
+- [CLI flags](/docs/cli) — skip Welcome or open with an ephemeral live URI

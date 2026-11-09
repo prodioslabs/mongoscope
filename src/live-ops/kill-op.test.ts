@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapKillOpError, parseKillOpid } from './kill-op'
+import { killCurrentOp, mapKillOpError, parseKillOpid } from './kill-op'
 
 describe('parseKillOpid', () => {
   it('parses numeric opids', () => {
@@ -16,7 +16,6 @@ describe('parseKillOpid', () => {
 
 describe('killCurrentOp', () => {
   it('returns not connected when client is null', async () => {
-    const { killCurrentOp } = await import('./kill-op')
     const result = await killCurrentOp(null, 123)
     expect(result.ok).toBe(false)
     if (!result.ok) {

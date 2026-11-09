@@ -1,9 +1,42 @@
 ---
 title: Themes
-description: Built-in themes, user themes, and light/dark mode
+description: Built-in themes, user theme files, and light/dark mode persistence
 ---
 
-- Built-ins (e.g. gruvbox default, catppuccin, nord, tokyonight, …) plus optional user themes.
-- Theme name + light/dark mode persisted in `~/.config/mongoscope/config.json` (or `$XDG_CONFIG_HOME/mongoscope/config.json`).
-- Drop `*.json` theme files in `~/.config/mongoscope/themes/` (basename = theme name; user overrides built-in of the same name).
-- `t` cycles themes · `m` toggles light/dark · Ctrl+K → Switch theme.
+Use themes to change colors in the TUI. Theme name and light/dark mode persist across sessions.
+
+## Built-in themes
+
+Default theme: `gruvbox`. Default mode: `dark`.
+
+Built-ins:
+
+- `catppuccin`
+- `catppuccin-frappe`
+- `catppuccin-macchiato`
+- `github`
+- `gruvbox`
+- `nord`
+- `one-dark`
+- `synthwave84`
+- `tokyonight`
+
+## Switch theme or mode
+
+| Key | Action |
+| --- | ------ |
+| `t` | Cycle themes |
+| `m` | Toggle light / dark |
+| Ctrl+K → Switch theme | Open theme switching from the command palette |
+
+## Persistence
+
+Theme name and mode are stored in `~/.config/mongoscope/config.json` (or `$XDG_CONFIG_HOME/mongoscope/config.json`).
+
+## Add a user theme
+
+1. Create `~/.config/mongoscope/themes/` if it does not exist.
+2. Drop a `*.json` theme file in that directory.
+3. Restart MongoScope or cycle themes until the new name appears.
+
+The basename of the file is the theme name. A user theme with the same name as a built-in overrides that built-in.

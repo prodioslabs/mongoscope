@@ -85,12 +85,8 @@ export function createFallbackSecretBackend(
   }
 }
 
-export function isBunSecretsAvailable(): boolean {
-  try {
-    return typeof Bun !== 'undefined' && typeof Bun.secrets?.get === 'function'
-  } catch {
-    return false
-  }
+function isBunSecretsAvailable(): boolean {
+  return typeof Bun !== 'undefined' && typeof Bun.secrets?.get === 'function'
 }
 
 export function createSecretStore(backend: SecretBackend = bunSecretsBackend): SecretStore {

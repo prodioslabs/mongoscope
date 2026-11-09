@@ -10,6 +10,8 @@ Open [http://localhost:3000](http://localhost:3000). Pages live under `/docs`. S
 
 Product install and TUI quickstart stay in the [root README](../README.md). This folder is the reference site you edit and ship.
 
+Agent writing standards for MDX pages live in the root [AGENTS.md](../AGENTS.md) **Docs content writing** section (match existing `content/docs/` style).
+
 ## What’s here
 
 | Path                | Role                                                           |
@@ -18,14 +20,15 @@ Product install and TUI quickstart stay in the [root README](../README.md). This
 | `src/`              | App Router, layouts, search, UI components                     |
 | `src/lib/source.ts` | Fumadocs MDX content source                                    |
 
-| Script                | Purpose                    |
-| --------------------- | -------------------------- |
-| `bun run dev`         | Local docs with hot reload |
-| `bun run build`       | Production build           |
-| `bun run start`       | Serve the production build |
-| `bun run lint`        | Oxlint                     |
-| `bun run format`      | Oxfmt write                |
-| `bun run types:check` | Next typegen + `tsc`       |
+| Script                   | Purpose                                      |
+| ------------------------ | -------------------------------------------- |
+| `bun run dev`            | Generate icon/themes, then local hot reload  |
+| `bun run generate:themes`| Regenerate `tui-themes.ts` from TUI assets   |
+| `bun run build`          | Production build                             |
+| `bun run start`          | Serve the production build                   |
+| `bun run lint`           | Oxlint                                       |
+| `bun run format`         | Oxfmt write                                  |
+| `bun run types:check`    | Next typegen + `tsc`                         |
 
 ## Quick Start
 
@@ -48,7 +51,7 @@ bun run start
 
 ## Docker
 
-Build from the repo root with `docs/` as the context. The build needs network access (`next/font` fetches Google Fonts).
+Build from the repo root with `docs/` as the context. Network is needed at build time for `next build` dependency fetches; the site uses system font stacks (no webfont download).
 
 ```bash
 docker build -t mongoscope-docs docs

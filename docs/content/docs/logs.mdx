@@ -1,9 +1,35 @@
 ---
 title: Logs
-description: Static file tail and live getLog buffer
+description: Tail a MongoDB log file or poll the server getLog buffer
 ---
 
-- **Static:** live-tail of the analyzed log file (after welcome parse).
-- **Live:** polls `getLog: 'global'` from the selected connection. Toggle with `l` when connected.
-- Live fidelity: **rolling RAM buffer (~1024 events)** — not a durable full history (banner in UI).
-- `space` follow · `/` search · `f` custom filter · `c`/`w`/`r`/`n`/`s` category pills
+Use the Logs tab to follow recent log lines from the analyzed file or from the connected server’s in-memory `getLog` buffer.
+
+## Prerequisites
+
+- For Static: a log already opened through Welcome or `--log-path` — see [Getting started](/docs/getting-started)
+- For Live: a selected connection — see [Connections](/docs/connections)
+
+## Choose Static or Live
+
+| Mode | Data source | Notes |
+| ---- | ----------- | ----- |
+| Static | Live-tail of the analyzed log file | File poll about every 100 ms; client ring buffer holds recent lines |
+| Live | `getLog: 'global'` on the selected connection | Poll about every 1 second |
+
+Press `l` to toggle when a connection is selected.
+
+### Live fidelity
+
+The server `getLog` path is a **rolling RAM buffer (~1024 events)** — not a durable full history. The UI shows a banner to that effect. Prefer Static (file) when you need a longer on-disk trail.
+
+## Search and filter
+
+| Key | Action |
+| --- | ------ |
+| `space` | Toggle follow |
+| `/` | Search |
+| `f` | Custom filter |
+| `c` / `w` / `r` / `n` / `s` | Category pills: COMMAND / WRITE / REPL / NETWORK / STORAGE |
+
+All categories are on by default. On the Logs tab, `r` is the REPL category pill — Welcome’s sudo retry (`r`) is Welcome-only.

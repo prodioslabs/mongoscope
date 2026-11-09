@@ -1,12 +1,10 @@
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import '../styles/globals.css'
-import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
-import { appName } from '@/lib/shared'
+import { appName, siteDescription } from '@/lib/shared'
 
-const inter = Inter({
-  subsets: ['latin'],
-})
+// No webfonts: body and code use system stacks (see globals.css). A webfont download and its
+// fallback-face lookups sat in front of the hero paint on mobile Lighthouse.
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || undefined
 
@@ -21,11 +19,12 @@ export const metadata: Metadata = {
     default: appName,
     template: `%s | ${appName}`,
   },
+  description: siteDescription,
 }
 
 export default function Layout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={inter.className} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className="flex flex-col min-h-screen" suppressHydrationWarning>
         <RootProvider>{children}</RootProvider>
       </body>

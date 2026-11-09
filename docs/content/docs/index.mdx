@@ -1,15 +1,41 @@
 ---
 title: Introduction
-description: Terminal UI for MongoDB slow queries, live ops, replication, indexes, and logs
+description: Orient yourself to MongoScope — a terminal UI for MongoDB slow queries, live ops, replication, indexes, and logs
 ---
 
-MongoScope is a terminal UI for inspecting MongoDB slow queries, live operations, replication, indexes, and logs. Built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui).
+MongoScope is a terminal UI for inspecting MongoDB slow queries, live operations, replication, indexes, and logs. Use it when you need a local TTY workflow against log files, `system.profile`, or a live connection — not a browser dashboard.
 
-Requires a real interactive TTY (do not pipe stdout).
+It is built with [Bun](https://bun.sh) and [OpenTUI](https://github.com/anomalyco/opentui).
 
-Dashboard tabs (`1`–`5`, or Tab / Shift+Tab): **Slow Queries** · **Live Ops** · **Replication** · **Indexes** · **Logs**.
+## Who this is for
 
-Install with the curl one-liner or from [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases) — full steps in [Installation](/docs/installation). These pages are the deeper product reference.
+- Operators and developers who already work in a terminal
+- People debugging slow queries from MongoDB log files or a live profile
+- Teams that need a quick view of `currentOp`, replica-set health, indexes, or recent server logs
+
+## What you can do
+
+Dashboard tabs (`1`–`5`, or Tab / Shift+Tab):
+
+| Tab | Job |
+| --- | --- |
+| Slow Queries | Aggregate patterns from a log file or live `system.profile` |
+| Live Ops | Watch `currentOp`, collection top, and kill an operation |
+| Replication | Inspect topology, oplog window, lag, heartbeats, and elections |
+| Indexes | Inventory indexes, builds, and suggested keys from Slow Queries |
+| Logs | Tail a log file or poll the server `getLog` buffer |
+
+## Requirements
+
+- A real interactive TTY — do not pipe stdout
+- For static analysis: a readable MongoDB log file
+- For live tabs: a reachable MongoDB and a selected connection
+
+## Start here
+
+1. Install the binary — [Installation](/docs/installation)
+2. Open the dashboard — [Getting started](/docs/getting-started)
+3. Add a live connection when you need Live Ops, Replication, or Indexes — [Connections](/docs/connections)
 
 <Cards>
   <Card
@@ -20,35 +46,21 @@ Install with the curl one-liner or from [GitHub Releases](https://github.com/pro
   <Card
     title="Getting started"
     href="/docs/getting-started"
-    description="Welcome flow, dashboard tabs, connections, and global keys"
+    description="Welcome flow, first dashboard open, and global keys"
   />
   <Card
     title="Connections"
     href="/docs/connections"
-    description="DbSelector, connections dialog, and Static vs Live"
+    description="Save profiles, Static vs Live, and CLI ephemeral connect"
   />
   <Card
-    title="Slow Queries"
-    href="/docs/slow-queries"
-    description="Log patterns and live system.profile"
+    title="CLI flags"
+    href="/docs/cli"
+    description="Startup flags for logs and live connect"
   />
   <Card
-    title="Live Ops"
-    href="/docs/live-ops"
-    description="currentOp, kill-op, and collection top"
+    title="Keyboard shortcuts"
+    href="/docs/shortcuts"
+    description="Global and per-tab keys"
   />
-  <Card
-    title="Replication"
-    href="/docs/replication"
-    description="Topology, oplog, lag, heartbeats, elections"
-  />
-  <Card
-    title="Indexes"
-    href="/docs/indexes"
-    description="Inventory, builds, and suggested indexes"
-  />
-  <Card title="Logs" href="/docs/logs" description="File tail and getLog live buffer" />
-  <Card title="Themes" href="/docs/themes" description="Built-ins, user themes, light/dark" />
-  <Card title="CLI flags" href="/docs/cli" description="Startup flags and local-dev entrypoints" />
-  <Card title="Keyboard shortcuts" href="/docs/shortcuts" description="Global and per-tab keys" />
 </Cards>

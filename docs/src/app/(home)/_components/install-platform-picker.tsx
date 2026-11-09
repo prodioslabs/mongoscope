@@ -1,121 +1,90 @@
 'use client'
 
-import { DynamicCodeBlock } from 'fumadocs-ui/components/dynamic-codeblock'
-import Link from 'next/link'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { docsRoute, githubRepoUrl, installCurlCommand } from '@/lib/shared'
+import { latestRelease, releasesUrl } from '@/lib/shared'
 
-type InstallSectionProps = {
-  className?: string
+type Platform = 'unix' | 'windows'
+
+type InstallPlatformPickerProps = {
+  /** Install command for macOS / Linux, highlighted on the server. */
+  unixInstall: ReactNode
 }
 
-export function InstallSection({ className }: InstallSectionProps) {
-  return (
-    <section
-      className={cn('mx-auto w-full max-w-(--fd-layout-width) min-w-0 px-4 sm:px-6', className)}
-      aria-labelledby="install-heading"
-    >
-      <div className="rounded-2xl border border-fd-border bg-fd-card px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2
-            id="install-heading"
-            className="text-lg font-semibold tracking-tight text-fd-foreground sm:text-xl"
-          >
-            Install
-          </h2>
-          <ul className="flex flex-wrap items-center gap-2">
-            <OsChip brand="apple" icon={<AppleMark className="size-4" />} label="macOS" />
-            <OsChip brand="linux" icon={<LinuxMark className="size-4" />} label="Linux" />
-            <OsChip
-              brand="windows"
-              icon={<WindowsMark className="size-4" />}
-              label="Windows"
-              muted
-            />
-          </ul>
-        </div>
+export function InstallPlatformPicker({ unixInstall }: InstallPlatformPickerProps) {
+  const [platform, setPlatform] = useState<Platform>('unix')
 
-        <p className="mb-4 max-w-2xl text-sm text-pretty text-fd-muted-foreground">
-          One command for macOS and Linux — the installer detects your OS and architecture. Windows
-          builds ship on{' '}
+  return (
+    <>
+      <div role="group" aria-label="Operating system" className="mb-3 flex flex-wrap gap-1.5">
+        <PlatformButton
+          selected={platform === 'unix'}
+          onSelect={() => setPlatform('unix')}
+          icon={
+            <>
+              <AppleMark className="size-3.5" />
+              <LinuxMark className="size-3.5" />
+            </>
+          }
+        >
+          macOS / Linux
+        </PlatformButton>
+        <PlatformButton
+          selected={platform === 'windows'}
+          onSelect={() => setPlatform('windows')}
+          icon={<WindowsMark className="size-3.5" />}
+        >
+          Windows
+        </PlatformButton>
+      </div>
+      {platform === 'unix' ? (
+        unixInstall
+      ) : (
+        <p className="text-sm text-fd-muted-foreground">
+          Download{' '}
+          <code className="text-fd-foreground">
+            mongoscope_{latestRelease.version}_windows_amd64.zip
+          </code>{' '}
+          from{' '}
           <a
-            href={`${githubRepoUrl}/releases`}
-            className="font-medium text-fd-primary underline-offset-4 hover:underline"
+            href={releasesUrl}
             target="_blank"
             rel="noreferrer noopener"
+            className="font-medium text-(--home-accent-ink) underline-offset-4 hover:underline"
           >
             GitHub Releases
           </a>
-          .
+          , unzip it, and put <code className="text-fd-foreground">mongoscope.exe</code> on your
+          PATH.
         </p>
-
-        <div className="min-w-0 overflow-x-auto">
-          <DynamicCodeBlock
-            lang="bash"
-            code={installCurlCommand}
-            codeblock={{
-              title: 'Terminal',
-              className: 'my-0 max-w-full',
-              viewportProps: {
-                className: 'overflow-x-auto',
-              },
-            }}
-          />
-        </div>
-
-        <p className="mt-4 text-sm text-fd-muted-foreground">
-          Building from source?{' '}
-          <Link
-            href={`${docsRoute}/getting-started`}
-            className="font-medium text-fd-foreground underline-offset-4 hover:underline"
-          >
-            Contributor setup
-          </Link>{' '}
-          (clone, <code className="text-fd-foreground">bun install</code>,{' '}
-          <code className="text-fd-foreground">bun start</code>).
-        </p>
-      </div>
-    </section>
+      )}
+    </>
   )
 }
 
-type OsBrand = 'apple' | 'linux' | 'windows'
-
-type OsChipProps = {
-  brand: OsBrand
+type PlatformButtonProps = {
+  selected: boolean
+  onSelect: () => void
   icon: ReactNode
-  label: string
-  muted?: boolean
+  children: ReactNode
 }
 
-const osChipBrandHover: Record<OsBrand, string> = {
-  // Apple mark is mono — black / white invert by theme
-  apple:
-    'hover:border-neutral-900 hover:bg-neutral-900 hover:text-white hover:shadow-neutral-900/25 dark:hover:border-white dark:hover:bg-white dark:hover:text-neutral-900 dark:hover:shadow-white/20',
-  // Tux yellow
-  linux:
-    'hover:border-[#e5a800] hover:bg-[#fcc624] hover:text-neutral-900 hover:shadow-[#fcc624]/35',
-  // Windows / Microsoft blue
-  windows: 'hover:border-[#0078d4] hover:bg-[#00a4ef] hover:text-white hover:shadow-[#00a4ef]/35',
-}
-
-function OsChip({ brand, icon, label, muted = false }: OsChipProps) {
+function PlatformButton({ selected, onSelect, icon, children }: PlatformButtonProps) {
   return (
-    <li
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium',
-        'transition-[color,background-color,border-color,transform,box-shadow] duration-200 ease-out',
-        'hover:shadow-md',
-        muted
-          ? 'border-fd-border/80 bg-fd-secondary/20 text-fd-muted-foreground'
-          : 'border-fd-border bg-fd-secondary/50 text-fd-foreground',
-        osChipBrandHover[brand],
+        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+        selected
+          ? 'border-fd-foreground bg-fd-foreground text-fd-background'
+          : 'border-fd-border text-fd-muted-foreground hover:text-fd-foreground',
       )}
     >
       {icon}
-      <span>{label}</span>
-    </li>
+      {children}
+    </button>
   )
 }
 

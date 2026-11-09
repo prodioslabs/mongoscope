@@ -1,13 +1,41 @@
 ---
 title: Indexes
-description: Index inventory, BUILD %, and suggested-index jumps from Slow Queries
+description: Inventory indexes, watch builds, and review suggested keys from Slow Queries
 ---
 
-Requires a selected live connection. Auto-refresh ~5s.
+Use the Indexes tab to browse per-database and per-collection index inventory on the connected node, including in-progress builds and usage counters.
 
-- Per-database / collection inventory, sizes, flags, `$indexStats` ops/since (connected node only)
-- In-progress **BUILD %** from `$currentOp` (idleConnections included)
-- Navigation: `←`/`→` database · `[`/`]` collection · `↑`/`↓` rows
-- Sort: `n`/`i` collections · `s`/`o` indexes by size/ops
-- Jump target from Slow Queries details (`i`) with suggested-index banner (create outside MongoScope)
-- See also: [Indexing guide](/docs/indexing-guide)
+## Prerequisites
+
+- A selected live connection — see [Connections](/docs/connections)
+- Permissions to list indexes and run `$indexStats` / `$currentOp` as used by the tab
+
+## Refresh behavior
+
+While the tab is open and connected, MongoScope refreshes about every 5 seconds. Stats are for the **connected node only** — run the same checks on each replica-set or shard member you care about.
+
+## Navigate and sort
+
+| Key | Action |
+| --- | ------ |
+| `←` / `→` | Change database |
+| `[` / `]` | Change collection |
+| `↑` / `↓` (or `j` / `k`) | Move rows |
+| `n` / `i` | Sort collections by name / index count |
+| `s` / `o` | Sort indexes by size / ops |
+
+Default sorts: collections by name ascending; indexes by size descending.
+
+## What each row shows
+
+- Index name, keys, sizes, and flags
+- `$indexStats` ops / since for the connected node
+- In-progress **BUILD %** from `$currentOp` (including idle connections)
+
+## Review a suggested index from Slow Queries
+
+1. Open a Slow Queries pattern detail (Enter).
+2. Press `i` to jump here with a suggested vs existing index banner.
+3. Create any missing index outside MongoScope (mongosh, automation, or your migration process).
+
+MongoScope does not create or drop indexes. For compound-key design and verification, see the [Indexing guide](/docs/indexing-guide).

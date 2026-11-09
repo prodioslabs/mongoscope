@@ -75,7 +75,11 @@ export function LogsTab() {
             },
           },
         ],
-        bindings: [{ key: 'l', cmd: 'logs.toggle-source' }],
+        bindings: toBindings(
+          LOGS_SHORTCUTS.filter((shortcut) =>
+            shortcut.bindings.some((binding) => binding.cmd === 'logs.toggle-source'),
+          ),
+        ),
       }
     },
     [logsSource, setLogsSource, showSourceToggle],

@@ -22,7 +22,12 @@ export function baseOptions(): BaseLayoutProps {
       {
         type: 'custom',
         secondary: true,
-        children: <GitHubStarLink />,
+        // Fumadocs renders `custom` children raw inside the header `<ul>`; wrap in `<li>`.
+        children: (
+          <li className="list-none">
+            <GitHubStarLink />
+          </li>
+        ),
       },
     ],
   }

@@ -11,6 +11,10 @@ const config = {
   output: 'standalone',
   // Pin tracing to docs/ so the parent monorepo bun.lock does not nest standalone output.
   outputFileTracingRoot: docsRoot,
+  // Tree-shake icon / UI barrel imports out of the home critical path.
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'fumadocs-ui'],
+  },
 }
 
 export default withMDX(config)

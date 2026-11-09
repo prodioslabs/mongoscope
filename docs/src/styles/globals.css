@@ -2,17 +2,106 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
-/* Mark accent — matches TUI gruvbox theme.accent */
+/* Brand accent — matches TUI gruvbox theme.accent. Also Fumadocs' primary, so docs
+   active states (sidebar, TOC, breadcrumb, tabs) carry the brand instead of grey. */
 :root {
   --ms-accent: #427b58;
+  --color-fd-primary: var(--ms-accent);
+  /* Elevated home surfaces (cards, keycaps, CTAs). Pure paper in light; Fumadocs card in dark. */
+  --tui-card: #ffffff;
+  /* Mix endpoint for darkening light-mode accents (home-provider). */
+  --tui-ink: #000000;
+  /* Shadow ink — soft rest elevation is light-only; mid/strong deepen slightly in dark. */
+  --tui-shadow-soft: rgb(0 0 0 / 0.04);
+  --tui-shadow: rgb(0 0 0 / 0.22);
+  --tui-shadow-strong: rgb(0 0 0 / 0.45);
+  --tui-overlay: rgb(0 0 0 / 0.45);
+  /* Brand mark — gruvbox-dark; tile stays dark in both site modes. Keep favicon bake in sync
+     (`markColors` in mark-geometry.ts → scripts/generate-icon.ts). */
+  --tui-mark-tile: #282828;
+  --tui-mark-tile-edge: #3c3836;
+  --tui-mark-lens: #ebdbb2;
+  --tui-mark-bars: #8ec07c;
+  --tui-mark-spike: #fe8019;
+  /* Declared here too (next-themes also sets it) so `light-dark()` works before hydration. */
+  color-scheme: light;
+
+  /*
+   * Default home TUI palette = accessible gruvbox (same as `defaultTuiTheme`).
+   * Kept in CSS so first paint does not wait on `HomeProvider` / theme JS.
+   * Non-default themes still override via inline style after `t`.
+   */
+  --tui-bg: light-dark(#fefbee, #282828);
+  --tui-panel: light-dark(#f5edd8, #3c3836);
+  --tui-border: light-dark(#dbd2c4, #665c54);
+  --tui-fg: light-dark(#3c3836, #ebdbb2);
+  --tui-muted: light-dark(#766a5f, #b0a189);
+  --tui-primary: light-dark(#076678, #8ba99a);
+  --tui-accent: light-dark(#427b58, #8ec07c);
+  --tui-info: light-dark(#b57614, #fabd2f);
+  --tui-success: light-dark(#79740e, #b8bb26);
+  --tui-warning: light-dark(#af3a03, #fe8019);
+  --tui-error: light-dark(#9d0006, #f58064);
+  --home-accent: light-dark(#427b58, #8ec07c);
+  --home-accent-ink: light-dark(#356246, #8ec07c);
+  --home-accent-soft: color-mix(in srgb, var(--home-accent) 14%, transparent);
 }
 
 .dark {
   --ms-accent: #8ec07c;
+  --color-fd-primary: var(--ms-accent);
+  --tui-card: var(--color-fd-card);
+  --tui-shadow-soft: transparent;
+  --tui-shadow: rgb(0 0 0 / 0.5);
+  color-scheme: dark;
+}
+
+@theme {
+  --color-tui-card: var(--tui-card);
+  --color-tui-overlay: var(--tui-overlay);
+
+  /*
+   * System fonts only — no webfont on the mobile critical path. Keep stacks short: Chrome on
+   * Linux (Lighthouse / PageSpeed hosts) resolves every listed family per weight and size
+   * during first layout, and misses (`ui-sans-serif`, `-apple-system`, …) each cost an IPC.
+   * `system-ui` already maps to SF / Segoe UI / Roboto on Apple / Windows / Android.
+   */
+  --font-sans: system-ui, sans-serif;
+
+  /* `ui-monospace` = SF Mono in Safari, whose generic `monospace` is Courier; Menlo and
+     Consolas cover Chrome / Firefox on macOS and Windows; Linux uses generic `monospace`. */
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  --animate-ms-blink: ms-blink 1s steps(1) infinite;
+  --animate-ms-rise: ms-rise 0.3s ease-out;
+  --animate-ms-flash: ms-flash 1.4s ease-out;
+
+  @keyframes ms-blink {
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ms-rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* Inset: home demo cards clip overflow for their cursor spotlight. */
+  @keyframes ms-flash {
+    30% {
+      box-shadow:
+        inset 0 0 0 1px var(--home-accent),
+        inset 0 0 0 6px var(--home-accent-soft);
+    }
+  }
 }
 
 html {
   scrollbar-gutter: stable;
+  font-family: var(--font-sans);
 }
 
 html > body[data-scroll-locked] {

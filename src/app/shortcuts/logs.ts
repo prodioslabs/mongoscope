@@ -60,8 +60,7 @@ export const LOGS_SHORTCUTS: readonly Shortcut[] = [
     helpLabel:
       'Toggle Static file / Live getLog (when a connection is selected; getLog is a ~1024-event RAM buffer)',
     footerLabel: 'source',
-    // Bound in LogsTab source layer (priority), not LogsView.
-    bindings: [],
+    bindings: [{ key: 'l', cmd: 'logs.toggle-source' }],
   },
 ]
 
