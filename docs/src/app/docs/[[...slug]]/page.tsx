@@ -58,7 +58,13 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
       absolute: `${page.data.title} | ${appName}`,
     },
     description: page.data.description,
+    alternates: {
+      canonical: page.url,
+    },
     openGraph: {
+      type: 'article',
+      siteName: appName,
+      url: page.url,
       images: getPageImageUrl(page).url,
     },
   }

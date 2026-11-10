@@ -1,11 +1,11 @@
 import { HomeLayout } from 'fumadocs-ui/layouts/home'
 import type { Metadata } from 'next'
 import { baseOptions } from '@/lib/layout.shared'
-import { appName, releasesUrl, siteDescription } from '@/lib/shared'
+import { releasesUrl, siteDescription, siteTitle } from '@/lib/shared'
 
 export const metadata: Metadata = {
   title: {
-    absolute: appName,
+    absolute: siteTitle,
   },
   description: siteDescription,
 }
