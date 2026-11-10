@@ -57,10 +57,10 @@ Build from the repo root with `docs/` as the context. Network is needed at build
 docker build -t mongoscope-docs docs
 ```
 
-Pass `NEXT_PUBLIC_SITE_URL` as a build arg so absolute metadata and OG URLs are correct in the image. When unset, production builds warn and fall back to `http://localhost:3000`:
+Pass `NEXT_PUBLIC_SITE_URL` as a build arg. Canonical links, Open Graph images, `sitemap.xml`, and `robots.txt` all use it, so it must be the exact public hostname (`https://mongoscope.prodioslabs.in` in production). When unset, production builds warn and fall back to `http://localhost:3000`:
 
 ```bash
-docker build --build-arg NEXT_PUBLIC_SITE_URL=https://example.com -t mongoscope-docs docs
+docker build --build-arg NEXT_PUBLIC_SITE_URL=https://mongoscope.prodioslabs.in -t mongoscope-docs docs
 ```
 
 Run:
