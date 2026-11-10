@@ -1,4 +1,6 @@
+import type { Metadata } from 'next'
 import dynamic from 'next/dynamic'
+import { appName } from '@/lib/shared'
 import { Hero } from './_components/hero'
 import { HomeProvider } from './_components/home-provider'
 import { SiteFooter } from './_components/site-footer'
@@ -17,6 +19,17 @@ const KeyboardSection = dynamic(() =>
 const ClosingCta = dynamic(() =>
   import('./_components/closing-cta').then((module) => module.ClosingCta),
 )
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: appName,
+    url: '/',
+  },
+}
 
 export default function HomePage() {
   return (
