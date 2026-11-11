@@ -16,6 +16,7 @@ function makePattern(overrides: Partial<QueryPattern> = {}): QueryPattern {
     trend: new Uint16Array([1, 2, 3]),
     sampleRow: 0,
     totalDurationMs: 360,
+    history: null,
     ...overrides,
   }
 }

@@ -1,9 +1,19 @@
 import {
+  avgMsPerBucket,
+  compareHistoryWindows,
+  detectPlanTransitions,
+  formatHistoryTimestamp,
+  formatPlanTransition,
+  formatWindowSummary,
+  scoreRegression,
+  type PatternExplain,
+  type QueryPattern,
+} from '../../../../query-patterns'
+import {
   formatCount,
   formatExaminedRet,
   sparkline,
 } from '../format'
-import type { PatternExplain, QueryPattern } from '../../../../query-patterns'
 
 export function prettyDisplay(value: string): string {
   if (value === 'n/a') {
@@ -89,6 +99,38 @@ export function buildQueryDetailCopyText(
   pushRow(lines, 'Total ms', formatCount(pattern.totalDurationMs))
   pushRow(lines, 'Shape', pattern.shape)
   pushRow(lines, 'Trend', sparkline(pattern.trend))
+  lines.push('')
+
+  lines.push('History')
+  if (pattern.history == null) {
+    lines.push(
+      'Query Time Machine is static log analysis only. Live system.profile has no durable history.',
+    )
+  } else {
+    const history = pattern.history
+    const comparison = compareHistoryWindows(history, pattern.trend)
+    const regression = scoreRegression(history, pattern.trend)
+    const transitions = detectPlanTransitions(history)
+    pushRow(lines, 'First slow', formatHistoryTimestamp(history.firstSeenSlowMs))
+    pushRow(lines, 'Last slow', formatHistoryTimestamp(history.lastSeenSlowMs))
+    pushRow(lines, 'Avg ms', sparkline(avgMsPerBucket(pattern.trend, history.sumDurationMs)))
+    pushRow(lines, 'Early', formatWindowSummary('early', comparison))
+    pushRow(lines, 'Late', formatWindowSummary('late', comparison))
+    pushRow(
+      lines,
+      'Regression',
+      comparison.lowConfidence
+        ? `low confidence · score ${regression.score.toFixed(2)}`
+        : `score ${regression.score.toFixed(2)}`,
+    )
+    if (transitions.length === 0) {
+      pushRow(lines, 'Plan chg', 'none in this window')
+    } else {
+      for (const transition of transitions) {
+        lines.push(formatPlanTransition(transition))
+      }
+    }
+  }
   lines.push('')
 
   lines.push('Context')

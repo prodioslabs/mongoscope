@@ -45,7 +45,7 @@ export function formatWindowLabel(startMs: number, endMs: number): string {
   return `${Math.max(1, Math.round(days))}d window`
 }
 
-export function sparkline(trend: Uint16Array, width?: number): string {
+export function sparkline(trend: ArrayLike<number>, width?: number): string {
   return sparklineFromLib(trend, width)
 }
 

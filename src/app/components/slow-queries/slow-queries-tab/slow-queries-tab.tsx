@@ -6,7 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { resolveAppVersion } from '../../../../lib/app-version'
 import { displayText } from '../../../../lib/display-text'
 import { errorMessageText } from '../../../../lib/error-message'
-import { formatLogTailPreset, type LogStore } from '../../../../parser'
+import {
+  formatLogTailPreset,
+  LOG_TAIL_LINE_PRESETS,
+  MAX_LOG_TAIL_LINES,
+  type LogStore,
+} from '../../../../parser'
 import {
   DEFAULT_SLOWMS,
   getPatternExplainFromSample,
@@ -16,6 +21,7 @@ import {
 } from '../../../../profiler'
 import {
   getPatternExplain,
+  scoreRegression,
   toExportablePatterns,
   type ExportSort,
   type ExportSource,
@@ -58,7 +64,7 @@ import {
 import { QueryDetailDialog } from '../query-detail-dialog'
 import { StatsCard } from '../stats-card'
 
-type SortBy = 'count' | 'avgMs' | 'plan'
+type SortBy = 'count' | 'avgMs' | 'plan' | 'regression'
 
 type SlowQueryStats = {
   patternCount: string
@@ -174,6 +180,7 @@ function StaticSlowQueriesPanel() {
   const logStore = useSession((s) => s.logStore)
   const logPath = useSession((s) => s.logPath)
   const logTailLines = useSession((s) => s.logTailLines)
+  const setLogTailLines = useSession((s) => s.setLogTailLines)
   const parseProgress = useSession((s) => s.parseProgress)
   const parseError = useSession((s) => s.parseError)
   const consumePendingSlowQueriesNav = useSession((s) => s.consumePendingSlowQueriesNav)
@@ -187,8 +194,10 @@ function StaticSlowQueriesPanel() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [exportDocument, setExportDocument] = useState<SlowQueriesExportDocument | null>(null)
+  const [logTailDialogOpen, setLogTailDialogOpen] = useState(false)
   const [transientStatus, setTransientStatus] = useState<string | null>(null)
   const statusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const logTailDialogOpenRef = useRef(false)
 
   const selectedIndexRef = useRef(0)
   const scrollOffsetRef = useRef(0)
@@ -220,7 +229,9 @@ function StaticSlowQueriesPanel() {
       ? `parsing… ${parseProgress}%`
       : `tail ${formatLogTailPreset(logTailLines)} · ${windowLabel}`)
 
-  useFooterKeybindings(exportDialogOpen ? [] : SLOW_QUERIES_STATIC_FOOTER)
+  useFooterKeybindings(
+    exportDialogOpen || logTailDialogOpen ? [] : SLOW_QUERIES_STATIC_FOOTER,
+  )
   useFooterStatus(statusLabel)
 
   const showTransientStatus = useCallback(function showTransientStatus(message: string) {
@@ -247,6 +258,13 @@ function StaticSlowQueriesPanel() {
       exportDialogOpenRef.current = exportDialogOpen
     },
     [exportDialogOpen],
+  )
+
+  useEffect(
+    function syncStaticLogTailDialogOpenRef() {
+      logTailDialogOpenRef.current = logTailDialogOpen
+    },
+    [logTailDialogOpen],
   )
 
   useEffect(
@@ -411,7 +429,7 @@ function StaticSlowQueriesPanel() {
 
       return {
         appMode: 'base' satisfies AppKeymapMode,
-        enabled: detailPatternId == null && !exportDialogOpen,
+        enabled: detailPatternId == null && !exportDialogOpen && !logTailDialogOpen,
         commands: [
           {
             name: 'slow-queries.sort-count',
@@ -429,6 +447,12 @@ function StaticSlowQueriesPanel() {
             name: 'slow-queries.sort-plan',
             run() {
               applySort('plan')
+            },
+          },
+          {
+            name: 'slow-queries.sort-regression',
+            run() {
+              applySort('regression')
             },
           },
           {
@@ -454,6 +478,19 @@ function StaticSlowQueriesPanel() {
             },
           },
           {
+            name: 'slow-queries.open-tail',
+            run() {
+              if (
+                exportDialogOpenRef.current ||
+                logTailDialogOpenRef.current ||
+                detailPatternId != null
+              ) {
+                return
+              }
+              setLogTailDialogOpen(true)
+            },
+          },
+          {
             name: 'slow-queries.export-open',
             run() {
               openExport()
@@ -466,6 +503,7 @@ function StaticSlowQueriesPanel() {
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.move')) ||
               shortcut.bindings.some((b) => b.cmd.startsWith('slow-queries.sort')) ||
               shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-details') ||
+              shortcut.bindings.some((b) => b.cmd === 'slow-queries.open-tail') ||
               shortcut.bindings.some((b) => b.cmd === 'slow-queries.export-open')
             )
           }),
@@ -477,6 +515,7 @@ function StaticSlowQueriesPanel() {
       exportDialogOpen,
       logPath,
       logStore,
+      logTailDialogOpen,
       parseError,
       parseProgress,
       queryPatterns,
@@ -558,6 +597,24 @@ function StaticSlowQueriesPanel() {
         logStore={logStore}
         queryPatterns={queryPatterns}
         onClose={() => setDetailPatternId(null)}
+      />
+      <LogTailDialog
+        open={logTailDialogOpen}
+        title="Log sample window"
+        subtitle="Last lines of the log file to parse (static Slow Queries / Logs)"
+        currentLines={logTailLines}
+        presets={LOG_TAIL_LINE_PRESETS}
+        maxLines={MAX_LOG_TAIL_LINES}
+        isPending={parseProgress != null}
+        onApply={function applyStaticLogTail(limit) {
+          setLogTailDialogOpen(false)
+          void setLogTailLines(limit).then(function afterStaticLogTail() {
+            showTransientStatus(`tail ${formatLogTailPreset(limit)}`)
+          })
+        }}
+        onCancel={function cancelStaticLogTail() {
+          setLogTailDialogOpen(false)
+        }}
       />
       {exportDocument != null ? (
         <SlowQueriesExportDialog
@@ -999,6 +1056,12 @@ function LiveSlowQueriesDashboard({ snapshot, isPending }: LiveSlowQueriesDashbo
             },
           },
           {
+            name: 'slow-queries.sort-regression',
+            run() {
+              applySort('regression')
+            },
+          },
+          {
             name: 'slow-queries.move-up',
             run() {
               moveSelection(-1)
@@ -1370,6 +1433,14 @@ function sortPatterns(
       }
       return ascending ? a.count - b.count : b.count - a.count
     }
+    if (sortBy === 'regression') {
+      const scoreA = regressionSortScore(a)
+      const scoreB = regressionSortScore(b)
+      if (scoreB !== scoreA) {
+        return ascending ? scoreA - scoreB : scoreB - scoreA
+      }
+      return ascending ? a.avgMs - b.avgMs : b.avgMs - a.avgMs
+    }
     const rankDiff = planSortRank(a.plan) - planSortRank(b.plan)
     if (rankDiff !== 0) {
       return ascending ? -rankDiff : rankDiff
@@ -1377,6 +1448,18 @@ function sortPatterns(
     return ascending ? a.count - b.count : b.count - a.count
   })
   return copy
+}
+
+/** Confident regressions only; low-confidence / live patterns sort as 0. */
+function regressionSortScore(pattern: QueryPattern): number {
+  if (pattern.history == null) {
+    return 0
+  }
+  const result = scoreRegression(pattern.history, pattern.trend)
+  if (result.lowConfidence) {
+    return 0
+  }
+  return result.score
 }
 
 function sortArrow(sortDirection: SortDirection): string {
@@ -1410,7 +1493,11 @@ function buildTableContent(
     headerCell(headerLabel('AVG MS', 'avgMs', sortBy, sortDirection), theme, sortBy === 'avgMs'),
     headerCell('EXAMINED/RET', theme),
     headerCell(headerLabel('PLAN', 'plan', sortBy, sortDirection), theme, sortBy === 'plan'),
-    headerCell('TREND', theme),
+    headerCell(
+      headerLabel('TREND', 'regression', sortBy, sortDirection),
+      theme,
+      sortBy === 'regression',
+    ),
   ]
 
   let namespaceWidth = 'NAMESPACE'.length

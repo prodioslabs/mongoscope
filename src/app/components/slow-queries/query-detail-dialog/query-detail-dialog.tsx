@@ -3,7 +3,16 @@ import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  avgMsPerBucket,
+  compareHistoryWindows,
+  detectPlanTransitions,
+  filterMarkersForNamespace,
+  formatHistoryTimestamp,
+  formatIndexMarker,
+  formatPlanTransition,
+  formatWindowSummary,
   getPatternExplain,
+  scoreRegression,
   splitNamespace,
   type PatternExplain,
   type QueryPattern,
@@ -574,6 +583,12 @@ export function QueryDetailDialog({
                       />
                     </DetailSection>
 
+                    <HistorySection
+                      pattern={pattern}
+                      indexMarkers={queryPatterns?.indexMarkers ?? []}
+                      theme={theme}
+                    />
+
                     <DetailSection title="Context" theme={theme}>
                       <DetailRow label="Timestamp" value={formatTimestamp(explain.timestampMs)} />
                       <DetailRow label="Ctx" value={explain.ctx || 'n/a'} />
@@ -633,6 +648,122 @@ function DetailScrollThumb({ trackRows, thumbSize, thumbOffset, theme }: DetailS
     >
       <text fg={theme.border} content={displayText(cells.join('\n'))} />
     </box>
+  )
+}
+
+type HistorySectionProps = {
+  pattern: QueryPattern
+  indexMarkers: NonNullable<QueryPatternStore['indexMarkers']>
+  theme: Theme
+}
+
+function HistorySection({ pattern, indexMarkers, theme }: HistorySectionProps) {
+  if (pattern.history == null) {
+    return (
+      <DetailSection title="History" theme={theme}>
+        <text
+          fg={theme.textMuted}
+          wrapMode="word"
+          content={displayText(
+            'Query Time Machine is static log analysis only. Live system.profile has no durable history. Nothing is stored — open a mongod.log to compare early vs late in that file.',
+          )}
+        />
+      </DetailSection>
+    )
+  }
+
+  const history = pattern.history
+  const comparison = compareHistoryWindows(history, pattern.trend)
+  const transitions = detectPlanTransitions(history)
+  const regression = scoreRegression(history, pattern.trend)
+  const avgMsTrend = avgMsPerBucket(pattern.trend, history.sumDurationMs)
+  const markers = filterMarkersForNamespace(indexMarkers, pattern.namespace).filter(
+    function inPatternSpan(marker) {
+      return (
+        marker.timestampMs >= history.firstSeenSlowMs &&
+        marker.timestampMs <= history.lastSeenSlowMs
+      )
+    },
+  )
+
+  return (
+    <DetailSection title="History" theme={theme}>
+      <text
+        fg={theme.textMuted}
+        wrapMode="word"
+        content={displayText(
+          'First seen slow in this log tail (ops above slowms only — not a true baseline). Same-period changes are correlation, not causation. Session-only; MongoScope does not store history.',
+        )}
+      />
+      <DetailRow
+        label="First slow"
+        value={formatHistoryTimestamp(history.firstSeenSlowMs)}
+      />
+      <DetailRow label="Last slow" value={formatHistoryTimestamp(history.lastSeenSlowMs)} />
+      <DetailRow
+        label="Avg ms"
+        value={sparkline(avgMsTrend)}
+        valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
+      />
+      <DetailRow label="Volume" value={sparkline(pattern.trend)} />
+      <DetailRow label="Early" value={formatWindowSummary('early', comparison)} />
+      <DetailRow label="Late" value={formatWindowSummary('late', comparison)} />
+      <DetailRow
+        label="Regression"
+        value={
+          comparison.lowConfidence
+            ? `low confidence (need ≥5 samples/window) · score ${regression.score.toFixed(2)}`
+            : `score ${regression.score.toFixed(2)}`
+        }
+        valueColor={
+          comparison.lowConfidence
+            ? theme.textMuted
+            : regression.score >= 1
+              ? theme.warning
+              : theme.text
+        }
+      />
+      {history.planMix.length > 0 ? (
+        <DetailRow
+          label="Plan mix"
+          value={history.planMix.map((entry) => `${entry.plan}×${entry.count}`).join(' · ')}
+        />
+      ) : null}
+      {transitions.length > 0 ? (
+        <box flexDirection="column" paddingTop={0}>
+          <text fg={theme.textMuted} content={displayText('Plan changes')} />
+          {transitions.map((transition) => (
+            <text
+              key={`${transition.atMs}-${transition.fromPlan}-${transition.toPlan}`}
+              fg={theme.text}
+              wrapMode="word"
+              content={displayText(formatPlanTransition(transition))}
+            />
+          ))}
+        </box>
+      ) : (
+        <DetailRow label="Plan chg" value="none in this window" />
+      )}
+      {markers.length > 0 ? (
+        <box flexDirection="column" paddingTop={0}>
+          <text
+            fg={theme.textMuted}
+            wrapMode="word"
+            content={displayText('Index events in this file (same period)')}
+          />
+          {markers.map((marker) => (
+            <text
+              key={`${marker.timestampMs}-${marker.kind}-${marker.label}`}
+              fg={theme.text}
+              wrapMode="word"
+              content={displayText(formatIndexMarker(marker))}
+            />
+          ))}
+        </box>
+      ) : (
+        <DetailRow label="Indexes" value="no logged index events for this ns" />
+      )}
+    </DetailSection>
   )
 }
 
