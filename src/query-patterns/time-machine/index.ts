@@ -28,3 +28,4 @@ export {
   formatPlanTransition,
   formatWindowSummary,
 } from './format'
+export { buildHistoryDetail, type PatternHistoryDetail } from './history-detail'

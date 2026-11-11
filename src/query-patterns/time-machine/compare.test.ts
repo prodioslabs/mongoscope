@@ -24,98 +24,65 @@ describe('compareHistoryWindows', () => {
     expect(comparison.lowConfidence).toBe(true)
   })
 
-  it('marks a single sample as low confidence', () => {
-    const comparison = compareHistoryWindows(emptyHistory(), new Uint16Array(TREND_BUCKETS), [
-      {
-        timestampMs: 100,
-        durationMs: 200,
-        docsExamined: 10,
-        docsReturned: 1,
-        plan: 'COLLSCAN',
-      },
-    ])
+  it('marks a single-bucket sample as low confidence', () => {
+    const trend = new Uint16Array(TREND_BUCKETS)
+    const sumDurationMs = new Float64Array(TREND_BUCKETS)
+    const sumDocsExamined = new Float64Array(TREND_BUCKETS)
+    const sumDocsReturned = new Float64Array(TREND_BUCKETS)
+    const bucketPlans = Array.from({ length: TREND_BUCKETS }, () => '')
+    trend[0] = 1
+    sumDurationMs[0] = 200
+    sumDocsExamined[0] = 10
+    sumDocsReturned[0] = 1
+    bucketPlans[0] = 'COLLSCAN'
+
+    const comparison = compareHistoryWindows(
+      emptyHistory({
+        sumDurationMs,
+        sumDocsExamined,
+        sumDocsReturned,
+        bucketPlans,
+      }),
+      trend,
+    )
     expect(comparison.early.count + comparison.late.count).toBe(1)
     expect(comparison.lowConfidence).toBe(true)
   })
 
-  it('splits samples by midpoint and computes averages', () => {
-    const samples = [
-      {
-        timestampMs: 0,
-        durationMs: 100,
-        docsExamined: 10,
-        docsReturned: 1,
-        plan: 'IXSCAN',
-      },
-      {
-        timestampMs: 100,
-        durationMs: 100,
-        docsExamined: 10,
-        docsReturned: 1,
-        plan: 'IXSCAN',
-      },
-      {
-        timestampMs: 200,
-        durationMs: 100,
-        docsExamined: 10,
-        docsReturned: 1,
-        plan: 'IXSCAN',
-      },
-      {
-        timestampMs: 300,
-        durationMs: 100,
-        docsExamined: 10,
-        docsReturned: 1,
-        plan: 'IXSCAN',
-      },
-      {
-        timestampMs: 400,
-        durationMs: 100,
-        docsExamined: 10,
-        docsReturned: 1,
-        plan: 'IXSCAN',
-      },
-      {
-        timestampMs: 600,
-        durationMs: 300,
-        docsExamined: 100,
-        docsReturned: 1,
-        plan: 'COLLSCAN',
-      },
-      {
-        timestampMs: 700,
-        durationMs: 300,
-        docsExamined: 100,
-        docsReturned: 1,
-        plan: 'COLLSCAN',
-      },
-      {
-        timestampMs: 800,
-        durationMs: 300,
-        docsExamined: 100,
-        docsReturned: 1,
-        plan: 'COLLSCAN',
-      },
-      {
-        timestampMs: 900,
-        durationMs: 300,
-        docsExamined: 100,
-        docsReturned: 1,
-        plan: 'COLLSCAN',
-      },
-      {
-        timestampMs: 1000,
-        durationMs: 300,
-        docsExamined: 100,
-        docsReturned: 1,
-        plan: 'COLLSCAN',
-      },
-    ]
-    const history = emptyHistory({
-      firstSeenSlowMs: 0,
-      lastSeenSlowMs: 1000,
-    })
-    const comparison = compareHistoryWindows(history, new Uint16Array(TREND_BUCKETS), samples)
+  it('splits buckets by midpoint and computes averages', () => {
+    const trend = new Uint16Array(TREND_BUCKETS)
+    const sumDurationMs = new Float64Array(TREND_BUCKETS)
+    const sumDocsExamined = new Float64Array(TREND_BUCKETS)
+    const sumDocsReturned = new Float64Array(TREND_BUCKETS)
+    const bucketPlans = Array.from({ length: TREND_BUCKETS }, () => '')
+
+    // Early half: five IXSCAN buckets at 100ms. Late half: five COLLSCAN at 300ms.
+    for (let i = 0; i < 5; i++) {
+      trend[i] = 1
+      sumDurationMs[i] = 100
+      sumDocsExamined[i] = 10
+      sumDocsReturned[i] = 1
+      bucketPlans[i] = 'IXSCAN'
+    }
+    for (let i = 12; i < 17; i++) {
+      trend[i] = 1
+      sumDurationMs[i] = 300
+      sumDocsExamined[i] = 100
+      sumDocsReturned[i] = 1
+      bucketPlans[i] = 'COLLSCAN'
+    }
+
+    const comparison = compareHistoryWindows(
+      emptyHistory({
+        firstSeenSlowMs: 0,
+        lastSeenSlowMs: 1000,
+        sumDurationMs,
+        sumDocsExamined,
+        sumDocsReturned,
+        bucketPlans,
+      }),
+      trend,
+    )
     expect(comparison.early.count).toBe(5)
     expect(comparison.late.count).toBe(5)
     expect(comparison.lowConfidence).toBe(false)
@@ -125,30 +92,24 @@ describe('compareHistoryWindows', () => {
     expect(comparison.late.plan).toBe('COLLSCAN')
   })
 
-  it('ignores out-of-order non-finite timestamps when using samples', () => {
-    const comparison = compareHistoryWindows(emptyHistory(), new Uint16Array(TREND_BUCKETS), [
-      {
-        timestampMs: Number.NaN,
-        durationMs: 999,
-        docsExamined: 1,
-        docsReturned: 1,
-        plan: 'COLLSCAN',
-      },
-      {
-        timestampMs: 800,
-        durationMs: 50,
-        docsExamined: 1,
-        docsReturned: 1,
-        plan: 'IXSCAN',
-      },
-      {
-        timestampMs: 100,
-        durationMs: 50,
-        docsExamined: 1,
-        docsReturned: 1,
-        plan: 'IXSCAN',
-      },
-    ])
+  it('skips empty buckets when assigning early/late', () => {
+    const trend = new Uint16Array(TREND_BUCKETS)
+    const sumDurationMs = new Float64Array(TREND_BUCKETS)
+    const bucketPlans = Array.from({ length: TREND_BUCKETS }, () => '')
+    trend[2] = 1
+    sumDurationMs[2] = 50
+    bucketPlans[2] = 'IXSCAN'
+    trend[20] = 1
+    sumDurationMs[20] = 50
+    bucketPlans[20] = 'IXSCAN'
+
+    const comparison = compareHistoryWindows(
+      emptyHistory({
+        sumDurationMs,
+        bucketPlans,
+      }),
+      trend,
+    )
     expect(comparison.early.count + comparison.late.count).toBe(2)
   })
 })

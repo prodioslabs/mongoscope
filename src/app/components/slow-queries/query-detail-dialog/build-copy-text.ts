@@ -1,12 +1,6 @@
 import {
-  avgMsPerBucket,
-  compareHistoryWindows,
-  detectPlanTransitions,
-  formatHistoryTimestamp,
-  formatPlanTransition,
-  formatWindowSummary,
-  REGRESSION_MIN_SAMPLES,
-  scoreRegression,
+  buildHistoryDetail,
+  type IndexMarker,
   type PatternExplain,
   type QueryPattern,
 } from '../../../../query-patterns'
@@ -52,6 +46,7 @@ export function buildQueryDetailCopyText(
   explain: PatternExplain | null,
   pattern: QueryPattern | null,
   showRaw: boolean,
+  indexMarkers: readonly IndexMarker[] = [],
 ): string | null {
   if (explain == null || pattern == null) {
     return null
@@ -99,32 +94,32 @@ export function buildQueryDetailCopyText(
   lines.push('')
 
   lines.push('History')
-  if (pattern.history == null) {
-    lines.push(
-      'Query Time Machine is static log analysis only. Live system.profile has no durable history.',
-    )
+  const historyDetail = buildHistoryDetail(pattern, indexMarkers)
+  if (historyDetail.kind === 'unavailable') {
+    lines.push(historyDetail.notice)
   } else {
-    const history = pattern.history
-    const comparison = compareHistoryWindows(history, pattern.trend)
-    const regression = scoreRegression(history, pattern.trend)
-    const transitions = detectPlanTransitions(history)
-    pushRow(lines, 'First slow', formatHistoryTimestamp(history.firstSeenSlowMs))
-    pushRow(lines, 'Last slow', formatHistoryTimestamp(history.lastSeenSlowMs))
-    pushRow(lines, 'Avg ms', sparkline(avgMsPerBucket(pattern.trend, history.sumDurationMs)))
-    pushRow(lines, 'Early', formatWindowSummary('early', comparison))
-    pushRow(lines, 'Late', formatWindowSummary('late', comparison))
-    pushRow(
-      lines,
-      'Regression',
-      comparison.lowConfidence
-        ? `low confidence (need ≥${REGRESSION_MIN_SAMPLES} samples/window) · score ${regression.score.toFixed(2)}`
-        : `score ${regression.score.toFixed(2)}`,
-    )
-    if (transitions.length === 0) {
+    pushRow(lines, 'First slow', historyDetail.firstSlow)
+    pushRow(lines, 'Last slow', historyDetail.lastSlow)
+    pushRow(lines, 'Avg ms', sparkline(historyDetail.avgMsTrend))
+    pushRow(lines, 'Volume', sparkline(historyDetail.volumeTrend))
+    pushRow(lines, 'Early', historyDetail.earlySummary)
+    pushRow(lines, 'Late', historyDetail.lateSummary)
+    pushRow(lines, 'Regression', historyDetail.regressionLabel)
+    if (historyDetail.planMixLabel != null) {
+      pushRow(lines, 'Plan mix', historyDetail.planMixLabel)
+    }
+    if (historyDetail.planTransitionLines.length === 0) {
       pushRow(lines, 'Plan chg', 'none in this window')
     } else {
-      for (const transition of transitions) {
-        lines.push(formatPlanTransition(transition))
+      for (const line of historyDetail.planTransitionLines) {
+        lines.push(line)
+      }
+    }
+    if (historyDetail.indexMarkerLines.length === 0) {
+      pushRow(lines, 'Indexes', 'no logged index events for this ns')
+    } else {
+      for (const line of historyDetail.indexMarkerLines) {
+        lines.push(line)
       }
     }
   }

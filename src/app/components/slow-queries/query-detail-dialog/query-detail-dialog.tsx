@@ -3,18 +3,10 @@ import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
-  avgMsPerBucket,
-  compareHistoryWindows,
-  detectPlanTransitions,
-  filterMarkersForNamespace,
-  formatHistoryTimestamp,
-  formatIndexMarker,
-  formatPlanTransition,
-  formatWindowSummary,
+  buildHistoryDetail,
   getPatternExplain,
-  REGRESSION_MIN_SAMPLES,
-  scoreRegression,
   splitNamespace,
+  type IndexMarker,
   type PatternExplain,
   type QueryPattern,
   type QueryPatternStore,
@@ -90,9 +82,11 @@ export function QueryDetailDialog({
   const patternRef = useRef(pattern)
   const showRawRef = useRef(false)
   const loadErrorRef = useRef<string | null>(null)
+  const indexMarkersRef = useRef<readonly IndexMarker[]>([])
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   onCloseRef.current = onClose
   patternRef.current = pattern
+  indexMarkersRef.current = queryPatterns?.indexMarkers ?? []
   const [explain, setExplain] = useState<PatternExplain | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
@@ -317,6 +311,7 @@ export function QueryDetailDialog({
                   explainRef.current,
                   patternRef.current,
                   showRawRef.current,
+                  indexMarkersRef.current,
                 ),
                 'Nothing to copy',
               )
@@ -449,6 +444,7 @@ export function QueryDetailDialog({
                     explainRef.current,
                     patternRef.current,
                     showRawRef.current,
+                    indexMarkersRef.current,
                   ),
                   'Nothing to copy',
                 )
@@ -660,103 +656,62 @@ type HistorySectionProps = {
 }
 
 function HistorySection({ pattern, indexMarkers, theme }: HistorySectionProps) {
-  if (pattern.history == null) {
+  const detail = buildHistoryDetail(pattern, indexMarkers)
+
+  if (detail.kind === 'unavailable') {
     return (
       <DetailSection title="History" theme={theme}>
-        <text
-          fg={theme.textMuted}
-          wrapMode="word"
-          content={displayText(
-            'Query Time Machine is static log analysis only. Live system.profile has no durable history. Nothing is stored — open a mongod.log to compare early vs late in that file.',
-          )}
-        />
+        <text fg={theme.textMuted} wrapMode="word" content={displayText(detail.notice)} />
       </DetailSection>
     )
   }
 
-  const history = pattern.history
-  const comparison = compareHistoryWindows(history, pattern.trend)
-  const transitions = detectPlanTransitions(history)
-  const regression = scoreRegression(history, pattern.trend)
-  const avgMsTrend = avgMsPerBucket(pattern.trend, history.sumDurationMs)
-  const markers = filterMarkersForNamespace(indexMarkers, pattern.namespace).filter(
-    function inPatternSpan(marker) {
-      return (
-        marker.timestampMs >= history.firstSeenSlowMs &&
-        marker.timestampMs <= history.lastSeenSlowMs
-      )
-    },
-  )
-
   return (
     <DetailSection title="History" theme={theme}>
-      <text
-        fg={theme.textMuted}
-        wrapMode="word"
-        content={displayText(
-          'First seen slow in this log tail (ops above slowms only — not a true baseline). Same-period changes are correlation, not causation. Session-only; MongoScope does not store history.',
-        )}
-      />
-      <DetailRow label="First slow" value={formatHistoryTimestamp(history.firstSeenSlowMs)} />
-      <DetailRow label="Last slow" value={formatHistoryTimestamp(history.lastSeenSlowMs)} />
+      <text fg={theme.textMuted} wrapMode="word" content={displayText(detail.disclaimer)} />
+      <DetailRow label="First slow" value={detail.firstSlow} />
+      <DetailRow label="Last slow" value={detail.lastSlow} />
       <DetailRow
         label="Avg ms"
-        value={sparkline(avgMsTrend)}
+        value={sparkline(detail.avgMsTrend)}
         valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
       />
-      <DetailRow label="Volume" value={sparkline(pattern.trend)} />
-      <DetailRow label="Early" value={formatWindowSummary('early', comparison)} />
-      <DetailRow label="Late" value={formatWindowSummary('late', comparison)} />
+      <DetailRow label="Volume" value={sparkline(detail.volumeTrend)} />
+      <DetailRow label="Early" value={detail.earlySummary} />
+      <DetailRow label="Late" value={detail.lateSummary} />
       <DetailRow
         label="Regression"
-        value={
-          comparison.lowConfidence
-            ? `low confidence (need ≥${REGRESSION_MIN_SAMPLES} samples/window) · score ${regression.score.toFixed(2)}`
-            : `score ${regression.score.toFixed(2)}`
-        }
+        value={detail.regressionLabel}
         valueColor={
-          comparison.lowConfidence
+          detail.lowConfidence
             ? theme.textMuted
-            : regression.score >= 1
+            : detail.regressionScore >= 1
               ? theme.warning
               : theme.text
         }
       />
-      {history.planMix.length > 0 ? (
-        <DetailRow
-          label="Plan mix"
-          value={history.planMix.map((entry) => `${entry.plan}×${entry.count}`).join(' · ')}
-        />
+      {detail.planMixLabel != null ? (
+        <DetailRow label="Plan mix" value={detail.planMixLabel} />
       ) : null}
-      {transitions.length > 0 ? (
+      {detail.planTransitionLines.length > 0 ? (
         <box flexDirection="column" paddingTop={0}>
           <text fg={theme.textMuted} content={displayText('Plan changes')} />
-          {transitions.map((transition) => (
-            <text
-              key={`${transition.atMs}-${transition.fromPlan}-${transition.toPlan}`}
-              fg={theme.text}
-              wrapMode="word"
-              content={displayText(formatPlanTransition(transition))}
-            />
+          {detail.planTransitionLines.map((line) => (
+            <text key={line} fg={theme.text} wrapMode="word" content={displayText(line)} />
           ))}
         </box>
       ) : (
         <DetailRow label="Plan chg" value="none in this window" />
       )}
-      {markers.length > 0 ? (
+      {detail.indexMarkerLines.length > 0 ? (
         <box flexDirection="column" paddingTop={0}>
           <text
             fg={theme.textMuted}
             wrapMode="word"
             content={displayText('Index events in this file (same period)')}
           />
-          {markers.map((marker) => (
-            <text
-              key={`${marker.timestampMs}-${marker.kind}-${marker.label}`}
-              fg={theme.text}
-              wrapMode="word"
-              content={displayText(formatIndexMarker(marker))}
-            />
+          {detail.indexMarkerLines.map((line) => (
+            <text key={line} fg={theme.text} wrapMode="word" content={displayText(line)} />
           ))}
         </box>
       ) : (
