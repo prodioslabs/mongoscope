@@ -8,6 +8,7 @@ export { findBestMatchingPattern } from './match-pattern'
 export {
   REGRESSION_MIN_SAMPLES,
   avgMsPerBucket,
+  bucketIndexForTimestamp,
   compareHistoryWindows,
   detectPlanTransitions,
   filterMarkersForNamespace,
@@ -15,6 +16,7 @@ export {
   formatIndexMarker,
   formatPlanTransition,
   formatWindowSummary,
+  modalPlanFromCounts,
   scoreRegression,
   type IndexMarker,
   type PatternHistory,

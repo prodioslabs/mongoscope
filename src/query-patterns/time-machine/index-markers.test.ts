@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { SLOW_QUERY_ID } from '../types'
 import {
   DROP_INDEXES_CMD_ID,
   INDEX_BUILD_COMPLETE_ID,
   INDEX_BUILD_START_ID,
   filterMarkersForNamespace,
   indexMarkerFromAttr,
-  SLOW_QUERY_ID,
 } from './index-markers'
 
 describe('indexMarkerFromAttr', () => {

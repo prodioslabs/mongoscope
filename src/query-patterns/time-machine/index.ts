@@ -16,11 +16,8 @@ export {
 } from './bucket'
 export { compareHistoryWindows } from './compare'
 export { detectPlanTransitions } from './plan-transitions'
-export { scoreFromComparison, scoreRegression } from './regression'
+export { scoreRegression } from './regression'
 export {
-  DROP_INDEXES_CMD_ID,
-  INDEX_BUILD_COMPLETE_ID,
-  INDEX_BUILD_START_ID,
   filterMarkersForNamespace,
   indexMarkerFromAttr,
   isIndexMarkerCandidateId,

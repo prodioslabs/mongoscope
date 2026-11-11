@@ -3,6 +3,7 @@ import { isRecord } from '../lib/is-record'
 import type { LogStore } from '../parser'
 import { extractSlowQueryAttr } from './attr'
 import {
+  bucketIndexForTimestamp,
   indexMarkerFromAttr,
   isIndexMarkerCandidateId,
   modalPlanFromCounts,
@@ -77,7 +78,6 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
     windowEndMs = windowStartMs
   }
 
-  const span = Math.max(1, windowEndMs - windowStartMs)
   const patterns = new Map<string, MutablePattern>()
   const indexMarkers: IndexMarker[] = []
   let processed = 0
@@ -163,19 +163,19 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
         if (ts > mutable.lastSeenSlowMs) {
           mutable.lastSeenSlowMs = ts
         }
-        const bucket = Math.min(
-          TREND_BUCKETS - 1,
-          Math.floor(((ts - windowStartMs) / span) * TREND_BUCKETS),
-        )
-        const next = (mutable.trend[bucket] ?? 0) + 1
-        mutable.trend[bucket] = Math.min(0xffff, next)
-        mutable.sumDurationMs[bucket] = (mutable.sumDurationMs[bucket] ?? 0) + extracted.durationMs
-        mutable.sumDocsExamined[bucket] =
-          (mutable.sumDocsExamined[bucket] ?? 0) + extracted.docsExamined
-        mutable.sumDocsReturned[bucket] =
-          (mutable.sumDocsReturned[bucket] ?? 0) + extracted.docsReturned
-        const bucketPlans = mutable.bucketPlanCounts[bucket]!
-        bucketPlans.set(extracted.plan, (bucketPlans.get(extracted.plan) ?? 0) + 1)
+        const bucket = bucketIndexForTimestamp(ts, windowStartMs, windowEndMs, TREND_BUCKETS)
+        if (bucket != null) {
+          const next = (mutable.trend[bucket] ?? 0) + 1
+          mutable.trend[bucket] = Math.min(0xffff, next)
+          mutable.sumDurationMs[bucket] =
+            (mutable.sumDurationMs[bucket] ?? 0) + extracted.durationMs
+          mutable.sumDocsExamined[bucket] =
+            (mutable.sumDocsExamined[bucket] ?? 0) + extracted.docsExamined
+          mutable.sumDocsReturned[bucket] =
+            (mutable.sumDocsReturned[bucket] ?? 0) + extracted.docsReturned
+          const bucketPlans = mutable.bucketPlanCounts[bucket]!
+          bucketPlans.set(extracted.plan, (bucketPlans.get(extracted.plan) ?? 0) + 1)
+        }
       }
 
       processed++
@@ -267,9 +267,7 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
 }
 
 function finalizeHistory(mutable: MutablePattern): PatternHistory {
-  const firstSeenSlowMs = Number.isFinite(mutable.firstSeenSlowMs)
-    ? mutable.firstSeenSlowMs
-    : 0
+  const firstSeenSlowMs = Number.isFinite(mutable.firstSeenSlowMs) ? mutable.firstSeenSlowMs : 0
   const lastSeenSlowMs = Number.isFinite(mutable.lastSeenSlowMs)
     ? mutable.lastSeenSlowMs
     : firstSeenSlowMs

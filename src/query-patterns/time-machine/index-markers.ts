@@ -1,13 +1,13 @@
 import { isRecord } from '../../lib/is-record'
+import { SLOW_QUERY_ID } from '../types'
 import type { IndexMarker, IndexMarkerKind } from './types'
 
 /** MongoDB log message ids used for index timeline markers. */
 export const INDEX_BUILD_START_ID = 20384
 export const INDEX_BUILD_COMPLETE_ID = 20663
 export const DROP_INDEXES_CMD_ID = 51806
-export const SLOW_QUERY_ID = 51803
 
-export type HotRow = {
+type HotRow = {
   row: number
   id: number
   timestampMs: number
@@ -18,10 +18,7 @@ export type HotRow = {
  * Classify a log row + parsed attr into an index marker, or null.
  * Callers supply attr only for candidate ids (avoid full-file reparse).
  */
-export function indexMarkerFromAttr(
-  row: HotRow,
-  attr: unknown,
-): IndexMarker | null {
+export function indexMarkerFromAttr(row: HotRow, attr: unknown): IndexMarker | null {
   if (!Number.isFinite(row.timestampMs)) {
     return null
   }
@@ -30,10 +27,7 @@ export function indexMarkerFromAttr(
     return markerFromBuildAttr(row.timestampMs, 'index-build-start', attr)
   }
 
-  if (
-    row.id === INDEX_BUILD_COMPLETE_ID ||
-    row.msg === 'Index build: completed successfully'
-  ) {
+  if (row.id === INDEX_BUILD_COMPLETE_ID || row.msg === 'Index build: completed successfully') {
     return markerFromBuildAttr(row.timestampMs, 'index-build-complete', attr)
   }
 
@@ -70,7 +64,6 @@ export function filterMarkersForNamespace(
     return marker.namespace === ns
   })
 }
-
 
 function markerFromBuildAttr(
   timestampMs: number,
@@ -126,10 +119,7 @@ function markerFromDropAttr(timestampMs: number, attr: unknown): IndexMarker | n
   return { timestampMs, kind: 'drop-indexes', namespace, label }
 }
 
-function markerFromSlowCreateIndexes(
-  timestampMs: number,
-  attr: unknown,
-): IndexMarker | null {
+function markerFromSlowCreateIndexes(timestampMs: number, attr: unknown): IndexMarker | null {
   if (!isRecord(attr)) {
     return null
   }

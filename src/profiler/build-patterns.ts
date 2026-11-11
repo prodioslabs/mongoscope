@@ -1,4 +1,10 @@
-import { extractSlowQueryAttr, TREND_BUCKETS, type QueryPattern } from '../query-patterns'
+import {
+  bucketIndexForTimestamp,
+  extractSlowQueryAttr,
+  modalPlanFromCounts,
+  TREND_BUCKETS,
+  type QueryPattern,
+} from '../query-patterns'
 import type { ProfileSample } from './types'
 
 export type BuildPatternsResult = {
@@ -60,7 +66,6 @@ export function buildPatternsFromSamples(samples: ProfileSample[]): BuildPattern
     windowEndMs = windowStartMs
   }
 
-  const span = Math.max(1, windowEndMs - windowStartMs)
   const patterns = new Map<string, MutablePattern>()
   const rawSamples: Record<string, unknown>[] = []
 
@@ -104,12 +109,16 @@ export function buildPatternsFromSamples(samples: ProfileSample[]): BuildPattern
     }
 
     if (Number.isFinite(sample.timestampMs)) {
-      const bucket = Math.min(
-        TREND_BUCKETS - 1,
-        Math.floor(((sample.timestampMs - windowStartMs) / span) * TREND_BUCKETS),
+      const bucket = bucketIndexForTimestamp(
+        sample.timestampMs,
+        windowStartMs,
+        windowEndMs,
+        TREND_BUCKETS,
       )
-      const next = (mutable.trend[bucket] ?? 0) + 1
-      mutable.trend[bucket] = Math.min(0xffff, next)
+      if (bucket != null) {
+        const next = (mutable.trend[bucket] ?? 0) + 1
+        mutable.trend[bucket] = Math.min(0xffff, next)
+      }
     }
   }
 
@@ -125,7 +134,7 @@ export function buildPatternsFromSamples(samples: ProfileSample[]): BuildPattern
       avgMs: count > 0 ? Math.round(mutable.totalDurationMs / count) : 0,
       avgDocsExamined: count > 0 ? Math.round(mutable.totalDocsExamined / count) : 0,
       avgDocsReturned: count > 0 ? Math.round(mutable.totalDocsReturned / count) : 0,
-      plan: modalPlan(mutable.planCounts),
+      plan: modalPlanFromCounts(mutable.planCounts),
       trend: mutable.trend,
       sampleRow: mutable.sampleIndex,
       totalDurationMs: mutable.totalDurationMs,
@@ -151,16 +160,4 @@ export function buildPatternsFromSamples(samples: ProfileSample[]): BuildPattern
     windowEndMs,
     slowQueryCount: usable.length,
   }
-}
-
-function modalPlan(counts: Map<string, number>): string {
-  let best = 'n/a'
-  let bestCount = -1
-  for (const [plan, n] of counts) {
-    if (n > bestCount) {
-      best = plan
-      bestCount = n
-    }
-  }
-  return best
 }
