@@ -6,6 +6,23 @@ export { buildQueryPatternStore } from './build'
 export { getPatternExplain } from './explain'
 export { findBestMatchingPattern } from './match-pattern'
 export {
+  REGRESSION_MIN_SAMPLES,
+  avgMsPerBucket,
+  compareHistoryWindows,
+  detectPlanTransitions,
+  filterMarkersForNamespace,
+  formatHistoryTimestamp,
+  formatIndexMarker,
+  formatPlanTransition,
+  formatWindowSummary,
+  scoreRegression,
+  type IndexMarker,
+  type PatternHistory,
+  type PlanTransition,
+  type RegressionScore,
+  type WindowComparison,
+} from './time-machine'
+export {
   EXPORT_FORMATS,
   defaultExportFilename,
   serializeSlowQueriesExport,

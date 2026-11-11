@@ -142,6 +142,12 @@ describe('buildQueryPatternStore', () => {
     expect(apps.sampleRow).toBe(1) // slower 300ms row
     expect(apps.trend).toBeInstanceOf(Uint16Array)
     expect(apps.trend.length).toBe(TREND_BUCKETS)
+    expect(apps.history).not.toBeNull()
+    expect(apps.history!.firstSeenSlowMs).toBe(Date.parse('2026-04-08T10:00:00.000Z'))
+    expect(apps.history!.lastSeenSlowMs).toBe(Date.parse('2026-04-08T10:05:00.000Z'))
+    expect(apps.history!.sumDurationMs).toBeInstanceOf(Float64Array)
+    expect(apps.history!.planMix.some((entry) => entry.plan === 'COLLSCAN')).toBe(true)
+    expect(patterns.indexMarkers).toEqual([])
 
     const candidates = patterns.patterns.find((p) => p.namespace === 'govdb.candidates')!
     expect(candidates.count).toBe(1)
@@ -149,6 +155,48 @@ describe('buildQueryPatternStore', () => {
 
     // Sorted by count desc
     expect(patterns.patterns[0]!.namespace).toBe('govdb.applications')
+  })
+
+  it('records index markers and plan history from the same log', async () => {
+    const drop = JSON.stringify({
+      t: { $date: '2026-04-08T10:03:00.000Z' },
+      s: 'I',
+      c: 'COMMAND',
+      id: 51806,
+      ctx: 'conn1',
+      msg: 'CMD: dropIndexes',
+      attr: { namespace: 'govdb.applications', indexes: 'status_1' },
+    })
+    const lines = [
+      slowLine({
+        date: '2026-04-08T10:00:00.000Z',
+        ns: 'govdb.applications',
+        filter: { status: 'pending' },
+        durationMillis: 80,
+        planSummary: 'IXSCAN { status: 1 }',
+      }),
+      drop,
+      slowLine({
+        date: '2026-04-08T10:06:00.000Z',
+        ns: 'govdb.applications',
+        filter: { status: 'pending' },
+        durationMillis: 400,
+        planSummary: 'COLLSCAN',
+      }),
+    ].join('\n')
+
+    const store = await parseStore(lines + '\n')
+    const patterns = await buildQueryPatternStore(store)
+    expect(patterns.indexMarkers).toHaveLength(1)
+    expect(patterns.indexMarkers[0]!.kind).toBe('drop-indexes')
+    expect(patterns.indexMarkers[0]!.label).toBe('status_1')
+
+    const apps = patterns.patterns[0]!
+    expect(apps.history).not.toBeNull()
+    expect(apps.history!.planMix.map((entry) => entry.plan).sort()).toEqual([
+      'COLLSCAN',
+      'IXSCAN',
+    ])
   })
 
   it('picks slowest sample row for explain', async () => {
@@ -220,5 +268,6 @@ describe('buildQueryPatternStore', () => {
     const patterns = await buildQueryPatternStore(store)
     expect(patterns.patterns).toEqual([])
     expect(patterns.slowQueryCount).toBe(0)
+    expect(patterns.indexMarkers).toEqual([])
   })
 })

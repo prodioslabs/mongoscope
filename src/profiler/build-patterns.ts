@@ -129,6 +129,7 @@ export function buildPatternsFromSamples(samples: ProfileSample[]): BuildPattern
       trend: mutable.trend,
       sampleRow: mutable.sampleIndex,
       totalDurationMs: mutable.totalDurationMs,
+      history: null,
     })
   }
 

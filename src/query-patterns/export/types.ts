@@ -1,7 +1,7 @@
 export type ExportFormat = 'json' | 'csv' | 'markdown'
 
 export type ExportSort = {
-  by: 'count' | 'avgMs' | 'plan'
+  by: 'count' | 'avgMs' | 'plan' | 'regression'
   direction: 'asc' | 'desc'
 }
 

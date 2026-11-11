@@ -15,6 +15,7 @@ function pattern(overrides: Partial<QueryPattern> & Pick<QueryPattern, 'id'>): Q
     trend: new Uint16Array(24),
     sampleRow: 0,
     totalDurationMs: 100,
+    history: null,
     ...overrides,
   }
 }
