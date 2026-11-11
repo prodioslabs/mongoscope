@@ -12,6 +12,7 @@ import {
   formatPlanTransition,
   formatWindowSummary,
   getPatternExplain,
+  REGRESSION_MIN_SAMPLES,
   scoreRegression,
   splitNamespace,
   type PatternExplain,
@@ -195,14 +196,11 @@ export function QueryDetailDialog({
     [open],
   )
 
-  useEffect(
-    function clearCopyFeedbackOnUnmount() {
-      return function disposeCopyFeedbackTimer() {
-        clearCopyFeedbackTimer()
-      }
-    },
-    [],
-  )
+  useEffect(function clearCopyFeedbackOnUnmount() {
+    return function disposeCopyFeedbackTimer() {
+      clearCopyFeedbackTimer()
+    }
+  }, [])
 
   useEffect(
     function resetScrollOnContentChange() {
@@ -315,7 +313,11 @@ export function QueryDetailDialog({
                 return
               }
               copyPlainText(
-                buildQueryDetailCopyText(explainRef.current, patternRef.current, showRawRef.current),
+                buildQueryDetailCopyText(
+                  explainRef.current,
+                  patternRef.current,
+                  showRawRef.current,
+                ),
                 'Nothing to copy',
               )
             },
@@ -323,10 +325,7 @@ export function QueryDetailDialog({
           {
             name: 'query-detail.copy-suggest',
             run() {
-              copyPlainText(
-                buildSuggestedIndexCopyText(explainRef.current),
-                'No suggested index',
-              )
+              copyPlainText(buildSuggestedIndexCopyText(explainRef.current), 'No suggested index')
             },
           },
           {
@@ -428,7 +427,11 @@ export function QueryDetailDialog({
         maxHeight={dimensions.height - paddingTop - 1}
       >
         <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
-          <text fg={theme.text} attributes={TextAttributes.BOLD} content={displayText('Query detail')} />
+          <text
+            fg={theme.text}
+            attributes={TextAttributes.BOLD}
+            content={displayText('Query detail')}
+          />
           <box flexDirection="row" gap={1} flexShrink={0}>
             <text
               fg={theme.textMuted}
@@ -459,7 +462,11 @@ export function QueryDetailDialog({
 
         {copyFeedback != null ? (
           <text
-            fg={copyFeedback.startsWith('Sent') || copyFeedback === 'Copied' ? theme.success : theme.warning}
+            fg={
+              copyFeedback.startsWith('Sent') || copyFeedback === 'Copied'
+                ? theme.success
+                : theme.warning
+            }
             content={displayText(copyFeedback)}
             flexShrink={0}
           />
@@ -640,12 +647,7 @@ function DetailScrollThumb({ trackRows, thumbSize, thumbOffset, theme }: DetailS
   }
 
   return (
-    <box
-      width={1}
-      height={trackRows}
-      flexShrink={0}
-      backgroundColor={theme.backgroundElement}
-    >
+    <box width={1} height={trackRows} flexShrink={0} backgroundColor={theme.backgroundElement}>
       <text fg={theme.border} content={displayText(cells.join('\n'))} />
     </box>
   )
@@ -695,10 +697,7 @@ function HistorySection({ pattern, indexMarkers, theme }: HistorySectionProps) {
           'First seen slow in this log tail (ops above slowms only — not a true baseline). Same-period changes are correlation, not causation. Session-only; MongoScope does not store history.',
         )}
       />
-      <DetailRow
-        label="First slow"
-        value={formatHistoryTimestamp(history.firstSeenSlowMs)}
-      />
+      <DetailRow label="First slow" value={formatHistoryTimestamp(history.firstSeenSlowMs)} />
       <DetailRow label="Last slow" value={formatHistoryTimestamp(history.lastSeenSlowMs)} />
       <DetailRow
         label="Avg ms"
@@ -712,7 +711,7 @@ function HistorySection({ pattern, indexMarkers, theme }: HistorySectionProps) {
         label="Regression"
         value={
           comparison.lowConfidence
-            ? `low confidence (need ≥5 samples/window) · score ${regression.score.toFixed(2)}`
+            ? `low confidence (need ≥${REGRESSION_MIN_SAMPLES} samples/window) · score ${regression.score.toFixed(2)}`
             : `score ${regression.score.toFixed(2)}`
         }
         valueColor={
@@ -837,12 +836,7 @@ function DetailRow({ label, value, valueColor }: DetailRowProps) {
   const theme = useTheme((s) => s.theme)
   return (
     <box flexDirection="row" gap={1}>
-      <text
-        fg={theme.textMuted}
-        width={14}
-        flexShrink={0}
-        content={displayText(label)}
-      />
+      <text fg={theme.textMuted} width={14} flexShrink={0} content={displayText(label)} />
       <text
         fg={valueColor ?? theme.text}
         wrapMode="word"

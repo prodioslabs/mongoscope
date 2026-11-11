@@ -5,15 +5,12 @@ import {
   formatHistoryTimestamp,
   formatPlanTransition,
   formatWindowSummary,
+  REGRESSION_MIN_SAMPLES,
   scoreRegression,
   type PatternExplain,
   type QueryPattern,
 } from '../../../../query-patterns'
-import {
-  formatCount,
-  formatExaminedRet,
-  sparkline,
-} from '../format'
+import { formatCount, formatExaminedRet, sparkline } from '../format'
 
 export function prettyDisplay(value: string): string {
   if (value === 'n/a') {
@@ -120,7 +117,7 @@ export function buildQueryDetailCopyText(
       lines,
       'Regression',
       comparison.lowConfidence
-        ? `low confidence · score ${regression.score.toFixed(2)}`
+        ? `low confidence (need ≥${REGRESSION_MIN_SAMPLES} samples/window) · score ${regression.score.toFixed(2)}`
         : `score ${regression.score.toFixed(2)}`,
     )
     if (transitions.length === 0) {
