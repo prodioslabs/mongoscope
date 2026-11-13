@@ -1,9 +1,10 @@
 import {
-  formatCount,
-  formatExaminedRet,
-  sparkline,
-} from '../format'
-import type { PatternExplain, QueryPattern } from '../../../../query-patterns'
+  buildHistoryDetail,
+  type IndexMarker,
+  type PatternExplain,
+  type QueryPattern,
+} from '../../../../query-patterns'
+import { formatCount, formatExaminedRet, sparkline } from '../format'
 
 export function prettyDisplay(value: string): string {
   if (value === 'n/a') {
@@ -45,6 +46,7 @@ export function buildQueryDetailCopyText(
   explain: PatternExplain | null,
   pattern: QueryPattern | null,
   showRaw: boolean,
+  indexMarkers: readonly IndexMarker[] = [],
 ): string | null {
   if (explain == null || pattern == null) {
     return null
@@ -89,6 +91,38 @@ export function buildQueryDetailCopyText(
   pushRow(lines, 'Total ms', formatCount(pattern.totalDurationMs))
   pushRow(lines, 'Shape', pattern.shape)
   pushRow(lines, 'Trend', sparkline(pattern.trend))
+  lines.push('')
+
+  lines.push('History')
+  const historyDetail = buildHistoryDetail(pattern, indexMarkers)
+  if (historyDetail.kind === 'unavailable') {
+    lines.push(historyDetail.notice)
+  } else {
+    pushRow(lines, 'First slow', historyDetail.firstSlow)
+    pushRow(lines, 'Last slow', historyDetail.lastSlow)
+    pushRow(lines, 'Avg ms', sparkline(historyDetail.avgMsTrend))
+    pushRow(lines, 'Volume', sparkline(historyDetail.volumeTrend))
+    pushRow(lines, 'Early', historyDetail.earlySummary)
+    pushRow(lines, 'Late', historyDetail.lateSummary)
+    pushRow(lines, 'Regression', historyDetail.regressionLabel)
+    if (historyDetail.planMixLabel != null) {
+      pushRow(lines, 'Plan mix', historyDetail.planMixLabel)
+    }
+    if (historyDetail.planTransitionLines.length === 0) {
+      pushRow(lines, 'Plan chg', 'none in this window')
+    } else {
+      for (const line of historyDetail.planTransitionLines) {
+        lines.push(line)
+      }
+    }
+    if (historyDetail.indexMarkerLines.length === 0) {
+      pushRow(lines, 'Indexes', 'no logged index events for this ns')
+    } else {
+      for (const line of historyDetail.indexMarkerLines) {
+        lines.push(line)
+      }
+    }
+  }
   lines.push('')
 
   lines.push('Context')

@@ -13,10 +13,10 @@ Use the Slow Queries tab to inspect repeated slow shapes from a parsed log file 
 
 ## Choose Static or Live
 
-| Mode | Data source | Default |
-| ---- | ----------- | ------- |
-| Static | Aggregated patterns from the Welcome / `--log-path` parse (tail of the file) | Yes |
-| Live | Newest `system.profile` samples from the selected connection | No |
+| Mode   | Data source                                                                  | Default |
+| ------ | ---------------------------------------------------------------------------- | ------- |
+| Static | Aggregated patterns from the Welcome / `--log-path` parse (tail of the file) | Yes     |
+| Live   | Newest `system.profile` samples from the selected connection                 | No      |
 
 Press `l` to toggle when a connection is selected. Live polls about every 2 seconds while the tab is active and connected.
 
@@ -32,14 +32,29 @@ MongoScope sets profiler level `1` and `slowms` (default `100`). It never sets l
 
 ## Sort and inspect patterns
 
-| Key | Action |
-| --- | ------ |
-| `c` / `a` / `p` | Sort by count / average ms / plan (same column again toggles direction) |
-| Enter | Open pattern details |
-| `[` / `]` | Cycle databases (Live) |
-| `Shift+T` | Live sample window (presets / custom; default 100000, clamp 1–1000000) |
+| Key                   | Action                                                                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `c` / `a` / `p` / `g` | Sort by count / average ms / plan / regression (`g` is meaningful on static logs only; live patterns have no history and sort as 0) |
+| Enter                 | Open pattern details                                                                                                                |
+| `[` / `]`             | Cycle databases (Live)                                                                                                              |
+| `Shift+T`             | Static: log tail size (last N lines). Live: profiler sample window (presets / custom; default 100000, clamp 1–1000000)              |
 
 From details, press `i` to jump to Indexes with a suggested vs existing index comparison (read-only — create indexes outside MongoScope). See the [Indexing guide](/docs/indexing-guide).
+
+## History (Query Time Machine)
+
+Open a pattern’s details to see **History** for that shape in the **current static log parse**:
+
+| Field                      | Meaning                                                                                                                                      |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| First / last slow          | First and last timestamps of this shape in the tailed log (ops above `slowms` only — not a true baseline)                                    |
+| Avg ms / volume sparklines | Latency and occurrence buckets over the parse window                                                                                         |
+| Early / late               | Midpoint split of this pattern’s own span: count, avg ms, modal plan                                                                         |
+| Regression score           | Heuristic from avg ms, examined/returned, and plan mix; needs ≥5 samples in each half or marked low confidence. Sort with `g` on Static only |
+| Plan changes               | Modal plan transitions across time buckets (e.g. IXSCAN → COLLSCAN)                                                                          |
+| Index events               | `Index build` start/complete, `CMD: dropIndexes`, and slow `createIndexes` lines for the same namespace in this file                         |
+
+Same-period index lines are **correlation**, not proof of cause. MongoScope does **not** store history, plans, or index snapshots — analysis is in-memory for this session. Live mode shows a short notice: Time Machine is static log analysis only (`system.profile` has no durable history).
 
 ## Export patterns
 

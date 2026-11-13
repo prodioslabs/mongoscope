@@ -3,8 +3,10 @@ import { useBindings, useKeymap } from '@opentui/keymap/react'
 import { useRenderer, useTerminalDimensions } from '@opentui/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
+  buildHistoryDetail,
   getPatternExplain,
   splitNamespace,
+  type IndexMarker,
   type PatternExplain,
   type QueryPattern,
   type QueryPatternStore,
@@ -80,9 +82,11 @@ export function QueryDetailDialog({
   const patternRef = useRef(pattern)
   const showRawRef = useRef(false)
   const loadErrorRef = useRef<string | null>(null)
+  const indexMarkersRef = useRef<readonly IndexMarker[]>([])
   const copyFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   onCloseRef.current = onClose
   patternRef.current = pattern
+  indexMarkersRef.current = queryPatterns?.indexMarkers ?? []
   const [explain, setExplain] = useState<PatternExplain | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showRaw, setShowRaw] = useState(false)
@@ -186,14 +190,11 @@ export function QueryDetailDialog({
     [open],
   )
 
-  useEffect(
-    function clearCopyFeedbackOnUnmount() {
-      return function disposeCopyFeedbackTimer() {
-        clearCopyFeedbackTimer()
-      }
-    },
-    [],
-  )
+  useEffect(function clearCopyFeedbackOnUnmount() {
+    return function disposeCopyFeedbackTimer() {
+      clearCopyFeedbackTimer()
+    }
+  }, [])
 
   useEffect(
     function resetScrollOnContentChange() {
@@ -306,7 +307,12 @@ export function QueryDetailDialog({
                 return
               }
               copyPlainText(
-                buildQueryDetailCopyText(explainRef.current, patternRef.current, showRawRef.current),
+                buildQueryDetailCopyText(
+                  explainRef.current,
+                  patternRef.current,
+                  showRawRef.current,
+                  indexMarkersRef.current,
+                ),
                 'Nothing to copy',
               )
             },
@@ -314,10 +320,7 @@ export function QueryDetailDialog({
           {
             name: 'query-detail.copy-suggest',
             run() {
-              copyPlainText(
-                buildSuggestedIndexCopyText(explainRef.current),
-                'No suggested index',
-              )
+              copyPlainText(buildSuggestedIndexCopyText(explainRef.current), 'No suggested index')
             },
           },
           {
@@ -419,7 +422,11 @@ export function QueryDetailDialog({
         maxHeight={dimensions.height - paddingTop - 1}
       >
         <box flexDirection="row" justifyContent="space-between" flexShrink={0}>
-          <text fg={theme.text} attributes={TextAttributes.BOLD} content={displayText('Query detail')} />
+          <text
+            fg={theme.text}
+            attributes={TextAttributes.BOLD}
+            content={displayText('Query detail')}
+          />
           <box flexDirection="row" gap={1} flexShrink={0}>
             <text
               fg={theme.textMuted}
@@ -437,6 +444,7 @@ export function QueryDetailDialog({
                     explainRef.current,
                     patternRef.current,
                     showRawRef.current,
+                    indexMarkersRef.current,
                   ),
                   'Nothing to copy',
                 )
@@ -450,7 +458,11 @@ export function QueryDetailDialog({
 
         {copyFeedback != null ? (
           <text
-            fg={copyFeedback.startsWith('Sent') || copyFeedback === 'Copied' ? theme.success : theme.warning}
+            fg={
+              copyFeedback.startsWith('Sent') || copyFeedback === 'Copied'
+                ? theme.success
+                : theme.warning
+            }
             content={displayText(copyFeedback)}
             flexShrink={0}
           />
@@ -574,6 +586,12 @@ export function QueryDetailDialog({
                       />
                     </DetailSection>
 
+                    <HistorySection
+                      pattern={pattern}
+                      indexMarkers={queryPatterns?.indexMarkers ?? []}
+                      theme={theme}
+                    />
+
                     <DetailSection title="Context" theme={theme}>
                       <DetailRow label="Timestamp" value={formatTimestamp(explain.timestampMs)} />
                       <DetailRow label="Ctx" value={explain.ctx || 'n/a'} />
@@ -625,14 +643,81 @@ function DetailScrollThumb({ trackRows, thumbSize, thumbOffset, theme }: DetailS
   }
 
   return (
-    <box
-      width={1}
-      height={trackRows}
-      flexShrink={0}
-      backgroundColor={theme.backgroundElement}
-    >
+    <box width={1} height={trackRows} flexShrink={0} backgroundColor={theme.backgroundElement}>
       <text fg={theme.border} content={displayText(cells.join('\n'))} />
     </box>
+  )
+}
+
+type HistorySectionProps = {
+  pattern: QueryPattern
+  indexMarkers: NonNullable<QueryPatternStore['indexMarkers']>
+  theme: Theme
+}
+
+function HistorySection({ pattern, indexMarkers, theme }: HistorySectionProps) {
+  const detail = buildHistoryDetail(pattern, indexMarkers)
+
+  if (detail.kind === 'unavailable') {
+    return (
+      <DetailSection title="History" theme={theme}>
+        <text fg={theme.textMuted} wrapMode="word" content={displayText(detail.notice)} />
+      </DetailSection>
+    )
+  }
+
+  return (
+    <DetailSection title="History" theme={theme}>
+      <text fg={theme.textMuted} wrapMode="word" content={displayText(detail.disclaimer)} />
+      <DetailRow label="First slow" value={detail.firstSlow} />
+      <DetailRow label="Last slow" value={detail.lastSlow} />
+      <DetailRow
+        label="Avg ms"
+        value={sparkline(detail.avgMsTrend)}
+        valueColor={severityColor(theme, avgMsSeverity(pattern.avgMs))}
+      />
+      <DetailRow label="Volume" value={sparkline(detail.volumeTrend)} />
+      <DetailRow label="Early" value={detail.earlySummary} />
+      <DetailRow label="Late" value={detail.lateSummary} />
+      <DetailRow
+        label="Regression"
+        value={detail.regressionLabel}
+        valueColor={
+          detail.lowConfidence
+            ? theme.textMuted
+            : detail.regressionScore >= 1
+              ? theme.warning
+              : theme.text
+        }
+      />
+      {detail.planMixLabel != null ? (
+        <DetailRow label="Plan mix" value={detail.planMixLabel} />
+      ) : null}
+      {detail.planTransitionLines.length > 0 ? (
+        <box flexDirection="column" paddingTop={0}>
+          <text fg={theme.textMuted} content={displayText('Plan changes')} />
+          {detail.planTransitionLines.map((line) => (
+            <text key={line} fg={theme.text} wrapMode="word" content={displayText(line)} />
+          ))}
+        </box>
+      ) : (
+        <DetailRow label="Plan chg" value="none in this window" />
+      )}
+      {detail.indexMarkerLines.length > 0 ? (
+        <box flexDirection="column" paddingTop={0}>
+          <text
+            fg={theme.textMuted}
+            wrapMode="word"
+            content={displayText('Index events in this file (same period)')}
+          />
+          {detail.indexMarkerLines.map((line) => (
+            <text key={line} fg={theme.text} wrapMode="word" content={displayText(line)} />
+          ))}
+        </box>
+      ) : (
+        <DetailRow label="Indexes" value="no logged index events for this ns" />
+      )}
+    </DetailSection>
   )
 }
 
@@ -706,12 +791,7 @@ function DetailRow({ label, value, valueColor }: DetailRowProps) {
   const theme = useTheme((s) => s.theme)
   return (
     <box flexDirection="row" gap={1}>
-      <text
-        fg={theme.textMuted}
-        width={14}
-        flexShrink={0}
-        content={displayText(label)}
-      />
+      <text fg={theme.textMuted} width={14} flexShrink={0} content={displayText(label)} />
       <text
         fg={valueColor ?? theme.text}
         wrapMode="word"

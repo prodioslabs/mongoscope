@@ -1,3 +1,5 @@
+import type { IndexMarker, PatternHistory } from './time-machine/types'
+
 /** Fixed number of sparkline buckets over the pattern window. */
 export const TREND_BUCKETS = 24
 
@@ -17,6 +19,11 @@ export type QueryPattern = {
   trend: Uint16Array
   sampleRow: number
   totalDurationMs: number
+  /**
+   * Static log builds only. Live profiler patterns set this to null —
+   * system.profile has no durable history for Time Machine.
+   */
+  history: PatternHistory | null
 }
 
 export type QueryPatternStore = {
@@ -25,6 +32,8 @@ export type QueryPatternStore = {
   windowEndMs: number
   slowQueryCount: number
   buildDurationMs: number
+  /** Index/DDL markers parsed from the same tailed log (static only). */
+  indexMarkers: IndexMarker[]
 }
 
 export type IndexSuggestion = {

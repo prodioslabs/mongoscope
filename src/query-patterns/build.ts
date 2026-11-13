@@ -2,6 +2,15 @@ import { open } from 'node:fs/promises'
 import { isRecord } from '../lib/is-record'
 import type { LogStore } from '../parser'
 import { extractSlowQueryAttr } from './attr'
+import {
+  bucketIndexForTimestamp,
+  indexMarkerFromAttr,
+  isIndexMarkerCandidateId,
+  modalPlanFromCounts,
+  planMixFromCounts,
+  type IndexMarker,
+  type PatternHistory,
+} from './time-machine'
 import { SLOW_QUERY_ID, TREND_BUCKETS, type QueryPattern, type QueryPatternStore } from './types'
 
 const YIELD_EVERY = 256
@@ -18,17 +27,28 @@ type MutablePattern = {
   sampleRow: number
   sampleDurationMs: number
   trend: Uint16Array
+  sumDurationMs: Float64Array
+  sumDocsExamined: Float64Array
+  sumDocsReturned: Float64Array
+  bucketPlanCounts: Map<string, number>[]
+  firstSeenSlowMs: number
+  lastSeenSlowMs: number
 }
 
 export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatternStore> {
   const startedAt = performance.now()
 
   const slowRows: number[] = []
+  const markerCandidateRows: number[] = []
   let windowStartMs = Number.POSITIVE_INFINITY
   let windowEndMs = Number.NEGATIVE_INFINITY
 
   for (let row = 0; row < store.rowCount; row++) {
-    if (store.ids[row] !== SLOW_QUERY_ID) {
+    const id = store.ids[row]!
+    if (isIndexMarkerCandidateId(id)) {
+      markerCandidateRows.push(row)
+    }
+    if (id !== SLOW_QUERY_ID) {
       continue
     }
     slowRows.push(row)
@@ -50,6 +70,7 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
       windowEndMs: 0,
       slowQueryCount: 0,
       buildDurationMs: Math.round(performance.now() - startedAt),
+      indexMarkers: [],
     }
   }
 
@@ -57,8 +78,8 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
     windowEndMs = windowStartMs
   }
 
-  const span = Math.max(1, windowEndMs - windowStartMs)
   const patterns = new Map<string, MutablePattern>()
+  const indexMarkers: IndexMarker[] = []
   let processed = 0
 
   // mem:// paths are used in unit tests without a real file — skip disk reads
@@ -74,6 +95,19 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
           await yieldEventLoop()
         }
         continue
+      }
+
+      const createMarker = indexMarkerFromAttr(
+        {
+          row,
+          id: store.ids[row]!,
+          timestampMs: store.timestamps[row]!,
+          msg: store.getEntry(row).msg,
+        },
+        attr,
+      )
+      if (createMarker != null && createMarker.kind === 'create-indexes') {
+        indexMarkers.push(createMarker)
       }
 
       const extracted = extractSlowQueryAttr(attr)
@@ -100,6 +134,12 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
           sampleRow: row,
           sampleDurationMs: extracted.durationMs,
           trend: new Uint16Array(TREND_BUCKETS),
+          sumDurationMs: new Float64Array(TREND_BUCKETS),
+          sumDocsExamined: new Float64Array(TREND_BUCKETS),
+          sumDocsReturned: new Float64Array(TREND_BUCKETS),
+          bucketPlanCounts: Array.from({ length: TREND_BUCKETS }, () => new Map()),
+          firstSeenSlowMs: Number.POSITIVE_INFINITY,
+          lastSeenSlowMs: Number.NEGATIVE_INFINITY,
         }
         patterns.set(key, mutable)
       }
@@ -117,14 +157,59 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
 
       const ts = store.timestamps[row]!
       if (Number.isFinite(ts)) {
-        const bucket = Math.min(
-          TREND_BUCKETS - 1,
-          Math.floor(((ts - windowStartMs) / span) * TREND_BUCKETS),
-        )
-        const next = (mutable.trend[bucket] ?? 0) + 1
-        mutable.trend[bucket] = Math.min(0xffff, next)
+        if (ts < mutable.firstSeenSlowMs) {
+          mutable.firstSeenSlowMs = ts
+        }
+        if (ts > mutable.lastSeenSlowMs) {
+          mutable.lastSeenSlowMs = ts
+        }
+        const bucket = bucketIndexForTimestamp(ts, windowStartMs, windowEndMs, TREND_BUCKETS)
+        if (bucket != null) {
+          const next = (mutable.trend[bucket] ?? 0) + 1
+          mutable.trend[bucket] = Math.min(0xffff, next)
+          mutable.sumDurationMs[bucket] =
+            (mutable.sumDurationMs[bucket] ?? 0) + extracted.durationMs
+          mutable.sumDocsExamined[bucket] =
+            (mutable.sumDocsExamined[bucket] ?? 0) + extracted.docsExamined
+          mutable.sumDocsReturned[bucket] =
+            (mutable.sumDocsReturned[bucket] ?? 0) + extracted.docsReturned
+          const bucketPlans = mutable.bucketPlanCounts[bucket]!
+          bucketPlans.set(extracted.plan, (bucketPlans.get(extracted.plan) ?? 0) + 1)
+        }
       }
 
+      processed++
+      if (processed % YIELD_EVERY === 0) {
+        await yieldEventLoop()
+      }
+    }
+
+    // Non-slow index markers (build start/complete, dropIndexes).
+    for (const row of markerCandidateRows) {
+      const id = store.ids[row]!
+      if (id === SLOW_QUERY_ID) {
+        continue
+      }
+      const attr = await readAttrAt(store, row, fh)
+      if (attr == null) {
+        processed++
+        if (processed % YIELD_EVERY === 0) {
+          await yieldEventLoop()
+        }
+        continue
+      }
+      const marker = indexMarkerFromAttr(
+        {
+          row,
+          id,
+          timestampMs: store.timestamps[row]!,
+          msg: store.getEntry(row).msg,
+        },
+        attr,
+      )
+      if (marker != null) {
+        indexMarkers.push(marker)
+      }
       processed++
       if (processed % YIELD_EVERY === 0) {
         await yieldEventLoop()
@@ -133,6 +218,10 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
   } finally {
     await fh?.close()
   }
+
+  indexMarkers.sort(function compareMarkers(a, b) {
+    return a.timestampMs - b.timestampMs
+  })
 
   const finalized: QueryPattern[] = []
   let id = 0
@@ -147,10 +236,11 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
       avgMs: count > 0 ? Math.round(mutable.totalDurationMs / count) : 0,
       avgDocsExamined: count > 0 ? Math.round(mutable.totalDocsExamined / count) : 0,
       avgDocsReturned: count > 0 ? Math.round(mutable.totalDocsReturned / count) : 0,
-      plan: modalPlan(mutable.planCounts),
+      plan: modalPlanFromCounts(mutable.planCounts),
       trend: mutable.trend,
       sampleRow: mutable.sampleRow,
       totalDurationMs: mutable.totalDurationMs,
+      history: finalizeHistory(mutable),
     })
   }
 
@@ -172,19 +262,35 @@ export async function buildQueryPatternStore(store: LogStore): Promise<QueryPatt
     windowEndMs,
     slowQueryCount: slowRows.length,
     buildDurationMs: Math.round(performance.now() - startedAt),
+    indexMarkers,
   }
 }
 
-function modalPlan(counts: Map<string, number>): string {
-  let best = 'n/a'
-  let bestCount = -1
-  for (const [plan, n] of counts) {
-    if (n > bestCount) {
-      best = plan
-      bestCount = n
+function finalizeHistory(mutable: MutablePattern): PatternHistory {
+  const firstSeenSlowMs = Number.isFinite(mutable.firstSeenSlowMs) ? mutable.firstSeenSlowMs : 0
+  const lastSeenSlowMs = Number.isFinite(mutable.lastSeenSlowMs)
+    ? mutable.lastSeenSlowMs
+    : firstSeenSlowMs
+
+  const bucketPlans: string[] = []
+  for (let i = 0; i < TREND_BUCKETS; i++) {
+    const counts = mutable.bucketPlanCounts[i]!
+    if (counts.size === 0) {
+      bucketPlans.push('')
+    } else {
+      bucketPlans.push(modalPlanFromCounts(counts))
     }
   }
-  return best
+
+  return {
+    firstSeenSlowMs,
+    lastSeenSlowMs,
+    sumDurationMs: mutable.sumDurationMs,
+    sumDocsExamined: mutable.sumDocsExamined,
+    sumDocsReturned: mutable.sumDocsReturned,
+    bucketPlans,
+    planMix: planMixFromCounts(mutable.planCounts),
+  }
 }
 
 /** Let the event loop run (TUI / timers) between attr-read batches. */

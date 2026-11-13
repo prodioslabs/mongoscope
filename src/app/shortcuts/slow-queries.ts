@@ -43,9 +43,15 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
     bindings: [{ key: 'p', cmd: 'slow-queries.sort-plan' }],
   },
   {
+    keys: 'g',
+    helpLabel:
+      'Sort by regression score (static only; low-confidence patterns stay at the bottom)',
+    bindings: [{ key: 'g', cmd: 'slow-queries.sort-regression' }],
+  },
+  {
     keys: 'shift+t',
     helpLabel:
-      'Live only: profiler sample window (newest system.profile docs — 10k / 25k / 50k / 100k / 250k / custom)',
+      'Static: log tail size (last N lines). Live: profiler sample window (newest system.profile docs — 10k / 25k / 50k / 100k / 250k / custom)',
     footerLabel: 'samples',
     footerKeys: 'T',
     bindings: [{ key: 'shift+t', cmd: 'slow-queries.open-tail' }],
@@ -81,8 +87,8 @@ export const SLOW_QUERIES_SHORTCUTS: readonly Shortcut[] = [
 ]
 
 const sortCountAvgPlanChip: FooterChip = {
-  keys: 'c/a/p',
-  label: 'sort count/avg/plan',
+  keys: 'c/a/p/g',
+  label: 'sort count/avg/plan/regr',
   segments: [
     { key: '', text: 'sort ' },
     { key: 'c', text: 'count' },
@@ -90,14 +96,18 @@ const sortCountAvgPlanChip: FooterChip = {
     { key: 'a', text: 'avg' },
     { key: '', text: '/' },
     { key: 'p', text: 'plan' },
+    { key: '', text: '/' },
+    { key: 'g', text: 'regr' },
   ],
 }
 
 const exportChip: FooterChip = { keys: 'x', label: 'export' }
+const tailChip: FooterChip = { keys: 'T', label: 'tail' }
 
 export const SLOW_QUERIES_STATIC_FOOTER: FooterChip[] = [
   ...toFooter([SLOW_QUERIES_SHORTCUTS[0]!]),
   sortCountAvgPlanChip,
+  tailChip,
   exportChip,
 ]
 

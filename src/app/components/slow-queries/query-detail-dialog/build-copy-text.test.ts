@@ -16,6 +16,7 @@ function makePattern(overrides: Partial<QueryPattern> = {}): QueryPattern {
     trend: new Uint16Array([1, 2, 3]),
     sampleRow: 0,
     totalDurationMs: 360,
+    history: null,
     ...overrides,
   }
 }
@@ -89,6 +90,10 @@ describe('buildQueryDetailCopyText', () => {
     expect(text!).toContain('db.users.createIndex({ status: 1 })')
     expect(text!).toContain('Pattern')
     expect(text!).toContain('Count: 3')
+    expect(text!).toContain('History')
+    expect(text!).toContain(
+      'Query Time Machine is static log analysis only. Live system.profile has no durable history.',
+    )
     expect(text!).toContain('Context')
     expect(text!).toContain('Timestamp: 2024-01-01T00:00:00.000Z')
     expect(text!).toContain('Work')

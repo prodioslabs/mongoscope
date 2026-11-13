@@ -29,22 +29,22 @@ Press `Enter` on a pattern for the query detail, `5` for Logs, `q` to quit.
 
 ## Why MongoScope
 
-| You have                                  | MongoScope gives you                                                                              |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| A `mongod.log` from an incident           | Slow queries grouped by shape, with count, avg ms, examined/returned, plan, and a trend sparkline |
-| A shell on the database host and no GUI   | A single binary with no runtime to install; runs in any terminal, including over SSH              |
-| Self-hosted MongoDB without Atlas tooling | Log and `system.profile` analysis that needs only file access or a connection string              |
-| A live incident                           | `currentOp` with COLLSCAN highlights and kill-op, replica lag and elections, index build progress |
+| You have                                  | MongoScope gives you                                                                                                                              |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A `mongod.log` from an incident           | Slow queries grouped by shape, with count, avg ms, examined/returned, plan, trend, and History (early vs late, plan changes, logged index events) |
+| A shell on the database host and no GUI   | A single binary with no runtime to install; runs in any terminal, including over SSH                                                              |
+| Self-hosted MongoDB without Atlas tooling | Log and `system.profile` analysis that needs only file access or a connection string                                                              |
+| A live incident                           | `currentOp` with COLLSCAN highlights and kill-op, replica lag and elections, index build progress                                                 |
 
 ## What you get
 
-| Area         | What it surfaces                                                                 |
-| ------------ | -------------------------------------------------------------------------------- |
-| Slow Queries | Aggregated patterns from logs or live `system.profile`; export JSON/CSV/Markdown |
-| Live Ops     | `currentOp`, COLLSCAN highlights, kill-op, collection `top`                      |
-| Replication  | Topology, oplog window, lag sparkline, heartbeats, elections                     |
-| Indexes      | Inventory, build %, `$indexStats`, jump from a slow query                        |
-| Logs         | File tail or rolling `getLog` buffer from a live connection                      |
+| Area         | What it surfaces                                                                                                 |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Slow Queries | Aggregated patterns from logs or live `system.profile`; History compare on static logs; export JSON/CSV/Markdown |
+| Live Ops     | `currentOp`, COLLSCAN highlights, kill-op, collection `top`                                                      |
+| Replication  | Topology, oplog window, lag sparkline, heartbeats, elections                                                     |
+| Indexes      | Inventory, build %, `$indexStats`, jump from a slow query                                                        |
+| Logs         | File tail or rolling `getLog` buffer from a live connection                                                      |
 
 Connections land in your OS keychain (`Bun.secrets`) when available, otherwise plaintext under `secrets` in `~/.config/mongoscope/config.json`. Themes (gruvbox, catppuccin, nord, …) persist in that same config directory.
 
