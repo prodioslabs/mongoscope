@@ -52,7 +52,7 @@ export function SlowQueriesDemo({ className }: SlowQueriesDemoProps) {
       title="Slow Queries"
       badge="Static + Live"
       docsHref={`${docsRoute}/slow-queries`}
-      description="Groups slow log lines into query shapes. Sort by count, avg ms or plan and catch the COLLSCAN before your users do. Click a row for its details."
+      description="Groups slow log lines into query shapes. Sort by count, avg ms, plan, or regression (`g`, static). Open a row for details — History compares early vs late in the current log tail."
       keys={{
         c: () => setSlowSort('count'),
         a: () => setSlowSort('avg'),

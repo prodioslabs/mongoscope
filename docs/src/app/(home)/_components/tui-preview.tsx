@@ -15,7 +15,7 @@ import {
 } from './terminal'
 
 const footerKeys = [
-  'c count · a avg · p plan · enter details · x export · l live',
+  'c count · a avg · p plan · g regr · enter details · x export · l live',
   'x kill op · e explain · c connections',
   'c connections · auto-refresh 5s',
   '←/→ database · [/] collection · s size · o ops',

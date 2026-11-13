@@ -66,7 +66,7 @@ export function InstallSteps() {
           }
         >
           <p className="rounded-lg border border-fd-border bg-fd-secondary/50 px-3 py-2 font-mono text-xs text-fd-muted-foreground">
-            c count · a avg · p plan · enter details
+            c count · a avg · p plan · g regr · enter details
           </p>
         </Step>
       </ol>
