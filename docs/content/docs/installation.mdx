@@ -55,7 +55,7 @@ MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL https://raw.githubusercontent.com/prod
 
 ## Install from GitHub Releases
 
-Use this path when you prefer not to pipe a script into bash, or when you need Windows.
+Use this path when you prefer not to pipe a script into bash. On Windows, follow [Windows](#windows).
 
 1. Download the archive for your platform from [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases).
 2. Optional: verify the archive against `checksums.txt` from the same release.
@@ -95,7 +95,50 @@ On macOS without `sudo`, install under a user-writable prefix instead:
 install -m 755 mongoscope ~/.local/bin/mongoscope
 ```
 
-On Windows, unzip `mongoscope_<version>_windows_amd64.zip` and put `mongoscope.exe` on your `PATH`.
+### Windows
+
+Only Windows x86_64 is published; there is no Windows ARM64 build. The curl installer does not run on Windows. The zip contains a single `mongoscope.exe` at its root. Every Windows command below uses the same install folder: `%LOCALAPPDATA%\Programs\mongoscope`.
+
+<!--
+  Unverified on a real Windows machine: Expand-Archive folder creation,
+  User Path Get/SetEnvironmentVariable, case-insensitive PATH membership
+  (including trailing-backslash variants), new terminals picking up Path,
+  mongoscope.exe --version, Get-FileHash / Select-String, overwrite after
+  quit, Remove-Item -Recurse, and whether Windows shows a download warning.
+-->
+
+1. Download `mongoscope_<version>_windows_amd64.zip` from [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases). For the checksum step, also download `checksums.txt` from the same release.
+
+Windows may show a warning for an unsigned download. Compare the zip against `checksums.txt` from the same release to verify it.
+
+2. Open PowerShell in the folder that contains the zip and set the file name, replacing `<version>` with the version in the file name:
+
+```powershell
+$zip = 'mongoscope_<version>_windows_amd64.zip'
+```
+
+3. Optional: verify the zip. The `Hash` value from `Get-FileHash` must match the first field of the matching `checksums.txt` line (letter case can differ):
+
+```powershell
+Get-FileHash $zip
+Select-String $zip checksums.txt -SimpleMatch
+```
+
+4. Extract `mongoscope.exe` into the install folder and add that folder to your user `PATH` if it is not already there. Safe to run more than once:
+
+```powershell
+$dir = "$env:LOCALAPPDATA\Programs\mongoscope"
+Expand-Archive $zip -DestinationPath $dir -Force
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($null -eq $userPath) { $userPath = '' }
+$entries = @(($userPath -split ';' | Where-Object { $_ }))
+$normalizedDir = $dir.TrimEnd('\')
+if (-not ($entries | Where-Object { $_.TrimEnd('\').Equals($normalizedDir, [StringComparison]::OrdinalIgnoreCase) })) {
+  [Environment]::SetEnvironmentVariable('Path', (($entries + $dir) -join ';'), 'User')
+}
+```
+
+5. Open a new terminal so it picks up the new `PATH`, then run `mongoscope --version`.
 
 ## Verify the install
 
@@ -115,6 +158,15 @@ To pin an upgrade to a known tag:
 MONGOSCOPE_VERSION=v0.3.0 curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh | bash
 ```
 
+On Windows, quit MongoScope first, download the new zip from [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases), then extract it over the install folder from [Windows](#windows) (already on your `PATH`):
+
+```powershell
+$zip = 'mongoscope_<version>_windows_amd64.zip'
+Expand-Archive $zip -DestinationPath "$env:LOCALAPPDATA\Programs\mongoscope" -Force
+```
+
+`-Force` overwrites an existing `mongoscope.exe` when the file is not locked. It does not replace a running process; quit MongoScope before extracting.
+
 ## Uninstall MongoScope
 
 The installer only writes the binary. There is no uninstall script. Remove that file:
@@ -128,6 +180,20 @@ rm ~/.local/bin/mongoscope
 
 # Custom prefix
 rm "$MONGOSCOPE_PREFIX/bin/mongoscope"
+```
+
+On Windows, quit MongoScope, then remove the install folder from [Windows](#windows) and drop its user `PATH` entry (matched case-insensitively, with or without a trailing backslash):
+
+```powershell
+$dir = "$env:LOCALAPPDATA\Programs\mongoscope"
+Remove-Item $dir -Recurse
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($null -eq $userPath) { $userPath = '' }
+$normalizedDir = $dir.TrimEnd('\')
+$entries = @(($userPath -split ';' | Where-Object {
+  $_ -and -not $_.TrimEnd('\').Equals($normalizedDir, [StringComparison]::OrdinalIgnoreCase)
+}))
+[Environment]::SetEnvironmentVariable('Path', ($entries -join ';'), 'User')
 ```
 
 ## Troubleshooting
@@ -158,11 +224,19 @@ MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL https://raw.githubusercontent.com/prod
 
 If neither root, `sudo`, nor a writable prefix is available, the installer exits with: `run as root, install sudo, or set MONGOSCOPE_PREFIX to a writable directory`.
 
+### Cannot overwrite `mongoscope.exe` on Windows
+
+**Symptom:** `Expand-Archive` fails while updating because `mongoscope.exe` is in use.
+
+**Cause:** MongoScope is still running, so Windows has the file locked.
+
+**Resolution:** Quit MongoScope, then run the extract again from [Update MongoScope](#update-mongoscope).
+
 ### `unsupported OS: …`
 
 **Symptom:** The curl installer rejects the OS.
 
-**Resolution:** The installer supports Linux and macOS only. For Windows, download `mongoscope_<version>_windows_amd64.zip` from [GitHub Releases](https://github.com/prodioslabs/mongoscope/releases).
+**Resolution:** The installer supports Linux and macOS only. On Windows, install from the release zip — see [Windows](#windows).
 
 ### `unsupported architecture: …`
 

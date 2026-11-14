@@ -1,7 +1,9 @@
 import { ServerCodeBlock } from 'fumadocs-ui/components/codeblock.rsc'
+import { Download } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { docsRoute, installCurlCommand } from '@/lib/shared'
+import { getLatestRelease } from '@/lib/github-release'
+import { docsRoute, installCurlCommand, releasesUrl } from '@/lib/shared'
 import { InstallPlatformPicker } from './install-platform-picker'
 import { Kbd } from './kbd'
 import { HomeSection, SectionHeading } from './section'
@@ -35,7 +37,10 @@ export function InstallSteps() {
 
       <ol className="grid grid-cols-1 gap-3.5 md:grid-cols-3">
         <Step number={1} title="Install">
-          <InstallPlatformPicker unixInstall={<TerminalCodeBlock code={installCurlCommand} />} />
+          <InstallPlatformPicker
+            unixInstall={<TerminalCodeBlock code={installCurlCommand} />}
+            windowsInstall={<WindowsInstall />}
+          />
         </Step>
 
         <Step
@@ -86,6 +91,101 @@ export function InstallSteps() {
   )
 }
 
+async function WindowsInstall() {
+  const release = await getLatestRelease()
+  const zipName = `mongoscope_${release?.version ?? '<version>'}_windows_amd64.zip`
+  // Unverified on a real Windows machine: Expand-Archive folder creation, User Path
+  // Get/SetEnvironmentVariable, case-insensitive PATH membership (including trailing-
+  // backslash variants), new terminals picking up Path, mongoscope.exe --version,
+  // Get-FileHash, and whether Windows shows a download warning. Same install folder as
+  // docs/content/docs/installation.mdx (%LOCALAPPDATA%\Programs\mongoscope).
+  const installScript = [
+    `$zip = '${zipName}'`,
+    String.raw`$dir = "$env:LOCALAPPDATA\Programs\mongoscope"`,
+    'Expand-Archive $zip -DestinationPath $dir -Force',
+    "$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')",
+    "if ($null -eq $userPath) { $userPath = '' }",
+    "$entries = @(($userPath -split ';' | Where-Object { $_ }))",
+    String.raw`$normalizedDir = $dir.TrimEnd('\')`,
+    String.raw`if (-not ($entries | Where-Object { $_.TrimEnd('\').Equals($normalizedDir, [StringComparison]::OrdinalIgnoreCase) })) {`,
+    "  [Environment]::SetEnvironmentVariable('Path', (($entries + $dir) -join ';'), 'User')",
+    '}',
+  ].join('\n')
+
+  return (
+    <div className="flex flex-col gap-3 text-sm text-pretty text-fd-muted-foreground">
+      {release ? (
+        <a
+          href={release.windowsZipUrl}
+          className="inline-flex items-center gap-2 self-start rounded-lg border border-fd-border px-3 py-1.5 font-medium text-fd-foreground transition-colors hover:bg-fd-accent"
+        >
+          <Download className="size-4" aria-hidden />
+          Download v{release.version} (.zip)
+        </a>
+      ) : (
+        <p>
+          Download the Windows <code className="text-fd-foreground">.zip</code> from{' '}
+          <InlineLink href={releasesUrl}>GitHub Releases</InlineLink>.
+        </p>
+      )}
+      <p>
+        Windows may show a warning for an unsigned download. Compare the zip against{' '}
+        <InlineLink href={release?.checksumsUrl ?? releasesUrl}>checksums.txt</InlineLink>
+        {release ? null : ' from the same release'} to verify it.
+      </p>
+      <p>
+        In PowerShell, from the folder that contains the zip
+        {release ? null : (
+          <>
+            {' '}
+            (replace <code className="text-fd-foreground">&lt;version&gt;</code> with the version in
+            its name)
+          </>
+        )}
+        :
+      </p>
+      <TerminalCodeBlock code={installScript} lang="powershell" />
+      <p>
+        Open a new terminal, then run{' '}
+        <code className="text-fd-foreground">mongoscope --version</code>.
+      </p>
+      <p>
+        Optional: compare <code className="text-fd-foreground">Get-FileHash $zip</code> with the
+        zip&apos;s line in{' '}
+        <InlineLink href={release?.checksumsUrl ?? releasesUrl}>checksums.txt</InlineLink>
+        {release ? null : ' from the same release'}.
+      </p>
+      <p>
+        x86_64 only; Windows ARM64 builds are not published.{' '}
+        <Link
+          href={`${docsRoute}/installation#windows`}
+          className="font-medium text-fd-foreground underline-offset-4 hover:underline"
+        >
+          Full steps
+        </Link>
+      </p>
+    </div>
+  )
+}
+
+type InlineLinkProps = {
+  href: string
+  children: ReactNode
+}
+
+function InlineLink({ href, children }: InlineLinkProps) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="font-medium text-(--home-accent-ink) underline-offset-4 hover:underline"
+    >
+      {children}
+    </a>
+  )
+}
+
 type StepProps = {
   number: number
   title: string
@@ -110,20 +210,26 @@ function Step({ number, title, description, children }: StepProps) {
   )
 }
 
+const codeBlockTitles = {
+  bash: 'Terminal',
+  powershell: 'PowerShell',
+} as const
+
 type TerminalCodeBlockProps = {
   code: string
+  lang?: keyof typeof codeBlockTitles
 }
 
-function TerminalCodeBlock({ code }: TerminalCodeBlockProps) {
+function TerminalCodeBlock({ code, lang = 'bash' }: TerminalCodeBlockProps) {
   return (
     <div className="min-w-0">
       {/* Default themes match the docs: github-light / github-dark. */}
       <ServerCodeBlock
-        lang="bash"
+        lang={lang}
         code={code}
         codeblock={{
           // A title moves the copy button into a header instead of over long commands.
-          title: 'Terminal',
+          title: codeBlockTitles[lang],
           className: 'my-0 max-w-full',
           viewportProps: {
             className: 'overflow-x-auto',

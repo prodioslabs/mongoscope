@@ -73,13 +73,13 @@ Full reference: [Keyboard shortcuts](https://mongoscope.prodioslabs.in/docs/shor
 
 ## Install
 
-| Method              | Command / notes                                                                                                                                                   |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| curl (Linux, macOS) | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh \| bash`                                                                     |
-| Pin a version       | `MONGOSCOPE_VERSION=v0.3.0 curl -fsSL … \| bash`                                                                                                                  |
-| Custom prefix       | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                                                                                             |
-| Windows x86_64      | Download `mongoscope_<version>_windows_amd64.zip` from [Releases](https://github.com/prodioslabs/mongoscope/releases), unzip, put `mongoscope.exe` on your `PATH` |
-| Manual archive      | Linux / macOS `.tar.gz` and `checksums.txt` on [Releases](https://github.com/prodioslabs/mongoscope/releases)                                                     |
+| Method              | Command / notes                                                                                                                                                                          |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| curl (Linux, macOS) | `curl -fsSL https://raw.githubusercontent.com/prodioslabs/mongoscope/main/install.sh \| bash`                                                                                            |
+| Pin a version       | `MONGOSCOPE_VERSION=v0.3.0 curl -fsSL … \| bash`                                                                                                                                         |
+| Custom prefix       | `MONGOSCOPE_PREFIX=$HOME/.local curl -fsSL … \| bash`                                                                                                                                    |
+| Windows x86_64      | Download the `.zip` from [Releases](https://github.com/prodioslabs/mongoscope/releases), then follow the [PowerShell steps](https://mongoscope.prodioslabs.in/docs/installation#windows) |
+| Manual archive      | Linux / macOS `.tar.gz` and `checksums.txt` on [Releases](https://github.com/prodioslabs/mongoscope/releases)                                                                            |
 
 The installer downloads the matching archive from GitHub Releases, verifies `checksums.txt`, installs to `/usr/local/bin` (Linux) or `~/.local/bin` (macOS), and runs `mongoscope --version`. Update by re-running it. Details: [Installation](https://mongoscope.prodioslabs.in/docs/installation).
 

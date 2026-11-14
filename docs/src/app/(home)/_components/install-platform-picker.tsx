@@ -2,16 +2,17 @@
 
 import { useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { latestRelease, releasesUrl } from '@/lib/shared'
 
 type Platform = 'unix' | 'windows'
 
 type InstallPlatformPickerProps = {
   /** Install command for macOS / Linux, highlighted on the server. */
   unixInstall: ReactNode
+  /** Windows download link and PowerShell steps, rendered on the server. */
+  windowsInstall: ReactNode
 }
 
-export function InstallPlatformPicker({ unixInstall }: InstallPlatformPickerProps) {
+export function InstallPlatformPicker({ unixInstall, windowsInstall }: InstallPlatformPickerProps) {
   const [platform, setPlatform] = useState<Platform>('unix')
 
   return (
@@ -37,27 +38,7 @@ export function InstallPlatformPicker({ unixInstall }: InstallPlatformPickerProp
           Windows
         </PlatformButton>
       </div>
-      {platform === 'unix' ? (
-        unixInstall
-      ) : (
-        <p className="text-sm text-fd-muted-foreground">
-          Download{' '}
-          <code className="text-fd-foreground">
-            mongoscope_{latestRelease.version}_windows_amd64.zip
-          </code>{' '}
-          from{' '}
-          <a
-            href={releasesUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="font-medium text-(--home-accent-ink) underline-offset-4 hover:underline"
-          >
-            GitHub Releases
-          </a>
-          , unzip it, and put <code className="text-fd-foreground">mongoscope.exe</code> on your
-          PATH.
-        </p>
-      )}
+      {platform === 'unix' ? unixInstall : windowsInstall}
     </>
   )
 }
